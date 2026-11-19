@@ -202,6 +202,16 @@ def versoes():
     return out
 
 
+def auditar(acao, detalhes):
+    try:
+        sys.path.insert(0, str(AQUI))
+        import auditoria  # noqa: E402
+        import os
+        auditoria.registrar(os.environ.get("MARIA_USUARIO"), acao, detalhes)
+    except Exception as e:
+        print(f"⚠️  não consegui gravar a auditoria: {e}")
+
+
 def restaurar(versao):
     origem = HISTORICO / versao
     if not origem.is_dir():
@@ -214,6 +224,7 @@ def restaurar(versao):
             if (origem / rel).is_file():
                 shutil.copy2(origem / rel, AQUI / rel)
     print(f"✅ restaurado(s) {', '.join(ms)} da versão {versao} (o estado anterior ficou em {carimbo})")
+    auditar("modelo restaurado", {"versao": versao, "modelos": ms, "estado_anterior": carimbo})
 
 
 # =============================================================================
@@ -649,6 +660,11 @@ def main():
             guardar_versao([m], carimbo)
             torch.save(estado, AQUI / info["pth"])
             situacao = "substituído"
+            try:
+                import manifesto  # noqa: E402
+                manifesto.gerar(f"retreino {carimbo}: {m} substituído com anotações do usuário")
+            except Exception as e:
+                log(f"⚠️  não consegui atualizar o manifesto: {e}")
             log(f"✅ {m}: modelo novo NÃO piorou no teste fixo — substituiu o atual (anterior guardado em historico/{carimbo})")
         else:
             situacao = "mantido"
@@ -657,6 +673,8 @@ def main():
         relatorio["modelos"][m] = {"situacao": situacao, "casos_usuario": n, "antes": antes, "depois": depois}
     (pasta_rel / f"relatorio_{carimbo}.json").write_text(json.dumps(relatorio, indent=2, ensure_ascii=False),
                                                           encoding="utf-8")
+    auditar("retreino concluído", {"carimbo": carimbo, "rapido": args.rapido,
+                                   "modelos": {m: i.get("situacao") for m, i in relatorio["modelos"].items()}})
     log(f"relatório: {pasta_rel / f'relatorio_{carimbo}.json'}")
 
 

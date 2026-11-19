@@ -74,6 +74,7 @@ import argparse
 import csv
 import io
 import json
+import os
 import re
 from pathlib import Path
 
@@ -826,7 +827,7 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
 CAMPOS_SAIDA = ["amostra", "mama", "vista", "prioridade", "p_maligno_calibrada", "incerteza", "qualidade",
                 "avisos_qualidade", "origem_lesao", "imagens_usadas", "patologia", "conf_patologia", "p_maligno",
                 "achado", "conf_achado", "densidade", "densidade_origem", "aviso_densidade", "concordancia",
-                "score_deteccao", "idade", "fabricante", "mapa_calor", "versao_modelo", "imagem", "x0", "y0", "x1", "y1"]
+                "score_deteccao", "idade", "fabricante", "mapa_calor", "versao_modelo", "calibracao", "imagem", "x0", "y0", "x1", "y1"]
 
 
 def main():
@@ -868,8 +869,20 @@ def main():
           f" — ⚠️ diferente da registrada ({versao_registrada}): " + "; ".join(divergencias[:3])))
     arq_cal = PASTA_SCRIPT / "calibracao.json"
     CONTEXTO["cal"] = json.loads(arq_cal.read_text(encoding="utf-8")) if arq_cal.is_file() else None
+    calibracao_usada = "CBIS-DDSM (padrão)"
     if CONTEXTO["cal"] is None:
         print("⚠️  calibracao.json não encontrado: P(maligno) sem calibração e prioridade com limites padrão.")
+        calibracao_usada = "sem calibração"
+    arq_local = PASTA_SCRIPT / "calibracao_local.json"      # criada no dashboard com casos confirmados do serviço
+    if arq_local.is_file() and CONTEXTO["cal"] is not None:
+        local = json.loads(arq_local.read_text(encoding="utf-8"))
+        CONTEXTO["cal"]["patologia"] = local["patologia"]
+        if "prioridade" in local:
+            CONTEXTO["cal"]["prioridade"] = local["prioridade"]
+        assinatura = manifesto.sha256(arq_local)[:8]
+        versao_modelo = f"{versao_modelo}+cal-local-{assinatura}"
+        calibracao_usada = f"local ({local['patologia'].get('n', '?')} casos, {local.get('criada_em', '')})"
+        print(f"🎯 Calibração local em uso: {calibracao_usada}")
     CONTEXTO["mapas"] = not args.sem_mapas
     CONTEXTO["pasta_mapas"] = saida.parent / f"{saida.stem}_mapas"
 
@@ -931,7 +944,8 @@ def main():
         if d is None and r["_mama"] in dens_modelo:
             d, origem = dens_modelo[r["_mama"]], "inferida pelo modelo"
         r.update(mama=r["_mama"], densidade=d or "", densidade_origem=origem,
-                 aviso_densidade=texto_densidade(d) if d else "", versao_modelo=versao_modelo)
+                 aviso_densidade=texto_densidade(d) if d else "", versao_modelo=versao_modelo,
+                 calibracao=calibracao_usada)
         info = info_mama.get(r["_mama"], {})                     # idade/fabricante da planilha têm prioridade
         for c in ("idade", "fabricante"):
             if info.get(c):
@@ -945,6 +959,14 @@ def main():
         w.writerows(resultados)
 
     print(f"\n💾 Resultado salvo em: {saida}")
+    if not os.environ.get("MARIA_DASHBOARD"):            # pelo dashboard, quem registra é o próprio dashboard
+        try:
+            import auditoria  # noqa: E402
+            auditoria.registrar(None, "classificação (linha de comando)",
+                                {"pasta": str(pasta), "lesoes": len(resultados), "versao_modelo": versao_modelo,
+                                 "resultado": str(saida), "sha256_resultado": auditoria.sha256_arquivo(saida)})
+        except Exception as e:
+            print(f"⚠️  não consegui gravar a auditoria: {e}")
     print("\n" + "=" * 132)
     print(f"{'AMOSTRA':<28}{'PRIORIDADE':<14}{'P(CAL.)':<9}{'QUALIDADE':<11}{'ORIGEM DA LESÃO':<24}{'PATOLOGIA':<13}"
           f"{'ACHADO':<19}{'DENSIDADE'}")
