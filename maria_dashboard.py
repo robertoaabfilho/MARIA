@@ -84,15 +84,48 @@ EXT_IMG = {".png", ".jpg", ".jpeg", ".dcm"}
 SAIDAS = AQUI / "resultados"
 
 # planilha do médico: colunas na ordem em que aparecem, e nomes alternativos aceitos ao carregar um CSV
-COLUNAS_PLANILHA = ["mama", "densidade", "vista", "arquivo_completa", "arquivo_recorte", "lesao", "x0", "y0", "x1", "y1"]
+# (as colunas 1-14 aparecem no editor; "fabricante" e "lesao" são opcionais e ficam ocultas, mas são preservadas)
+COLUNAS_VISIVEIS = ["paciente", "idade", "arquivo_completa", "arquivo_recorte", "lado", "vista", "tipo_achado",
+                    "patologia", "caixa_esq", "caixa_topo", "caixa_dir", "caixa_base", "exame_confirmacao", "densidade"]
+COLUNAS_PLANILHA = COLUNAS_VISIVEIS + ["fabricante", "lesao"]
+CAIXA = ["caixa_esq", "caixa_topo", "caixa_dir", "caixa_base"]          # = x0, y0, x1, y1 (pixels da imagem original)
 SINONIMOS = {
-    "mama": ("mama", "amostra", "paciente", "caso", "id"),
-    "densidade": ("densidade", "densidade_mamaria", "densidade_birads", "acr"),
-    "vista": ("vista", "incidencia", "view"),
+    "paciente": ("paciente", "id_paciente", "patient_id", "mama", "amostra", "caso", "id"),
+    "idade": ("idade", "idade_anos", "age"),
     "arquivo_completa": ("arquivo_completa", "completa", "imagem_completa", "mamografia"),
     "arquivo_recorte": ("arquivo_recorte", "recorte", "imagem_recorte"),
+    "lado": ("lado", "lateralidade", "side", "left_or_right_breast"),
+    "vista": ("vista", "incidencia", "view", "image_view"),
+    "tipo_achado": ("tipo_achado", "tipo_de_achado", "achado", "abnormality_type"),
+    "patologia": ("patologia", "pathology", "pathology_classification/_follow_up"),
+    "caixa_esq": ("caixa_esq", "x0", "xmin"), "caixa_topo": ("caixa_topo", "y0", "ymin"),
+    "caixa_dir": ("caixa_dir", "x1", "xmax"), "caixa_base": ("caixa_base", "y1", "ymax"),
+    "exame_confirmacao": ("exame_confirmacao", "exame_de_confirmacao", "confirmacao"),
+    "densidade": ("densidade", "densidade_mamaria", "densidade_birads", "acr", "breast_density",
+                  "breast_density_(acr)"),
+    "fabricante": ("fabricante", "equipamento", "aparelho", "machine"),
     "lesao": ("lesao", "id_lesao"),
-    "x0": ("x0", "xmin"), "y0": ("y0", "ymin"), "x1": ("x1", "xmax"), "y1": ("y1", "ymax"),
+}
+OPCOES_LADO = ["direito", "esquerdo"]
+OPCOES_TIPO = ["massa", "calcificação", "assimetria", "distorção", "normal"]
+OPCOES_PATOLOGIA = ["maligno", "benigno", "normal"]
+OPCOES_EXAME = ["biópsia", "seguimento"]
+# valores aceitos ao carregar (sem acento, minúsculas) -> valor padrão
+VALORES = {
+    "lado": {**dict.fromkeys(("direito", "direita", "d", "dir", "r", "right"), "direito"),
+             **dict.fromkeys(("esquerdo", "esquerda", "e", "esq", "l", "left"), "esquerdo")},
+    "tipo_achado": {**dict.fromkeys(("massa", "nodulo", "massa/nodulo", "mass"), "massa"),
+                    **dict.fromkeys(("calcificacao", "calcificacoes", "microcalcificacao", "microcalcificacoes",
+                                     "calcification", "calcifications"), "calcificação"),
+                    **dict.fromkeys(("assimetria", "asymmetry"), "assimetria"),
+                    **dict.fromkeys(("distorcao", "distorcao_arquitetural", "distortion", "architectural_distortion"),
+                                    "distorção"),
+                    **dict.fromkeys(("normal", "sem_achado", "nenhum"), "normal")},
+    "patologia": {**dict.fromkeys(("maligno", "maligna", "malignant"), "maligno"),
+                  **dict.fromkeys(("benigno", "benigna", "benign", "benign_without_callback"), "benigno"),
+                  "normal": "normal"},
+    "exame_confirmacao": {**dict.fromkeys(("biopsia", "biopsy", "anatomopatologico", "histopatologico"), "biópsia"),
+                          **dict.fromkeys(("seguimento", "follow_up", "followup"), "seguimento")},
 }
 
 ORIGEM_RECORTE, ORIGEM_USUARIO, ORIGEM_MODELO, ORIGEM_NENHUMA = (
@@ -316,7 +349,7 @@ def _chave_coluna(nome):
 
 
 def planilha_vazia():
-    return pd.DataFrame({c: pd.Series(dtype="float" if c in ("x0", "y0", "x1", "y1") else "object")
+    return pd.DataFrame({c: pd.Series(dtype="float" if c in CAIXA + ["idade"] else "object")
                          for c in COLUNAS_PLANILHA})
 
 
@@ -327,14 +360,22 @@ def padronizar_planilha(df):
     for campo, nomes in SINONIMOS.items():
         col = next((n for n in nomes if n in df.columns), None)
         out[campo] = df[col] if col is not None else None
-    for c in ("x0", "y0", "x1", "y1"):
+    for c in CAIXA + ["idade"]:
         out[c] = pd.to_numeric(out[c].astype(str).str.replace(",", ".", regex=False), errors="coerce")
-    for c in ("mama", "densidade", "vista", "arquivo_completa", "arquivo_recorte", "lesao"):
+    for c in [c for c in COLUNAS_PLANILHA if c not in CAIXA + ["idade"]]:
         out[c] = out[c].astype("string").str.strip().replace({"nan": pd.NA, "": pd.NA}).astype("object")
         out[c] = out[c].where(out[c].notna(), None)
     out["densidade"] = out["densidade"].map(lambda v: str(v).upper().replace(".0", "") if v else None)
     out["vista"] = out["vista"].map(lambda v: str(v).upper() if v and str(v).upper() in ("CC", "MLO") else None)
+    for c, tabela in VALORES.items():                     # valores fora da lista ficam vazios
+        out[c] = out[c].map(lambda v, t=tabela: t.get(_chave_coluna(v)) if v else None)
     return out.reset_index(drop=True)
+
+
+def separar_lado(caso):
+    """'pacienteA_esq' -> ('pacienteA', 'esquerdo'); sem sufixo de lado -> (caso, None)."""
+    m = re.match(r"(.+?)[_-](esq|esquerd[oa]|e|l|left|dir|direit[oa]|d|r|right)$", caso, re.I)
+    return (m.group(1), VALORES["lado"][_chave_coluna(m.group(2))]) if m else (caso, None)
 
 
 def ler_planilha_bytes(dados: bytes):
@@ -350,13 +391,13 @@ def ler_planilha_bytes(dados: bytes):
 
 
 def gerar_planilha_da_pasta(pasta: Path):
-    """Rascunho da planilha a partir das imagens da pasta (uma linha por mama + vista)."""
+    """Rascunho da planilha a partir das imagens da pasta (uma linha por paciente + lado + vista)."""
     padrao_cbis = re.compile(r"P_(\d+)_(LEFT|RIGHT)_(CC|MLO)")
     linhas = {}
     for rel in listar_imagens(str(pasta)):
         f = pasta / rel
         nome = f.stem.lower()
-        tipo, mama, vista = None, None, None
+        tipo, paciente, lado, vista, idade = None, None, None, None, None
         if f.suffix.lower() == ".dcm":
             try:
                 import pydicom
@@ -367,19 +408,24 @@ def gerar_planilha_da_pasta(pasta: Path):
                 tipo = "recorte" if "crop" in desc else "completa"
                 cb = padrao_cbis.search(str(getattr(ds, "PatientID", "")))
                 if cb:
-                    mama, vista = f"P{cb[1]}_{cb[2]}", cb[3]
+                    paciente, lado, vista = f"P_{cb[1]}", VALORES["lado"][cb[2].lower()], cb[3]
                 else:
-                    mama = f"{getattr(ds, 'PatientID', f.stem)}_{getattr(ds, 'ImageLaterality', '')}".strip("_")
+                    paciente = str(getattr(ds, "PatientID", "") or f.stem)
+                    lat = str(getattr(ds, "ImageLaterality", "") or getattr(ds, "Laterality", "") or "").lower()
+                    lado = VALORES["lado"].get(lat)
                     vista = str(getattr(ds, "ViewPosition", "") or "").upper() or None
+                m_idade = re.match(r"(\d{2,3})Y", str(getattr(ds, "PatientAge", "") or ""))
+                idade = int(m_idade[1]) if m_idade else None
             except Exception:
                 continue
         else:
             m = re.match(r"(.+?)_(recorte|completa)(?:_(cc|mlo))?$", nome)
             if not m:
                 continue
-            mama, tipo, vista = f.stem[: len(m.group(1))], m.group(2), (m.group(3) or "").upper() or None
-        chave = (mama, vista)
-        lin = linhas.setdefault(chave, {"mama": mama, "vista": vista})
+            (paciente, lado), tipo, vista = separar_lado(f.stem[: len(m.group(1))]), m.group(2), \
+                (m.group(3) or "").upper() or None
+        chave = (paciente, lado, vista)
+        lin = linhas.setdefault(chave, {"paciente": paciente, "lado": lado, "vista": vista, "idade": idade})
         lin[f"arquivo_{tipo}"] = rel
     df = pd.DataFrame(list(linhas.values()))
     return padronizar_planilha(df) if len(df) else planilha_vazia()
@@ -403,6 +449,22 @@ def nova_planilha(df):
     """Troca a planilha-base do editor (o editor é recriado com uma chave nova)."""
     st.session_state.planilha_base = df
     st.session_state.planilha_versao = st.session_state.get("planilha_versao", 0) + 1
+
+
+def confirmacao_da_planilha(r):
+    """Linha do resultado com tipo/patologia/exame informados na planilha -> valores da revisão."""
+    tipo, pat, exame = (r.get("achado_informado"), r.get("patologia_informada"), r.get("exame_confirmacao"))
+    origem = r.get("origem_lesao")
+    normal = "normal" in (tipo, pat)
+    return {
+        # caixa numa imagem normal = falso positivo; caixa marcada pelo médico com achado = lesão real
+        "lesao_real": ("não" if normal and origem == ORIGEM_MODELO
+                       else "sim" if tipo and not normal and origem == ORIGEM_USUARIO else None),
+        "patologia_confirmada": {"maligno": "Maligno", "benigno": "Benigno"}.get(pat),
+        "achado_confirmado": {"massa": "Massa/Nódulo", "calcificação": "Microcalcificação"}.get(tipo),
+        "exame_confirmacao": {"biópsia": EXAMES_CONFIRMACAO[0], "seguimento": EXAMES_CONFIRMACAO[1]}.get(exame)
+                             if pat in ("maligno", "benigno") else None,
+    }
 
 
 def densidade_txt(v):
@@ -1269,7 +1331,7 @@ def pagina_executar():
                                    help="Separador vírgula ou ponto e vírgula; UTF-8 ou o padrão do Excel no Windows.")
             if st.button("Gerar a partir da pasta", icon=":material/auto_awesome:", disabled=not atual.is_dir(),
                          key="gerar_planilha",
-                         help="Cria um rascunho com uma linha por mama e vista, a partir dos arquivos da pasta."):
+                         help="Cria um rascunho com uma linha por paciente, lado e vista, a partir dos arquivos da pasta."):
                 nova_planilha(gerar_planilha_da_pasta(atual))
             if st.button("Limpar planilha", icon=":material/delete:", key="limpar_planilha"):
                 nova_planilha(planilha_vazia())
@@ -1287,32 +1349,50 @@ def pagina_executar():
         opcoes_arquivo = arquivos_pasta + extras
         planilha = st.data_editor(
             base, key=f"editor_planilha_{st.session_state.planilha_versao}", num_rows="dynamic", hide_index=True,
-            column_order=COLUNAS_PLANILHA,
+            column_order=COLUNAS_VISIVEIS,
             column_config={
-                "mama": st.column_config.TextColumn("mama", help="Id da mama (paciente + lado). Obrigatória.",
-                                                    required=True),
-                "densidade": st.column_config.SelectboxColumn("densidade", options=["1", "2", "3", "4", "A", "B", "C", "D"],
-                                                              help="Densidade BI-RADS do laudo (1-4 ou A-D)."),
-                "vista": st.column_config.SelectboxColumn("vista", options=["CC", "MLO"]),
+                "paciente": st.column_config.TextColumn("paciente", help="ID do paciente (ex.: P_00001). Obrigatória.",
+                                                        required=True),
+                "idade": st.column_config.NumberColumn("idade", min_value=0, max_value=120, step=1, format="%d",
+                                                       help="Idade em anos (se vazia, usa a do DICOM)."),
                 "arquivo_completa": st.column_config.SelectboxColumn(
                     "arquivo da mamografia completa", options=opcoes_arquivo, width="large"),
                 "arquivo_recorte": st.column_config.SelectboxColumn(
                     "arquivo do recorte", options=opcoes_arquivo, width="large"),
-                "lesao": st.column_config.TextColumn("lesão", help="Id da lesão, quando a mama tem mais de uma."),
-                **{c: st.column_config.NumberColumn(c, min_value=0, step=1, format="%d",
-                                                    help="Caixa da lesão marcada pelo médico (pixels da imagem original).")
-                   for c in ("x0", "y0", "x1", "y1")},
+                "lado": st.column_config.SelectboxColumn("lado", options=OPCOES_LADO),
+                "vista": st.column_config.SelectboxColumn("vista", options=["CC", "MLO"]),
+                "tipo_achado": st.column_config.SelectboxColumn(
+                    "tipo de achado", options=OPCOES_TIPO,
+                    help="Os recortes CC e MLO da mesma mama e do mesmo tipo são analisados juntos quando há "
+                         "um só de cada vista."),
+                "patologia": st.column_config.SelectboxColumn(
+                    "patologia", options=OPCOES_PATOLOGIA, help="Resultado confirmado (se houver)."),
+                "caixa_esq": st.column_config.NumberColumn("caixa esq.", min_value=0, step=1, format="%d",
+                                                           help="Borda ESQUERDA da caixa da lesão (pixels da imagem)."),
+                "caixa_topo": st.column_config.NumberColumn("caixa topo", min_value=0, step=1, format="%d",
+                                                            help="Borda de CIMA da caixa da lesão (pixels)."),
+                "caixa_dir": st.column_config.NumberColumn("caixa dir.", min_value=0, step=1, format="%d",
+                                                           help="Borda DIREITA da caixa da lesão (pixels)."),
+                "caixa_base": st.column_config.NumberColumn("caixa base", min_value=0, step=1, format="%d",
+                                                            help="Borda de BAIXO da caixa da lesão (pixels)."),
+                "exame_confirmacao": st.column_config.SelectboxColumn(
+                    "exame de confirmação", options=OPCOES_EXAME,
+                    help="Biópsia, ou seguimento com estabilidade por ≥ 2 anos."),
+                "densidade": st.column_config.SelectboxColumn("densidade", options=["1", "2", "3", "4", "A", "B", "C", "D"],
+                                                              help="Densidade BI-RADS do laudo (1-4 ou A-D). "
+                                                                   "Vazia = o modelo estima."),
             },
             alt="Planilha do médico, editável",
         )
-        planilha_valida = planilha[planilha["mama"].notna() & (planilha["mama"].astype(str).str.strip() != "")]
+        planilha_valida = planilha[planilha["paciente"].notna() & (planilha["paciente"].astype(str).str.strip() != "")]
         nomes_pasta = {Path(a).name.lower() for a in arquivos_pasta}
         faltando = [v for c in ("arquivo_completa", "arquivo_recorte") for v in planilha_valida[c].dropna()
                     if v not in arquivos_pasta and Path(str(v).replace("\\", "/")).name.lower() not in nomes_pasta]
         with st.container(horizontal=True, vertical_alignment="center"):
             st.caption(f"{len(planilha_valida)} linha(s) válida(s) · "
                        f"{int(planilha_valida['densidade'].notna().sum())} com densidade · "
-                       f"{int(planilha_valida[['x0', 'y0', 'x1', 'y1']].notna().all(axis=1).sum())} lesão(ões) marcada(s)")
+                       f"{int(planilha_valida[CAIXA].notna().all(axis=1).sum())} lesão(ões) marcada(s) · "
+                       f"{int(planilha_valida['patologia'].notna().sum())} com patologia")
             st.download_button("Baixar planilha editada", csv_excel(planilha_valida),
                                file_name="planilha_medico.csv", mime="text/csv", icon=":material/download:",
                                disabled=planilha_valida.empty)
@@ -1349,12 +1429,13 @@ def pagina_executar():
                     camadas = fundo.add_params(sel)
                     marcadas = st.session_state.planilha_base
                     marcadas = marcadas[(marcadas["arquivo_completa"] == arq_marcar)
-                                        & marcadas[["x0", "y0", "x1", "y1"]].notna().all(axis=1)]
+                                        & marcadas[CAIXA].notna().all(axis=1)]
                     if len(marcadas):
-                        camadas = camadas + alt.Chart(marcadas.assign(rotulo="lesão " + marcadas["lesao"].fillna("?")
+                        camadas = camadas + alt.Chart(marcadas.assign(rotulo=marcadas["tipo_achado"].fillna("lesão")
                                                                       .astype(str))).mark_rect(
                             fill=None, stroke="#2e7d32", strokeWidth=2).encode(
-                            x=alt.X("x0:Q", scale=esc_x), x2="x1:Q", y=alt.Y("y0:Q", scale=esc_y), y2="y1:Q",
+                            x=alt.X("caixa_esq:Q", scale=esc_x), x2="caixa_dir:Q", y=alt.Y("caixa_topo:Q", scale=esc_y),
+                            y2="caixa_base:Q",
                             tooltip=["rotulo:N"])
                     evento = st.altair_chart(camadas.properties(width=w_tela, height=h_tela), on_select="rerun",
                                              key=f"marcacao_{arq_marcar}", width="content",
@@ -1369,20 +1450,31 @@ def pagina_executar():
                                    icon=":material/crop_free:")
                         linha_arq = st.session_state.planilha_base
                         linha_arq = linha_arq[linha_arq["arquivo_completa"] == arq_marcar]
-                        mama_pad = (linha_arq["mama"].dropna().iloc[0] if len(linha_arq) and linha_arq["mama"].notna().any()
-                                    else re.sub(r"_(completa|cc|mlo).*$", "", Path(arq_marcar).stem, flags=re.I))
-                        vista_pad = re.search(r"(?:^|[^a-z])(cc|mlo)(?:[^a-z]|$)", Path(arq_marcar).stem.lower())
+                        def da_linha(c):
+                            return linha_arq[c].dropna().iloc[0] if len(linha_arq) and linha_arq[c].notna().any() else None
+                        stem = Path(arq_marcar).stem
+                        pac_nome, lado_nome = separar_lado(re.sub(r"[_-](completa|cc|mlo)([_-].*)?$", "", stem, flags=re.I))
+                        cbis_nome = re.search(r"P_(\d+)_(LEFT|RIGHT)", stem, re.I)
+                        if cbis_nome:
+                            pac_nome, lado_nome = f"P_{cbis_nome[1]}", VALORES["lado"][cbis_nome[2].lower()]
+                        vista_pad = re.search(r"(?:^|[^a-z])(cc|mlo)(?:[^a-z]|$)", stem.lower())
                         with st.container(horizontal=True, vertical_alignment="bottom"):
-                            mama_m = st.text_input("Mama", value=mama_pad, key="mama_marcacao")
+                            pac_m = st.text_input("Paciente", value=da_linha("paciente") or pac_nome, key="paciente_marcacao")
+                            lado_m = st.segmented_control("Lado", OPCOES_LADO, key="lado_marcacao",
+                                                          default=da_linha("lado") or lado_nome)
                             vista_m = st.segmented_control("Vista", ["CC", "MLO"], key="vista_marcacao",
-                                                           default=vista_pad.group(1).upper() if vista_pad else None)
-                            lesao_m = st.text_input("Lesão", value=str(len(marcadas) + 1), key="lesao_marcacao")
+                                                           default=da_linha("vista") or (vista_pad.group(1).upper()
+                                                                                         if vista_pad else None))
+                            tipo_m = st.selectbox("Tipo de achado", OPCOES_TIPO[:-1], index=None, key="tipo_marcacao",
+                                                  placeholder="escolha…")
                             if st.button("Adicionar à planilha", type="primary", icon=":material/add_box:",
                                          key="adicionar_marcacao", disabled=(x1 - x0) < 5 or (y1 - y0) < 5):
                                 nova = {c: None for c in COLUNAS_PLANILHA}
-                                nova.update({"mama": mama_m.strip(), "vista": vista_m, "arquivo_completa": arq_marcar,
-                                             "lesao": lesao_m.strip() or None, "x0": float(x0), "y0": float(y0),
-                                             "x1": float(x1), "y1": float(y1)})
+                                nova.update({"paciente": pac_m.strip(), "lado": lado_m, "vista": vista_m,
+                                             "arquivo_completa": arq_marcar, "tipo_achado": tipo_m,
+                                             "idade": da_linha("idade"), "densidade": da_linha("densidade"),
+                                             "caixa_esq": float(x0), "caixa_topo": float(y0),
+                                             "caixa_dir": float(x1), "caixa_base": float(y1)})
                                 nova_planilha(pd.concat([st.session_state.planilha_base, pd.DataFrame([nova])],
                                                         ignore_index=True))
                                 registrar("lesão marcada na tela", {"arquivo": Path(arq_marcar).name,
@@ -1752,13 +1844,14 @@ def pagina_executar():
             for c in ("mama", "vista", "origem_lesao", "imagens_usadas", "imagem", "x0", "y0", "x1", "y1", "score_deteccao",
                       "densidade", "densidade_origem", "aviso_densidade", "concordancia", "prioridade",
                       "p_maligno_calibrada", "incerteza", "qualidade", "avisos_qualidade", "idade", "fabricante",
-                      "mapa_calor", "versao_modelo"):
+                      "mapa_calor", "versao_modelo", "achado_informado", "patologia_informada", "exame_confirmacao"):
                 if c not in tab:
                     tab[c] = np.nan
             # colunas de texto sempre como texto (uma coluna toda vazia seria lida como número)
             for c in ("amostra", "mama", "vista", "origem_lesao", "imagens_usadas", "patologia", "achado",
                       "densidade_origem", "aviso_densidade", "concordancia", "imagem", "prioridade", "qualidade",
-                      "avisos_qualidade", "fabricante", "mapa_calor", "versao_modelo"):
+                      "avisos_qualidade", "fabricante", "mapa_calor", "versao_modelo", "achado_informado",
+                      "patologia_informada", "exame_confirmacao"):
                 tab[c] = tab[c].astype("object").where(tab[c].notna(), None)
             tab["densidade"] = pd.to_numeric(tab["densidade"], errors="coerce").astype("Int64")
             tab["densidade_txt"] = tab["densidade"].map(densidade_txt)
@@ -1851,6 +1944,13 @@ def pagina_executar():
             for c in CAMPOS_REVISAO:
                 rev[c] = [anteriores.at[ps, c] if (ps := anonimizacao.pseudonimizar(a, "LES")) in anteriores.index
                           and anteriores.at[ps, c] else None for a in rev["amostra"]]
+            # sem revisão salva: pré-preenche com o que a planilha informou (patologia, achado, exame)
+            for i, r in tab.iterrows():
+                if anonimizacao.pseudonimizar(r["amostra"], "LES") in anteriores.index:
+                    continue
+                for c, v in confirmacao_da_planilha(r).items():
+                    if v and not rev.at[i, c]:
+                        rev.at[i, c] = v
             revisado = st.data_editor(
                 rev, key=f"revisao_{res['carimbo']}", hide_index=True, num_rows="fixed",
                 column_order=["amostra", "mama", "vista", "origem_lesao", "patologia", "achado", "densidade", *CAMPOS_REVISAO],

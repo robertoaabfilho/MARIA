@@ -4,8 +4,9 @@ Casos reais de bases públicas (CBIS-DDSM e CDD-CESM), de pacientes que os model
 
 1_dicom_filme_cbis/   DICOM de mamografia em FILME digitalizado (CBIS-DDSM)
 2_png_digital_cdd/    PNG de mamografia DIGITAL (CDD-CESM)
-planilha_medico.csv   planilha do médico: densidade do laudo (só de algumas mamas, as outras o modelo
-                      infere), os arquivos de cada mama e 5 lesões marcadas pelo médico (caixas x0,y0,x1,y1)
+planilha_medico.csv   planilha do médico: paciente, lado, vista, arquivos, tipo de achado, patologia confirmada,
+                      exame de confirmação, densidade do laudo (só de algumas mamas, as outras o modelo
+                      infere) e 5 lesões marcadas pelo médico (caixa_esq, caixa_topo, caixa_dir, caixa_base)
 gabarito.csv          o diagnóstico verdadeiro de cada caso, para conferir o resultado
 
 COMO RODAR:
@@ -20,8 +21,9 @@ NOMES DOS ARQUIVOS PNG/JPG (DICOM é reconhecido pelos metadados, o nome não im
     <caso>_recorte_cc.png  / <caso>_recorte_mlo.png    recorte da lesão (classificado direto)
     Mesmo <caso> = mesma mama.
 
-FORMATO DA PLANILHA: veja COMO_USAR.txt (pasta principal). Colunas: mama, densidade, vista, arquivo_completa,
-    arquivo_recorte, lesao, x0, y0, x1, y1 — só "mama" é obrigatória.
+FORMATO DA PLANILHA: veja COMO_USAR.txt, seção 9 (pasta principal). Colunas: paciente, idade, arquivo_completa,
+    arquivo_recorte, lado, vista, tipo_achado, patologia, caixa_esq, caixa_topo, caixa_dir, caixa_base,
+    exame_confirmacao, densidade — só "paciente" é obrigatória.
     As caixas da planilha de exemplo são as marcações reais das bases (CBIS-DDSM e CDD-CESM). Compare, no dashboard,
     as lesões marcadas pelo médico com as detectadas pelo modelo (gráfico "usuário × modelo").
 

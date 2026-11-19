@@ -232,17 +232,41 @@ def texto_densidade(d):
 
 ACR = {"A": 1, "B": 2, "C": 3, "D": 4, "1": 1, "2": 2, "3": 3, "4": 4}
 # nomes de coluna aceitos na planilha do usuário (sem acento, minúsculas; espaços viram "_")
+# Formato padrão (colunas 1-14): paciente; idade; arquivo_completa; arquivo_recorte; lado; vista; tipo_achado;
+# patologia; caixa_esq; caixa_topo; caixa_dir; caixa_base; exame_confirmacao; densidade.
+# Também aceita os nomes das bases CBIS-DDSM/CDD-CESM e o formato antigo (mama, lesao, x0..y1).
 SINONIMOS = {
-    "mama": ("mama", "amostra", "paciente", "caso", "id"),
-    "densidade": ("densidade", "densidade_mamaria", "densidade_birads", "acr"),
-    "vista": ("vista", "incidencia", "view"),
+    "paciente": ("paciente", "id_paciente", "patient_id", "mama", "amostra", "caso", "id"),
+    "idade": ("idade", "idade_anos", "age"),
     "arquivo_completa": ("arquivo_completa", "completa", "imagem_completa", "mamografia"),
     "arquivo_recorte": ("arquivo_recorte", "recorte", "imagem_recorte"),
-    "lesao": ("lesao", "id_lesao"),
-    "idade": ("idade", "idade_anos"),
-    "fabricante": ("fabricante", "equipamento", "aparelho"),
-    "x0": ("x0", "xmin"), "y0": ("y0", "ymin"), "x1": ("x1", "xmax"), "y1": ("y1", "ymax"),
+    "lado": ("lado", "lateralidade", "side", "left_or_right_breast"),
+    "vista": ("vista", "incidencia", "view", "image_view"),
+    "tipo_achado": ("tipo_achado", "tipo_de_achado", "achado", "abnormality_type"),
+    "patologia": ("patologia", "pathology", "pathology_classification/_follow_up"),
+    "x0": ("caixa_esq", "x0", "xmin"), "y0": ("caixa_topo", "y0", "ymin"),
+    "x1": ("caixa_dir", "x1", "xmax"), "y1": ("caixa_base", "y1", "ymax"),
+    "exame_confirmacao": ("exame_confirmacao", "exame_de_confirmacao", "confirmacao"),
+    "densidade": ("densidade", "densidade_mamaria", "densidade_birads", "acr", "breast_density",
+                  "breast_density_(acr)"),
+    "fabricante": ("fabricante", "equipamento", "aparelho", "machine"),
+    "lesao": ("lesao", "id_lesao"),                      # opcional: força o pareamento CC <-> MLO
 }
+# valores aceitos (sem acento, minúsculas) -> valor padrão
+LADOS = {**dict.fromkeys(("direito", "direita", "d", "dir", "r", "right"), "direito"),
+         **dict.fromkeys(("esquerdo", "esquerda", "e", "esq", "l", "left"), "esquerdo")}
+TIPOS_ACHADO = {**dict.fromkeys(("massa", "nodulo", "massa/nodulo", "mass"), "massa"),
+                **dict.fromkeys(("calcificacao", "calcificacoes", "microcalcificacao", "microcalcificacoes",
+                                 "calcification", "calcifications"), "calcificação"),
+                **dict.fromkeys(("assimetria", "asymmetry"), "assimetria"),
+                **dict.fromkeys(("distorcao", "distorcao_arquitetural", "distortion", "architectural_distortion"),
+                                "distorção"),
+                **dict.fromkeys(("normal", "sem_achado", "nenhum"), "normal")}
+PATOLOGIAS = {**dict.fromkeys(("maligno", "maligna", "malignant"), "maligno"),
+              **dict.fromkeys(("benigno", "benigna", "benign", "benign_without_callback"), "benigno"),
+              **dict.fromkeys(("normal",), "normal")}
+EXAMES = {**dict.fromkeys(("biopsia", "biopsy", "anatomopatologico", "histopatologico"), "biópsia"),
+          **dict.fromkeys(("seguimento", "follow_up", "followup"), "seguimento")}
 
 
 def _chave_coluna(nome):
@@ -253,11 +277,22 @@ def _chave_coluna(nome):
     return nome
 
 
+def _valor_padrao(texto, tabela, campo, n):
+    if not texto:
+        return ""
+    chave = _chave_coluna(texto)
+    if chave not in tabela:
+        print(f"⚠️  planilha, linha {n}: {campo} '{texto}' não reconhecido(a), ignorado(a)")
+        return ""
+    return tabela[chave]
+
+
 def ler_planilha(caminho):
     """Planilha do usuário (CSV, separador "," ou ";", UTF-8 ou Windows/cp1252) -> lista de linhas.
-    Cada linha descreve uma mama e, opcionalmente: densidade (1-4 ou A-D), vista (CC/MLO), o arquivo da
-    mamografia completa, o arquivo do recorte da lesão e a caixa da lesão marcada pelo médico na completa
-    (x0, y0, x1, y1 em pixels da imagem original). Também aceita o formato antigo "amostra,densidade"."""
+    Uma linha por imagem e achado: paciente, idade, arquivos da mamografia completa e do recorte, lado, vista,
+    tipo de achado, patologia, caixa da lesão (caixa_esq, caixa_topo, caixa_dir, caixa_base, em pixels da
+    imagem original), exame de confirmação e densidade. Todas opcionais, menos o paciente.
+    "mama" (id interno) = paciente + lado."""
     bruto = Path(caminho).read_bytes()
     for cod in ("utf-8-sig", "cp1252"):
         try:
@@ -271,9 +306,14 @@ def ler_planilha(caminho):
     for n, bruta in enumerate(csv.DictReader(io.StringIO(texto), delimiter=sep), 2):
         b = {_chave_coluna(k): (v or "").strip() for k, v in bruta.items() if k is not None}
         l = {campo: next((b[c] for c in nomes if b.get(c)), "") for campo, nomes in SINONIMOS.items()}
-        if not l["mama"]:
+        if not l["paciente"]:
             continue
         l["linha"] = n
+        l["lado"] = _valor_padrao(l["lado"], LADOS, "lado", n)
+        l["tipo_achado"] = _valor_padrao(l["tipo_achado"], TIPOS_ACHADO, "tipo de achado", n)
+        l["patologia"] = _valor_padrao(l["patologia"], PATOLOGIAS, "patologia", n)
+        l["exame_confirmacao"] = _valor_padrao(l["exame_confirmacao"], EXAMES, "exame de confirmação", n)
+        l["mama"] = f"{l['paciente']}_{l['lado']}" if l["lado"] else l["paciente"]
         l["densidade"] = ACR.get(l["densidade"].upper())
         l["vista"] = l["vista"].upper() if l["vista"].upper() in ("CC", "MLO") else ""
         try:
@@ -374,8 +414,11 @@ def montar_amostras(pasta, planilha=None):
       recortes        = {amostra_id: {vista: {"caminho", "area"}}}
       completas       = {imagem_id: {"caminho", "area"}}   (mamografias inteiras: detecção e densidade)
       mama_de         = {amostra_id ou imagem_id: id da mama (paciente + lado)}
-      caixas_usuario  = {imagem_id: [((x0, y0, x1, y1), lesao), ...]}   (lesões marcadas pelo médico)
+      caixas_usuario  = {imagem_id: [((x0, y0, x1, y1), rótulo), ...]}   (lesões marcadas pelo médico)
       dens_informada  = {id da mama ou amostra: densidade 1-4}
+      informado       = {"amostra": {id: {...}}, "imagem": {imagem_id: {...}}}  (tipo, patologia e exame da planilha)
+    Pareamento CC <-> MLO (análise multivista): recortes da mesma mama e do mesmo tipo de achado são juntados
+    só quando há exatamente UM na CC e UM na MLO (ou quando a coluna "lesao" informa o par).
     Arquivos citados na planilha seguem a planilha; os demais seguem as regras automáticas
     (DICOM pelos metadados, PNG/JPG pelo sufixo do nome)."""
     arquivos = [p for p in pasta.rglob("*") if p.is_file()]
@@ -387,6 +430,7 @@ def montar_amostras(pasta, planilha=None):
     print(f"📂 {len(dicoms)} DICOM candidato(s) e {len(imagens)} PNG/JPG em: {pasta}")
 
     recortes, completas, mama_de, caixas_usuario, dens_informada = {}, {}, {}, {}, {}
+    informado = {"amostra": {}, "imagem": {}}
     PRIORIDADE = 10 ** 15   # o que vem da planilha vence o que as regras automáticas acharem
 
     def guardar(amostra, vista, caminho, area, mama=None):
@@ -433,8 +477,31 @@ def montar_amostras(pasta, planilha=None):
                 id_arq[chave], arq_id[ident] = ident, chave
             return id_arq[chave]
 
+        # id de cada recorte: pareado (CC + MLO) ou sozinho
+        grupos = {}
+        for i, l in enumerate(planilha):
+            if l["arquivo_recorte"] and not l["lesao"]:
+                grupos.setdefault((l["mama"], l["tipo_achado"]), []).append(i)
+        id_recorte, usados = {}, set()
+        for (mama, tipo), idx in grupos.items():
+            base = f"{mama}_{_chave_coluna(tipo) or 'lesao'}"
+            vistas = sorted(planilha[i]["vista"] for i in idx)
+            if vistas == ["CC", "MLO"]:
+                for i in idx:
+                    id_recorte[i] = base
+            else:
+                for i in idx:
+                    cand = f"{base}_{planilha[i]['vista'].lower() or 'sem_vista'}"
+                    k = 2
+                    while cand in usados:
+                        cand, k = f"{base}_{planilha[i]['vista'].lower() or 'sem_vista'}{k}", k + 1
+                    usados.add(cand)
+                    id_recorte[i] = cand
+        info_de = lambda l: {"achado_informado": l["tipo_achado"], "patologia_informada": l["patologia"],  # noqa: E731
+                             "exame_confirmacao": l["exame_confirmacao"]}
+
         faltando = []
-        for l in planilha:
+        for i, l in enumerate(planilha):
             mama = l["mama"]
             if l["densidade"]:
                 dens_informada[mama] = l["densidade"]
@@ -448,13 +515,25 @@ def montar_amostras(pasta, planilha=None):
                 img_id = id_completa(mama, completa)
                 guardar(img_id, "COMPLETA", str(completa), PRIORIDADE, mama)
                 if l["caixa"]:
-                    caixas_usuario.setdefault(img_id, []).append((l["caixa"], l["lesao"]))
+                    ja = [r for _, r in caixas_usuario.get(img_id, [])]
+                    rotulo = l["lesao"] or _chave_coluna(l["tipo_achado"]) or "lesao"
+                    if rotulo in ja:
+                        rotulo = f"{rotulo}{sum(r.rstrip('0123456789') == rotulo for r in ja) + 1}"
+                    caixas_usuario.setdefault(img_id, []).append((l["caixa"], rotulo))
+                    informado["amostra"][id_usuario(img_id, rotulo)] = info_de(l)
+                elif l["tipo_achado"] == "normal" or l["patologia"] == "normal":
+                    informado["imagem"][img_id] = info_de(l)
             elif l["caixa"]:
                 print(f"⚠️  planilha, linha {l['linha']}: caixa sem arquivo_completa, ignorada")
             if recorte is not None:
                 citados.add(recorte.resolve())
                 vista = l["vista"] or vista_do_nome(recorte) or "SEM_VISTA"
-                guardar(f"{mama}_{l['lesao']}" if l["lesao"] else mama, vista, str(recorte), PRIORIDADE, mama)
+                amostra = f"{mama}_{l['lesao']}" if l["lesao"] else id_recorte[i]
+                guardar(amostra, vista, str(recorte), PRIORIDADE, mama)
+                anterior = informado["amostra"].get(amostra)
+                if anterior and any(anterior[k] and info_de(l)[k] and anterior[k] != info_de(l)[k] for k in anterior):
+                    print(f"⚠️  planilha, linha {l['linha']}: CC e MLO de {amostra} com tipo/patologia diferentes")
+                informado["amostra"][amostra] = {k: (anterior or {}).get(k) or v for k, v in info_de(l).items()}
         if faltando:
             print("⚠️  arquivo(s) da planilha não encontrado(s) na pasta:")
             for f in faltando:
@@ -477,6 +556,10 @@ def montar_amostras(pasta, planilha=None):
         for i, m in enumerate(grupo):
             m["tipo"] = "completa" if i == 0 else "recorte"
 
+    recortes_cbis = {}                      # mama -> vista -> [recortes]  (pareamento abaixo)
+    for m in metadados:
+        if m["tipo"] == "recorte" and (cbis := PADRAO_CBIS.search(m["patient_id"])):
+            recortes_cbis.setdefault(f"P{cbis[1]}_{cbis[2]}", {}).setdefault(cbis[3], []).append(m)
     for m in metadados:
         if m["tipo"] == "mascara":
             continue
@@ -486,7 +569,12 @@ def montar_amostras(pasta, planilha=None):
             guardar(f"{mama}_{cbis[3] if cbis else m['vista']}", "COMPLETA", m["caminho"], m["area"], mama)
         elif cbis:
             num, lado, vista, lesao = cbis.groups()
-            guardar(f"P{num}_{lado}_{lesao or '0'}", vista, m["caminho"], m["area"], f"P{num}_{lado}")
+            # o número da anotação no CBIS ("abnormality id") NÃO identifica a mesma lesão nas duas vistas:
+            # só junta CC + MLO quando a mama tem um único recorte em cada vista
+            por_vista = recortes_cbis[f"P{num}_{lado}"]
+            par = sorted(por_vista) == ["CC", "MLO"] and all(len(v) == 1 for v in por_vista.values())
+            amostra = f"P{num}_{lado}_1" if par else f"P{num}_{lado}_{vista.lower()}{lesao or ''}"
+            guardar(amostra, vista, m["caminho"], m["area"], f"P{num}_{lado}")
         else:
             guardar(f"{m['patient_id']}_{m['lado']}", m["vista"], m["caminho"], m["area"])
 
@@ -511,7 +599,13 @@ def montar_amostras(pasta, planilha=None):
               "_recorte_mlo, _recorte, _completa_cc, _completa_mlo ou _completa:")
         for nome in ignorados_png:
             print(f"    - {nome}")
-    return recortes, completas, mama_de, caixas_usuario, dens_informada
+    return recortes, completas, mama_de, caixas_usuario, dens_informada, informado
+
+
+def id_usuario(imagem_id, rotulo):
+    """Id da lesão marcada pelo usuário numa mamografia completa."""
+    rotulo = str(rotulo)
+    return f"{imagem_id}_usuario{rotulo}" if rotulo.isdigit() else f"{imagem_id}_usuario_{rotulo}"
 
 
 # =============================================================================
@@ -789,7 +883,7 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
         else:
             conc = ("o modelo também detectou" if any(coincide(m[:4], cx) for m in do_modelo)
                     else "o modelo NÃO detectou")
-        amostra = f"{imagem_id}_usuario{lesao or n}"
+        amostra = id_usuario(imagem_id, lesao or n)
         p, a, av, mp = classificar(*cx, amostra)
         linhas.append(resultado(amostra, ORIGEM_USUARIO, f"mamografia completa ({nome_img})",
                                 p, a, limiar, avisos=av, mapas=mp, meta=meta, imagem=caminho, x0=round(cx[0]),
@@ -827,7 +921,7 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
 CAMPOS_SAIDA = ["amostra", "mama", "vista", "prioridade", "p_maligno_calibrada", "incerteza", "qualidade",
                 "avisos_qualidade", "origem_lesao", "imagens_usadas", "patologia", "conf_patologia", "p_maligno",
                 "achado", "conf_achado", "densidade", "densidade_origem", "aviso_densidade", "concordancia",
-                "score_deteccao", "idade", "fabricante", "mapa_calor", "versao_modelo", "calibracao", "imagem", "x0", "y0", "x1", "y1"]
+                "score_deteccao", "achado_informado", "patologia_informada", "exame_confirmacao", "idade", "fabricante", "mapa_calor", "versao_modelo", "calibracao", "imagem", "x0", "y0", "x1", "y1"]
 
 
 def main():
@@ -888,7 +982,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🖥️  Dispositivo: {device}")
-    recortes, completas, mama_de, caixas_usuario, dens_informada = montar_amostras(pasta, planilha)
+    recortes, completas, mama_de, caixas_usuario, dens_informada, informado = montar_amostras(pasta, planilha)
     info_mama = {}
     for linha in planilha or []:
         for c in ("idade", "fabricante"):
@@ -946,6 +1040,7 @@ def main():
         r.update(mama=r["_mama"], densidade=d or "", densidade_origem=origem,
                  aviso_densidade=texto_densidade(d) if d else "", versao_modelo=versao_modelo,
                  calibracao=calibracao_usada)
+        r.update(informado["amostra"].get(r["amostra"]) or informado["imagem"].get(r.get("_imagem")) or {})
         info = info_mama.get(r["_mama"], {})                     # idade/fabricante da planilha têm prioridade
         for c in ("idade", "fabricante"):
             if info.get(c):

@@ -25,6 +25,14 @@ def funcoes_do_dashboard(*nomes):
     import numpy as np, pandas as pd, re, io
     src = (RAIZ / "maria_dashboard.py").read_text(encoding="utf-8")
     ns = {"np": np, "pd": pd, "re": re, "io": io}
+    for no in ast.parse(src).body:          # constantes do módulo (NOMES_EM_MAIUSCULAS) que as funções usam
+        if isinstance(no, ast.Assign) and all(isinstance(t, (ast.Name, ast.Tuple)) for t in no.targets):
+            alvos = [n.id for t in no.targets for n in ast.walk(t) if isinstance(n, ast.Name)]
+            if alvos and all(a.isupper() for a in alvos):
+                try:
+                    exec(compile(ast.Module([no], []), "dashboard", "exec"), ns)
+                except Exception:
+                    pass
     for no in ast.parse(src).body:
         if isinstance(no, ast.FunctionDef) and no.name in nomes:
             exec(compile(ast.Module([no], []), "dashboard", "exec"), ns)

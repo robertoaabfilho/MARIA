@@ -175,8 +175,8 @@
       Use "Pasta acima" e a lista "Subpastas" para navegar. O MARIA procura também nas subpastas.
    b) Planilha do médico (opcional, veja a seção 9):
         - "Carregar planilha (CSV)": abre um CSV feito no Excel ou em outro programa.
-        - "Gerar a partir da pasta": cria um rascunho com uma linha por mama e vista, a partir dos
-          arquivos da pasta. Depois é só completar a densidade e as lesões.
+        - "Gerar a partir da pasta": cria um rascunho com uma linha por paciente, lado e vista, a
+          partir dos arquivos da pasta. Depois é só completar tipo de achado, patologia, densidade etc.
         - A tabela é EDITÁVEL: clique na célula para mudar; "+" no fim da tabela adiciona linha;
           selecione a linha e use a lixeira para apagar. Densidade, vista e arquivos são listas de
           escolha (os arquivos listados são os da pasta escolhida).
@@ -184,7 +184,8 @@
         - "Limpar planilha": começa do zero.
       Abaixo da tabela aparecem quantas linhas são válidas e avisos de arquivos que não estão na pasta.
    c) Marcar lesões na imagem (opcional): abra "Marcar lesões na imagem", escolha a mamografia completa,
-      ARRASTE O MOUSE sobre a lesão para desenhar a caixa, confira mama/vista/lesão e clique em
+      ARRASTE O MOUSE sobre a lesão para desenhar a caixa, confira paciente/lado/vista, escolha o
+      tipo de achado e clique em
       "Adicionar à planilha". As caixas já marcadas aparecem em verde.
    d) Clique em "Classificar". O andamento aparece na tela. No fim, vá para a aba 2.
 
@@ -315,8 +316,8 @@
 ===============================================================================================
  9. COMO PREENCHER A PLANILHA DO MÉDICO (CSV)
 ===============================================================================================
- A planilha é OPCIONAL. Serve para informar o que o médico já sabe (densidade do laudo, lesões
- marcadas) e para dizer quais arquivos são de quem quando os nomes não seguem o padrão da seção 8.
+ A planilha é OPCIONAL. Serve para informar o que o médico já sabe (idade, densidade do laudo,
+ lesões marcadas, tipo de achado, patologia confirmada) e para dizer quais arquivos são de quem quando os nomes não seguem o padrão da seção 8.
  Pode ser feita no Excel, no próprio dashboard (seção 6) ou em qualquer editor de texto.
 
  FORMATO DO ARQUIVO
@@ -327,65 +328,75 @@
      cabeçalho não importam ("Lesão" = "lesao").
    - Números decimais podem usar vírgula ou ponto (ex.: 300,5 ou 300.5).
 
- COLUNAS (só "mama" é obrigatória; as outras podem ficar em branco)
-   mama ............. Identificador da MAMA (paciente + lado), ex.: P0001_ESQ, maria_silva_esq.
-                      Todas as linhas com a mesma "mama" são da mesma mama.
-   densidade ........ Densidade do laudo: 1, 2, 3, 4 ou A, B, C, D (A=1 ... D=4). Basta preencher
-                      em UMA das linhas da mama. Tem prioridade sobre a densidade inferida.
-   vista ............ CC ou MLO (vista da imagem daquela linha).
-   arquivo_completa . Nome do arquivo da mamografia completa (ex.: exame123.dcm). Pode ser só o nome
-                      (o MARIA procura na pasta e nas subpastas) ou o caminho a partir da pasta
-                      escolhida (ex.: paciente1/exame123.dcm). Se houver dois arquivos com o mesmo
-                      nome em subpastas diferentes, use o caminho.
-   arquivo_recorte .. Nome do arquivo do recorte da lesão, quando houver.
-   idade ............ Idade da paciente (anos). Opcional; tem prioridade sobre a idade do DICOM.
-   fabricante ....... Fabricante/modelo do equipamento. Opcional; tem prioridade sobre o do DICOM.
-   lesao ............ Número ou nome da lesão (1, 2, ...). Use quando a mesma mama tem mais de uma
-                      lesão: os recortes com o mesmo número de lesão (CC e MLO) são combinados.
-   x0, y0, x1, y1 ... CAIXA da lesão marcada pelo médico na mamografia completa, em pixels da
-                      imagem ORIGINAL: (x0, y0) = canto superior esquerdo da lesão e (x1, y1) =
-                      canto inferior direito. O ponto (0, 0) é o canto superior esquerdo da imagem;
-                      x cresce para a direita e y para baixo. Tem de ter x1 > x0 e y1 > y0.
-                      Como obter: abra a imagem num visualizador que mostre a posição do mouse em
-                      pixels (PNG/JPG: o Paint mostra no rodapé; DICOM: visualizadores como Weasis
-                      ou RadiAnt) e anote os dois cantos. Caixas um pouco maiores que a lesão são
-                      melhores que caixas cortando a lesão.
+ COLUNAS, NESTA ORDEM (só "paciente" é obrigatória; as outras podem ficar em branco)
+    1 paciente ........... ID do paciente, ex.: P_00001. A MAMA é paciente + lado.
+    2 idade .............. Idade em anos. Se vazia, o MARIA usa a do DICOM (quando houver).
+    3 arquivo_completa ... Arquivo da mamografia completa (ex.: exame123.dcm). Pode ser só o nome (o
+                           MARIA procura na pasta e nas subpastas) ou o caminho a partir da pasta
+                           escolhida (ex.: paciente1/exame123.dcm). Se houver dois arquivos com o
+                           mesmo nome em subpastas diferentes, use o caminho.
+    4 arquivo_recorte .... Arquivo do recorte da lesão, quando houver.
+    5 lado ............... direito ou esquerdo (também aceita D/E, R/L, RIGHT/LEFT).
+    6 vista .............. CC ou MLO.
+    7 tipo_achado ........ massa, calcificação, assimetria, distorção ou normal (exame sem achado).
+    8 patologia .......... maligno, benigno ou normal — o resultado CONFIRMADO, se já houver.
+    9 caixa_esq ......... } CAIXA da lesão marcada pelo médico na mamografia completa, em pixels da
+   10 caixa_topo ........ } imagem ORIGINAL: borda esquerda, borda de cima, borda direita e borda de
+   11 caixa_dir ......... } baixo da lesão. O ponto (0, 0) é o canto superior esquerdo da IMAGEM (não
+   12 caixa_base ........ } tem a ver com o lado da mama). caixa_dir > caixa_esq e caixa_base > caixa_topo.
+                           O jeito mais fácil: desenhe a caixa no dashboard ("Marcar lesões na imagem").
+                           Ou abra a imagem num visualizador que mostre a posição do mouse em pixels
+                           (PNG/JPG: Paint; DICOM: Weasis ou RadiAnt) e anote os cantos. Caixas um
+                           pouco maiores que a lesão são melhores que caixas cortando a lesão.
+   13 exame_confirmacao .. biópsia ou seguimento (estabilidade por ≥ 2 anos): como a patologia foi
+                           confirmada.
+   14 densidade .......... Densidade do laudo: 1, 2, 3, 4 ou A, B, C, D (A=1 ... D=4). Basta em UMA
+                           linha da mama. Vazia = o modelo estima.
+   Opcionais extras: fabricante (do equipamento; prioridade sobre o DICOM) e lesao (veja REGRAS).
+   Cabeçalhos das bases públicas também são aceitos (patient_id, left or right breast, image view,
+   abnormality type, pathology, breast_density...). O formato antigo (mama, x0, y0, x1, y1) continua
+   aceito.
 
  REGRAS
-   - Uma linha por IMAGEM ou por LESÃO. Duas lesões na mesma imagem = duas linhas (mesmo
-     arquivo_completa, lesao diferente, cada uma com a sua caixa).
+   - Uma linha por IMAGEM e ACHADO. Duas lesões na mesma imagem = duas linhas (mesmo
+     arquivo_completa, cada uma com a sua caixa).
    - Uma linha com caixa precisa de arquivo_completa (a caixa é nessa imagem).
-   - A mesma imagem pode aparecer em várias linhas; o MARIA analisa cada imagem uma vez só.
+   - CC + MLO DA MESMA LESÃO: os recortes da mesma mama e do MESMO tipo_achado são analisados juntos
+     (multivista) quando há exatamente UM na CC e UM na MLO. Se houver duas massas na mesma mama, cada
+     recorte é analisado separado — a não ser que a coluna opcional "lesao" diga o par (mesmo número
+     na CC e na MLO = mesma lesão).
+   - Com patologia e exame_confirmacao preenchidos, a revisão (aba 2) já vem preenchida com a
+     confirmação; basta conferir e salvar para usar no desempenho e na calibração local (seção 14).
+     Exame "normal": as caixas que o detector achar nele já vêm como falso positivo.
    - Arquivos que estão na pasta mas não estão na planilha continuam sendo lidos pelas regras da
      seção 8 (B e C).
-   - Mamas sem densidade na planilha: o modelo infere (se houver a mamografia completa).
-   - O formato antigo, só com "amostra" e "densidade", também é aceito.
 
  EXEMPLOS (separador ;)
-   (a) Só a densidade do laudo (arquivos com nomes no padrão da seção 8):
-        mama;densidade
-        maria_silva_esq;C
-        joana_dir;2
+   Cabeçalho (igual em todos):
+   paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;caixa_esq;caixa_topo;caixa_dir;caixa_base;exame_confirmacao;densidade
 
-   (b) Arquivos com nomes livres (completa + recorte, duas vistas da mesma lesão):
-        mama;densidade;vista;arquivo_completa;arquivo_recorte;lesao;x0;y0;x1;y1
-        P0001_ESQ;B;CC;IMG_0001.dcm;IMG_0002.dcm;1;;;;
-        P0001_ESQ;;MLO;IMG_0003.dcm;IMG_0004.dcm;1;;;;
+   (a) Mesma massa nas duas vistas, com recorte, confirmada por biópsia:
+        P_00001;54;IMG_0001.dcm;IMG_0002.dcm;esquerdo;CC;massa;maligno;;;;;biópsia;B
+        P_00001;54;IMG_0003.dcm;IMG_0004.dcm;esquerdo;MLO;massa;maligno;;;;;biópsia;B
 
-   (c) Lesão marcada pelo médico (sem recorte; o MARIA recorta a caixa e classifica):
-        mama;densidade;vista;arquivo_completa;arquivo_recorte;lesao;x0;y0;x1;y1
-        P0002_DIR;D;CC;exame55.png;;1;1753;2300;2013;2529
+   (b) Lesão marcada pelo médico (sem recorte; o MARIA recorta a caixa e classifica):
+        P_00002;61;exame55.png;;direito;CC;calcificação;;1753;2300;2013;2529;;D
 
-   (d) Duas lesões na mesma imagem:
-        mama;densidade;vista;arquivo_completa;arquivo_recorte;lesao;x0;y0;x1;y1
-        P0003_ESQ;;MLO;mlo_esq.dcm;;1;1200;800;1450;1010
-        P0003_ESQ;;MLO;mlo_esq.dcm;;2;900;2100;1100;2290
+   (c) Duas lesões na mesma imagem:
+        P_00003;47;mlo_esq.dcm;;esquerdo;MLO;massa;;1200;800;1450;1010;;
+        P_00003;47;mlo_esq.dcm;;esquerdo;MLO;calcificação;;900;2100;1100;2290;;
+
+   (d) Exame normal (sem achado, seguimento de 2 anos):
+        P_00004;50;cc_dir.dcm;;direito;CC;normal;normal;;;;;seguimento;C
 
    Veja um exemplo completo em exemplos\planilha_medico.csv.
 
  MENSAGENS DE AVISO (aparecem no log; a rodada continua)
    "arquivo(s) da planilha não encontrado(s)" ... o nome está errado ou o arquivo está em outra pasta.
-   "caixa inválida (x1 <= x0 ou y1 <= y0)" ...... a caixa foi ignorada; confira os números.
+   "caixa inválida (x1 <= x0 ou y1 <= y0)" ...... caixa_dir <= caixa_esq ou caixa_base <= caixa_topo:
+                                                   a caixa foi ignorada; confira os números.
+   "lado/tipo de achado/patologia ... não reconhecido" o valor não está na lista; ficou em branco.
+   "CC e MLO de ... com tipo/patologia diferentes" as duas vistas da mesma lesão discordam.
    "caixa sem arquivo_completa" .................. a linha tem caixa mas não diz em qual imagem.
    Caixa que passa da borda da imagem é cortada na borda automaticamente.
 
@@ -394,7 +405,7 @@
  10. O QUE O MARIA FAZ COM CADA TIPO DE ENTRADA
 ===============================================================================================
    RECORTE DA LESÃO ........ classificado direto: patologia e achado. Recortes CC e MLO da mesma
-                             lesão são combinados (análise multivista para o achado).
+                             lesão são combinados (análise multivista; regra na seção 9).
    MAMOGRAFIA COMPLETA ..... 1) densidade mamária (se o médico não informou);
                              2) o detector procura lesões; cada caixa é recortada (com 20 px de
                                 margem) e classificada;
