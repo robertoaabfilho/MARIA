@@ -19,3 +19,6 @@ modelo/historico/
 # ---- gerados ----
 __pycache__/
 *.pyc
+integracao/config_dicom.json
+integracao/entrada/
+integracao/saida/

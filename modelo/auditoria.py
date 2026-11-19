@@ -13,12 +13,13 @@ import argparse
 import getpass
 import hashlib
 import json
+import os
 import platform
 import time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-ARQ_AUDITORIA = RAIZ / "auditoria" / "auditoria.jsonl"
+ARQ_AUDITORIA = Path(os.environ.get("MARIA_AUDITORIA") or RAIZ / "auditoria" / "auditoria.jsonl")   # variável: testes
 INICIO = "0" * 64
 
 

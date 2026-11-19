@@ -21,7 +21,8 @@ AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 ARQ_MANIFESTO = AQUI / "MANIFESTO.json"
 PADROES_MODELO = ["modelo_patologia/*.pth", "modelo_achado/*.pth", "modelo_deteccao/*.pth", "modelo_deteccao/*.json",
-                  "modelo_densidade/*.pth", "modelo_densidade/*.json", "desempenho.json"]
+                  "modelo_densidade/*.pth", "modelo_densidade/*.json", "calibracao.json"]
+# (desempenho.json é documentação: não muda a saída, então não entra na versão do modelo)
 PADROES_EXEMPLOS = ["exemplos/**/*.dcm", "exemplos/**/*.png", "exemplos/**/*.csv"]
 
 

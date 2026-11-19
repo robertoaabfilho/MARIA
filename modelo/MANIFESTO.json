@@ -1,10 +1,10 @@
 {
-  "gerado_em": "2026-11-19 13:08:53",
-  "descricao": "Versão de referência: patologia Mammo-CLIP 512 (5 dobras), achado ResNet-50 + multivista, detector Faster R-CNN CBIS+CDD (limiar 0,50), densidade ResNet-50 768 px",
+  "gerado_em": "2026-11-19 13:33:43",
+  "descricao": "Versão de referência + calibração Platt (CBIS-DDSM): patologia Mammo-CLIP 512 (5 dobras), achado ResNet-50 + multivista, detector Faster R-CNN CBIS+CDD (limiar 0,50), densidade ResNet-50 768 px",
   "modelos": {
-    "desempenho.json": {
-      "sha256": "cf3027d7f288ce264be0a97147c184191cad593dd87d9c7e187287fc79626365",
-      "bytes": 18244
+    "calibracao.json": {
+      "sha256": "85db28d98958ef0c94f57a1f28b2b78717dcdb723867af9b86b2887d077939d6",
+      "bytes": 811
     },
     "modelo_achado/resnet50_multitask_mama_do_zero.pth": {
       "sha256": "39312504f0076db06c6318fdb856ead7335030eefa290bc8fa456ca75ece9e31",
@@ -137,5 +137,5 @@
       "bytes": 992
     }
   },
-  "versao_modelo": "f939d940beae"
+  "versao_modelo": "41c3299a3b60"
 }

@@ -1,0 +1,12 @@
+{
+  "ae_titulo": "MARIA",
+  "porta": 11112,
+  "ae_permitidos": ["PACS", "MAMOGRAFO1"],
+  "destino": {"ae": "PACS", "host": "192.168.0.10", "porta": 104},
+  "espera_segundos": 30,
+  "limiar": 0.5,
+  "sem_mapas": true,
+  "apagar_recebidos": true,
+  "pasta_entrada": "integracao/entrada",
+  "pasta_saida": "integracao/saida"
+}
