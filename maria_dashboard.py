@@ -1046,6 +1046,94 @@ flowchart LR
                            "pela concordância na validação; a densidade 4 oscila muito entre épocas porque a "
                            "validação tem poucos casos dela.")
 
+    # ---- priorização, calibração, explicabilidade e "quando não usar" ----
+    st.subheader("Priorização, calibração e segurança da saída")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown(
+            "- **Prioridade de leitura** (alta, média, baixa): o MARIA ordena a fila para o radiologista; não dá o "
+            "diagnóstico. Limites sobre a P(maligno) calibrada: alta ≥ 0,50; média ≥ 0,20.\n"
+            "- **P(maligno) calibrada**: calibração de Platt ajustada nas previsões fora-da-dobra do CBIS-DDSM "
+            "(erro de calibração ECE de 3,9% → 1,6% em validação cruzada). Vale para uma população de **lesões já "
+            "suspeitas** (≈ 42% malignas); em outro serviço deve ser **recalibrada com casos locais** confirmados "
+            "(página Executar → aba 3).\n"
+            "- **Incerteza**: desvio-padrão entre as 5 redes; acima de 0,15, ou probabilidade entre 0,35 e 0,65, o "
+            "resultado é marcado como incerto.")
+    with c2:
+        st.markdown(
+            "- **Explicabilidade**: mapa de calor (Grad-CAM, média das 5 redes) de cada lesão, mostrando as regiões "
+            "que mais pesaram para a suspeita; e as caixas do detector na mamografia.\n"
+            "- **Quando NÃO usar** (qualidade = não usar): modalidade DICOM diferente de mamografia (MG), imagem "
+            "colorida, imagem sem contraste, recorte menor que 32 px. **Atenção**: resolução baixa, mama não "
+            "identificada, imagem saturada, região diferente de mama, resultado incerto.\n"
+            "- **Rastreabilidade**: cada resultado traz a versão do modelo (hash dos pesos e da calibração, "
+            "conferida contra o manifesto a cada execução).")
+
+    D_sub = None
+    if (pasta_modelo / "desempenho.json").is_file():
+        D_sub = json.loads((pasta_modelo / "desempenho.json").read_text(encoding="utf-8")).get("subgrupos_externos")
+    if D_sub:
+        st.subheader("Validação externa por subgrupo (CDD-CESM)")
+        g = D_sub["geral"]
+        st.caption(f"Patologia no CDD-CESM: mamografia digital, outro país, 2 equipamentos, base nunca usada no treino "
+                   f"da patologia. {g['n']} imagens com lesão ({g['malignos']} malignas).")
+        with st.container(horizontal=True):
+            st.metric("AUC geral", f"{g['auc']:.3f}".replace(".", ","), border=True)
+            st.metric("Sensibilidade (limiar 0,5)", f"{g['sens']:.0%}", border=True)
+            st.metric("Especificidade (limiar 0,5)", f"{g['espec']:.0%}", border=True)
+        linhas_sub = [{"subgrupo": k, "grupo": kk, "imagens": v["n"], "malignas": v["malignos"], "AUC": v["auc"],
+                       "sensibilidade": v["sens"], "especificidade": v["espec"]}
+                      for k, grupos in D_sub["subgrupos"].items() for kk, v in grupos.items()]
+        dsub = pd.DataFrame(linhas_sub)
+        c1, c2 = st.columns([3, 2])
+        with c1:
+            escolha_sub = st.segmented_control("Subgrupo", list(D_sub["subgrupos"]), default="Faixa etária",
+                                               key="subgrupo_sobre")
+            ds = dsub[dsub["subgrupo"] == (escolha_sub or "Faixa etária")]
+            mostrar(st.altair_chart, alt.Chart(ds).mark_bar(color="#c62828", clip=True).encode(
+                x=alt.X("grupo:N", title=None, axis=alt.Axis(labelAngle=0), sort=list(ds["grupo"])),
+                y=alt.Y("AUC:Q", scale=alt.Scale(domain=[0.5, 1], clamp=True)), y2=alt.datum(0.5),
+                tooltip=["grupo", "imagens", "malignas", alt.Tooltip("AUC:Q", format=".3f"),
+                         alt.Tooltip("sensibilidade:Q", format=".0%"), alt.Tooltip("especificidade:Q", format=".0%")])
+                .properties(title=f"AUC por {(escolha_sub or 'Faixa etária').lower()} (CDD-CESM)", height=240),
+                alt="AUC da patologia por subgrupo na validação externa")
+        with c2:
+            mostrar(st.dataframe, ds.drop(columns="subgrupo"), hide_index=True, alt="Desempenho externo por subgrupo",
+                    column_config={"AUC": st.column_config.NumberColumn(format="%.3f"),
+                                   "sensibilidade": st.column_config.NumberColumn(format="percent"),
+                                   "especificidade": st.column_config.NumberColumn(format="percent")})
+        if D_sub.get("calibracao"):
+            dcx = pd.DataFrame(D_sub["calibracao"])
+            c1, c2 = st.columns([2, 3])
+            with c1:
+                pts = alt.Chart(dcx).mark_line(point=True, color="#1565c0").encode(
+                    x=alt.X("p_media:Q", title="P(maligno) calibrada (CBIS-DDSM)", scale=alt.Scale(domain=[0, 1])),
+                    y=alt.Y("maligno_observado:Q", title="Proporção maligna no CDD-CESM", scale=alt.Scale(domain=[0, 1])),
+                    tooltip=["p_media", "maligno_observado", "n"])
+                diag = alt.Chart(pd.DataFrame({"p_media": [0, 1], "maligno_observado": [0, 1]})).mark_line(
+                    strokeDash=[4, 4], color="gray").encode(x="p_media:Q", y="maligno_observado:Q")
+                mostrar(st.altair_chart, (diag + pts).properties(title="Calibração fora da base de treino", height=240),
+                        alt="Calibração no CDD-CESM: a probabilidade calibrada no CBIS-DDSM não transfere")
+            with c2:
+                st.markdown("**O que isso mostra (dados do mundo real)**")
+                st.markdown(
+                    "- O **ranqueamento se mantém** fora da base de treino (AUC ≈ 0,81 no geral e 0,85–0,87 em massas "
+                    "e calcificações), mas cai em achados que não existem no treino (assimetria, distorção: 0,71) e em "
+                    "mulheres com menos de 40 anos (0,71).\n"
+                    "- O **limiar 0,5 não transfere**: especificidade de só 65%; a curva de calibração se afasta da "
+                    "diagonal.\n"
+                    "- Por isso o MARIA traz a **calibração local** e o **desempenho local por subgrupo e por "
+                    "fabricante**, com casos do serviço confirmados por biópsia ou seguimento. Antes de uso real, é "
+                    "preciso validar com **dados brasileiros, de vários equipamentos, com rótulo confiável** "
+                    "(protocolo em docs/dados/).")
+
+    st.subheader("Situação regulatória e de qualidade")
+    st.info("Protótipo de pesquisa, **sem registro na ANVISA**. Como software que apoia decisão diagnóstica, o MARIA "
+            "se enquadra como **dispositivo médico (SaMD)** pela RDC 657/2022, com classe de risco a definir pela "
+            "RDC 751/2022 — análise preliminar em docs/regulatorio/. A pasta docs/ traz a documentação de qualidade "
+            "(requisitos e rastreabilidade, gestão de risco, ciclo de vida de software, LGPD, segurança da "
+            "informação, protocolo de dados e integração).", icon=":material/gavel:")
+
     st.subheader("Limitações e uso responsável")
     st.warning("**Protótipo de pesquisa — não é dispositivo médico.** Não substitui a avaliação do radiologista.\n\n"
                "- Patologia e achado devem ser confirmados por biópsia, ressonância ou outro exame padrão-ouro.\n"

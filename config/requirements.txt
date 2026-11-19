@@ -12,3 +12,5 @@ tqdm
 pandas>=2.1
 streamlit>=1.67      # o dashboard usa recursos recentes (testado na 1.67)
 altair>=5           # gráficos (já vem com o streamlit)
+# integração com PACS (nó DICOM)
+pynetdicom>=3.0

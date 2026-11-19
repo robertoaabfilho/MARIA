@@ -1,0 +1,14 @@
+# MARIA — versões EXATAS validadas (IEC 62304: configuração do SOUP).
+# Instalação idêntica à validada:  pip install -r config/requirements-validado.txt
+# (PyTorch com GPU: instale antes o torch/torchvision da mesma versão pelo índice CUDA em pytorch.org)
+torch==2.15.0
+torchvision==0.29.2
+efficientnet_pytorch==0.7.1
+pydicom==3.0.2
+pynetdicom==3.0.4
+pillow==13.0.0
+numpy==2.5.4
+pandas==3.1.0
+streamlit==1.67.0
+altair==6.3.0
+tqdm==4.70.1
