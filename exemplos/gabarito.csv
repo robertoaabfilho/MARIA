@@ -1,0 +1,7 @@
+﻿caso;pasta;mama;patologia_real;achado_real;densidade_real;arquivos;observacao
+P00118;1_dicom_filme_cbis;P00118_RIGHT;Maligno;Massa;1 (A);completa CC+MLO e recorte CC+MLO;"CBIS-DDSM (filme); densidade informada no laudo"
+P00066;1_dicom_filme_cbis;P00066_LEFT;Maligno;Massa;4 (D);completa CC+MLO e recorte CC+MLO;"CBIS-DDSM (filme); densidade NÃO informada: o modelo estima"
+P00127;1_dicom_filme_cbis;P00127_RIGHT;Maligno;Microcalcificação;2 (B);só completa CC+MLO;"CBIS-DDSM (filme); sem recorte: a lesão tem de ser achada pelo detector"
+pacienteA;2_png_digital_cdd;pacienteA_esq;Maligno;Massa;3 (C);completa CC+MLO e recorte CC+MLO;"CDD-CESM (digital); densidade informada no laudo"
+pacienteB;2_png_digital_cdd;pacienteB_esq;Benigno;Microcalcificação (macrocalcificação benigna);3 (C);completa CC+MLO e recorte CC+MLO;"CDD-CESM (digital); densidade NÃO informada: o modelo estima"
+pacienteC;2_png_digital_cdd;pacienteC_dir;Normal (sem lesão);—;4 (D);só completa CC;"CDD-CESM (digital); exame normal: o ideal é o detector não marcar nada"

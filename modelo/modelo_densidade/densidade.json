@@ -1,0 +1,38 @@
+{
+  "tam": 768,
+  "classes": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "peso4": 1.0,
+  "validacao": {
+    "n": 297,
+    "acc": 0.7306397306397306,
+    "kappa_ponderado": 0.7127103888566453,
+    "acc_densa_vs_nao": 0.8552188552188552,
+    "sens_densidade4": 0.82
+  },
+  "teste": {
+    "n": 1050,
+    "acc": 0.7323809523809524,
+    "kappa_ponderado": 0.680986086368623,
+    "acc_densa_vs_nao": 0.8647619047619047,
+    "sens_densidade4": 0.7612903225806451
+  },
+  "teste_cbis": {
+    "n": 674,
+    "acc": 0.7062314540059347,
+    "kappa_ponderado": 0.6870370452263973,
+    "acc_densa_vs_nao": 0.8620178041543026,
+    "sens_densidade4": 0.8888888888888888
+  },
+  "teste_cdd": {
+    "n": 376,
+    "acc": 0.7792553191489362,
+    "kappa_ponderado": 0.6169105371697928,
+    "acc_densa_vs_nao": 0.8696808510638298,
+    "sens_densidade4": 0.3684210526315789
+  }
+}

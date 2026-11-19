@@ -1,0 +1,14 @@
+# MARIA — bibliotecas Python (versões usadas no desenvolvimento; versões próximas costumam funcionar)
+# Instalar (da pasta principal do MARIA):  pip install -r config/requirements.txt
+# PyTorch com GPU: veja o comando certo para a sua placa em https://pytorch.org/get-started/locally/
+torch>=2.4
+torchvision>=0.19
+efficientnet_pytorch==0.7.1
+pydicom>=3.0
+pillow>=10
+numpy>=1.26
+tqdm
+# só para o dashboard
+pandas>=2.1
+streamlit>=1.67      # o dashboard usa recursos recentes (testado na 1.67)
+altair>=5           # gráficos (já vem com o streamlit)

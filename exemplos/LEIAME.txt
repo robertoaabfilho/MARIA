@@ -1,0 +1,30 @@
+﻿EXEMPLOS DO MARIA
+=================
+Casos reais de bases públicas (CBIS-DDSM e CDD-CESM), de pacientes que os modelos NÃO viram no treino.
+
+1_dicom_filme_cbis/   DICOM de mamografia em FILME digitalizado (CBIS-DDSM)
+2_png_digital_cdd/    PNG de mamografia DIGITAL (CDD-CESM)
+planilha_medico.csv   planilha do médico: densidade do laudo (só de algumas mamas, as outras o modelo
+                      infere), os arquivos de cada mama e 5 lesões marcadas pelo médico (caixas x0,y0,x1,y1)
+gabarito.csv          o diagnóstico verdadeiro de cada caso, para conferir o resultado
+
+COMO RODAR:
+    Windows: duplo clique em config\rodar_exemplos.bat (na pasta principal do MARIA)
+    Linux:   ./config/rodar_exemplos.sh
+    ou, de dentro da pasta modelo:  python maria.py --pasta ../exemplos --planilha ../exemplos/planilha_medico.csv
+    ou no dashboard: pasta de imagens = esta pasta; em "Planilha do médico", carregue o planilha_medico.csv
+    (dá para editar na tela antes de classificar).
+
+NOMES DOS ARQUIVOS PNG/JPG (DICOM é reconhecido pelos metadados, o nome não importa):
+    <caso>_completa_cc.png / <caso>_completa_mlo.png   mamografia inteira (o detector procura as lesões)
+    <caso>_recorte_cc.png  / <caso>_recorte_mlo.png    recorte da lesão (classificado direto)
+    Mesmo <caso> = mesma mama.
+
+FORMATO DA PLANILHA: veja COMO_USAR.txt (pasta principal). Colunas: mama, densidade, vista, arquivo_completa,
+    arquivo_recorte, lesao, x0, y0, x1, y1 — só "mama" é obrigatória.
+    As caixas da planilha de exemplo são as marcações reais das bases (CBIS-DDSM e CDD-CESM). Compare, no dashboard,
+    as lesões marcadas pelo médico com as detectadas pelo modelo (gráfico "usuário × modelo").
+
+O QUE ESPERAR: os casos foram escolhidos para mostrar as situações típicas, não só acertos. O detector,
+por exemplo, pode marcar caixas falsas (inclusive no exame normal) ou não achar uma lesão.
+Protótipo de pesquisa — não é dispositivo médico.

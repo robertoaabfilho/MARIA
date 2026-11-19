@@ -1,0 +1,536 @@
+﻿===============================================================================================
+ MARIA - Modelo de Análise Radiomamográfica por Inteligência Artificial
+ GUIA DE USO
+===============================================================================================
+ Protótipo de pesquisa. NÃO é dispositivo médico e NÃO deve ser usado para decisão clínica.
+
+ ÍNDICE
+   1. O que o MARIA faz
+   2. O que tem nesta pasta
+   3. Requisitos
+   4. Instalação (Windows e Linux/macOS)
+   5. Primeiro teste: a pasta "exemplos"
+   6. Usando o dashboard (passo a passo)
+   7. Usando pela linha de comando
+   8. COMO O MARIA RECONHECE AS IMAGENS (formato dos nomes)
+   9. COMO PREENCHER A PLANILHA DO MÉDICO (CSV)
+  10. O que o MARIA faz com cada tipo de entrada
+  11. Resultados: o que significa cada coluna
+  12. Desempenho medido e limitações
+  13. Problemas comuns e soluções
+  14. Revisar resultados, banco de anotações e RETREINO do modelo
+
+
+===============================================================================================
+ 1. O QUE O MARIA FAZ
+===============================================================================================
+ Recebe uma pasta com mamografias (DICOM, PNG ou JPG) e, para cada lesão, informa:
+
+   - PATOLOGIA ......... Benigno ou Maligno, com a confiança e a probabilidade de malignidade.
+   - ACHADO ............ Massa/nódulo ou microcalcificação, com a confiança.
+   - LOCALIZAÇÃO ....... Nas mamografias completas, o modelo procura as lesões e desenha uma caixa
+                         em cada uma. O médico também pode marcar as lesões (planilha), e o MARIA
+                         compara a marcação do médico com a do modelo.
+   - DENSIDADE ......... Densidade mamária BI-RADS (1/A adiposa ... 4/D extremamente densa),
+                         informada pelo médico ou inferida pelo modelo, com um aviso de quanto o
+                         resultado é confiável naquela densidade (a acurácia cai em mama densa).
+
+ Pode ser usado de dois jeitos: pelo DASHBOARD (no navegador, recomendado) ou pela LINHA DE COMANDO.
+
+
+===============================================================================================
+ 2. O QUE TEM NESTA PASTA
+===============================================================================================
+   COMO_USAR.txt ........ este guia
+   maria_dashboard.py ... o dashboard (aberto pelos atalhos da pasta config)
+   config\ .............. atalhos e lista de bibliotecas
+       preparar_ambiente.bat .... (Windows) instala tudo o que é preciso
+       iniciar_dashboard.bat .... (Windows) abre o dashboard          | iniciar_dashboard.sh (Linux/macOS)
+       rodar_exemplos.bat ....... (Windows) testa com os exemplos     | rodar_exemplos.sh    (Linux/macOS)
+       requirements.txt ......... lista de bibliotecas Python
+   modelo\ .............. o programa (maria.py), o retreino (retreinar.py), os modelos treinados e o
+                          desempenho.json (números e curvas da página "Sobre o modelo"); não mexa nos .pth/.json
+   exemplos\ ............ casos reais para demonstração (veja exemplos\LEIAME.txt)
+   resultados\ .......... resultados das rodadas do dashboard (criada sozinha)
+   anotacoes\ ........... banco de anotações do usuário (criada ao salvar a primeira revisão; seção 14)
+   modelo\historico\ .... versões anteriores dos modelos, guardadas pelo retreino (seção 14)
+
+ Para levar o MARIA para outro computador, copie a pasta inteira. ATENÇÃO: as pastas "anotacoes" e
+ "resultados" contêm dados e imagens de pacientes; só copie/compartilhe se houver autorização (LGPD).
+
+
+===============================================================================================
+ 3. REQUISITOS
+===============================================================================================
+   - Windows 10/11, Linux ou macOS.
+   - Python 3.10, 3.11, 3.12 ou 3.13 (no Windows o atalho instala sozinho se não houver).
+   - Espaço em disco: ~1 GB para o MARIA + ~2 GB para as bibliotecas (~5 GB com GPU NVIDIA).
+   - Memória: 8 GB de RAM ou mais.
+   - Placa de vídeo NVIDIA: OPCIONAL. Sem ela o MARIA roda na CPU. Funciona, mas a mamografia
+     completa (detecção + densidade) leva bem mais tempo: provavelmente dezenas de segundos por
+     imagem, contra poucos segundos com GPU. Recortes de lesão são rápidos nos dois casos.
+   - Internet: só na primeira vez (para baixar as bibliotecas).
+   - Só para RETREINAR o modelo (seção 14): a máquina com os dados completos de treino, placa NVIDIA
+     e as bibliotecas extras scikit-learn e openpyxl (pip install scikit-learn openpyxl).
+
+
+===============================================================================================
+ 4. INSTALAÇÃO
+===============================================================================================
+ WINDOWS (automática)
+ --------------------
+   Abra a pasta config e dê duplo clique em  iniciar_dashboard.bat
+   (ou em preparar_ambiente.bat, que só prepara, sem abrir o dashboard).
+
+   Na primeira vez, uma janela preta mostra o progresso e o atalho resolve tudo sozinho:
+     1) Python: procura um Python 3.10 a 3.13 já instalado (pelo comando "python" ou pelo atalho
+        "py", mesmo que a opção "Add python.exe to PATH" não tenha sido marcada). Se não houver
+        nenhum, instala o Python 3.12 pelo winget (instalador que já vem no Windows 10 e 11).
+     2) Placa de vídeo: se houver placa NVIDIA (detectada pelo nvidia-smi, que vem com o driver),
+        instala o PyTorch com GPU (download de ~3 GB). Se já houver um PyTorch só de CPU, troca
+        pelo de GPU. Sem placa NVIDIA, avisa e segue na CPU.
+     3) Bibliotecas: instala ou atualiza o que faltar (config\requirements.txt).
+   Nas vezes seguintes ele só confere e abre direto.
+
+   Só é preciso agir manualmente em dois casos (o próprio atalho avisa na tela):
+     - Windows sem winget (versões antigas): instale o Python 3.12 pelo site
+       https://www.python.org/downloads/ (marque "Add python.exe to PATH") e rode o atalho de novo.
+     - Placa NVIDIA com driver muito antigo: atualize o driver pelo site da NVIDIA.
+       Não é preciso instalar o CUDA separadamente.
+
+ LINUX / macOS
+ -------------
+   No terminal, dentro da pasta do MARIA:
+       ./config/iniciar_dashboard.sh          (instala o que faltar e abre o dashboard)
+   ou, manualmente:
+       pip install -r config/requirements.txt
+   Para GPU NVIDIA no Linux, instale antes o PyTorch com o comando de https://pytorch.org/get-started/locally/
+   (no macOS o MARIA roda na CPU).
+
+
+===============================================================================================
+ 5. PRIMEIRO TESTE: A PASTA "exemplos"
+===============================================================================================
+   Windows: duplo clique em  config\rodar_exemplos.bat
+   Linux:   ./config/rodar_exemplos.sh
+
+   O MARIA classifica 6 pacientes reais (3 em filme DICOM, 3 em mamografia digital PNG) usando a
+   planilha exemplos\planilha_medico.csv e grava o resultado em modelo\results.csv.
+   Compare com o diagnóstico verdadeiro em exemplos\gabarito.csv.
+   Os casos mostram as situações típicas, inclusive erros do modelo (por exemplo, caixas falsas
+   no exame normal e uma lesão marcada pelo médico que o modelo não encontrou).
+
+
+===============================================================================================
+ 6. USANDO O DASHBOARD (PASSO A PASSO)
+===============================================================================================
+ Abrir: Windows -> config\iniciar_dashboard.bat | Linux -> ./config/iniciar_dashboard.sh
+ O navegador abre sozinho (normalmente em http://localhost:8501; o endereço também aparece na
+ janela preta). Deixe a janela preta aberta enquanto usa; fechá-la desliga o MARIA.
+
+ O dashboard tem duas PÁGINAS, escolhidas na barra lateral (esquerda):
+   - Sobre o modelo ... descrição do MARIA: como funciona (diagrama), arquitetura de cada modelo, bases de
+                        dados, resultados medidos e gráficos detalhados (curvas de aprendizado, matrizes de
+                        confusão, curvas ROC e FROC, calibração), limitações, versão dos modelos e referências.
+   - Executar ......... a página de uso (abre primeiro), com as abas descritas abaixo.
+
+ BARRA LATERAL (esquerda)
+   - Pasta do modelo ......... já vem preenchida; só mude se moveu a pasta "modelo".
+   Na página "Executar" aparecem também:
+   - Limiar para 'Maligno' ... P(maligno) a partir da qual a lesão é chamada de Maligno (padrão 0,50).
+                               Maior = menos casos chamados de malignos (menos alarmes falsos, mas
+                               perde mais cânceres). Menor = o contrário.
+   - Sensibilidade do detector  score mínimo de uma caixa do modelo (padrão 0,50). Menor = encontra
+                               mais lesões, mas marca mais caixas falsas. Veja os números na seção 12.
+
+ ABA "1) Imagens e planilha"
+   a) Pasta de imagens: digite (ou cole) o caminho da pasta, por exemplo C:\Exames\paciente1.
+      Use "Pasta acima" e a lista "Subpastas" para navegar. O MARIA procura também nas subpastas.
+   b) Planilha do médico (opcional, veja a seção 9):
+        - "Carregar planilha (CSV)": abre um CSV feito no Excel ou em outro programa.
+        - "Gerar a partir da pasta": cria um rascunho com uma linha por mama e vista, a partir dos
+          arquivos da pasta. Depois é só completar a densidade e as lesões.
+        - A tabela é EDITÁVEL: clique na célula para mudar; "+" no fim da tabela adiciona linha;
+          selecione a linha e use a lixeira para apagar. Densidade, vista e arquivos são listas de
+          escolha (os arquivos listados são os da pasta escolhida).
+        - "Baixar planilha editada": salva a planilha no formato do Excel em português.
+        - "Limpar planilha": começa do zero.
+      Abaixo da tabela aparecem quantas linhas são válidas e avisos de arquivos que não estão na pasta.
+   c) Clique em "Classificar". O andamento aparece na tela. No fim, vá para a aba 2.
+
+ ABA "2) Resultados"
+   - Resumo: número de lesões, malignas, benignas, mamas e o limiar usado.
+   - Resultados por lesão: tabela com uma linha por lesão. Passe o mouse no título de uma coluna
+     para ver o que ela significa (ou abra "O que significa cada coluna"). Filtre por patologia,
+     origem da lesão ou pelo nome. "Baixar tabela (CSV para Excel)" salva a tabela filtrada.
+   - Gráficos:
+       * Densidade: quantas mamas em cada densidade, separando a informada pelo médico da inferida.
+       * Lesões marcadas pelo usuário x detectadas pelo modelo: quantas foram marcadas pelos dois,
+         só pelo médico, só pelo modelo, e detectadas em imagens sem marcação do médico.
+       * Densidade x patologia, Densidade x achado e Achado x patologia: à esquerda, quantas
+         lesões em cada grupo; à direita, a confiança de cada lesão (um ponto por lesão; o traço
+         preto é a média). Confiança perto de 50% = o modelo está em dúvida.
+       * Distribuição de P(maligno) (recolhida).
+   - Detalhe da lesão: escolha a lesão na lista. Aparecem a imagem com as caixas (vermelho = a
+     lesão escolhida, verde = marcadas pelo médico, amarelo = detectadas pelo modelo), o recorte
+     que foi classificado e, à direita, os blocos Identificação (mama, vista, imagens analisadas),
+     Localização e detecção (posição, tamanho, confiança do detector, comparação médico x modelo),
+     Patologia, Achado e Densidade, com o aviso de confiabilidade.
+   - Revisar e confirmar resultados: tabela editável para registrar o que foi CONFIRMADO (lesão real ou
+     falso positivo, patologia, achado, exame de confirmação, densidade, observação). Veja a seção 14.
+   - Os arquivos de cada rodada (resultado e planilha usada) ficam na pasta "resultados".
+
+ ABA "3) Anotações e retreino"
+   Banco de anotações (exportar/importar) e o botão "Retreinar o modelo". Veja a seção 14.
+
+
+===============================================================================================
+ 7. USANDO PELA LINHA DE COMANDO
+===============================================================================================
+   Entre na pasta "modelo" e rode (Windows: "python" ou "py"; Linux/macOS: "python3"):
+
+       python maria.py --pasta C:\caminho\das\imagens --planilha C:\caminho\planilha.csv
+
+   Opções:
+     --pasta CAMINHO ........... pasta com as imagens (obrigatória; inclui subpastas)
+     --planilha ARQUIVO ........ planilha do médico (opcional, seção 9)
+     --limiar 0.5 .............. limiar de P(maligno) para "Maligno"
+     --limiar_deteccao 0.5 ..... score mínimo das caixas do detector
+     --sem_deteccao ............ não procura lesões nas mamografias completas (só classifica os
+                                 recortes e as lesões marcadas pelo médico; a densidade continua)
+     --saida_csv ARQUIVO ....... onde gravar o resultado (padrão: modelo\results.csv)
+
+   Retreino pela linha de comando (só na máquina com os dados completos; seção 14):
+       python retreinar.py --verificar                        mostra se a máquina pode retreinar e
+                                                              quantos casos utilizáveis há
+       python retreinar.py --modelos densidade detector achado   retreina (qualquer combinação)
+       python retreinar.py --versoes                          lista as versões guardadas
+       python retreinar.py --restaurar 20261119_101500        volta os modelos para aquela versão
+
+   O resultado sai no terminal e no results.csv (separado por vírgula). Para abrir no Excel em
+   português: Dados > Obter Dados > De Texto/CSV, escolha o arquivo e o delimitador "Vírgula".
+   (A tabela baixada pelo dashboard já vem no formato do Excel em português e abre com duplo clique.)
+
+
+===============================================================================================
+ 8. COMO O MARIA RECONHECE AS IMAGENS (FORMATO DOS NOMES)
+===============================================================================================
+ O MARIA lê TODOS os arquivos da pasta escolhida e das subpastas e decide, para cada um:
+   - se é uma MAMOGRAFIA COMPLETA (a mama inteira) ou um RECORTE da lesão;
+   - a qual MAMA ele pertence (paciente + lado);
+   - a VISTA: CC (crânio-caudal) ou MLO (médio-lateral oblíqua).
+ Tudo o que pertence à mesma mama é analisado junto: a densidade estimada nas mamografias
+ completas vale para todas as lesões daquela mama, e os recortes CC e MLO da mesma lesão são
+ combinados (análise "multivista").
+
+ Há três jeitos de o MARIA reconhecer um arquivo, nesta ordem de prioridade:
+
+ A) PELA PLANILHA (prioridade máxima)
+    Todo arquivo citado na planilha (colunas arquivo_completa / arquivo_recorte) segue o que a
+    planilha diz: a mama, a vista e se é completa ou recorte. O nome do arquivo pode ser qualquer
+    um. É o jeito mais seguro quando os arquivos vêm com nomes "sem padrão" (ex.: IMG_0001.dcm).
+
+ B) DICOM (.dcm), PELOS METADADOS (para arquivos que não estão na planilha)
+    O nome do arquivo não importa. O MARIA lê as informações gravadas dentro do DICOM:
+      - Tipo: pela descrição da série (SeriesDescription):
+            contém "full"  -> mamografia completa
+            contém "crop"  -> recorte da lesão
+            contém "mask"  -> máscara de lesão (IGNORADA)
+        Sem descrição: entre as imagens do mesmo paciente + lado + vista, a MAIOR é tratada como a
+        mamografia completa e as menores como recortes. Uma imagem sozinha = mamografia completa.
+      - Mama: PatientID + lado (ImageLaterality). Vista: ViewPosition (CC ou MLO).
+        Se o PatientID seguir o padrão do CBIS-DDSM (ex.: Mass-Test_P_00118_RIGHT_CC_1), a mama,
+        a vista e o número da lesão vêm dele.
+      - Se a pasta não tiver nenhum arquivo .dcm, arquivos SEM extensão também são testados como
+        DICOM (algumas exportações de equipamentos vêm assim).
+
+ C) PNG / JPG, PELO NOME (para arquivos que não estão na planilha)
+    O nome tem de terminar com um destes sufixos (maiúsculas ou minúsculas, tanto faz):
+
+        <caso>_completa_cc.png ..... mamografia completa, vista CC
+        <caso>_completa_mlo.png .... mamografia completa, vista MLO
+        <caso>_completa.png ........ mamografia completa, vista não informada
+        <caso>_recorte_cc.png ...... recorte da lesão, vista CC
+        <caso>_recorte_mlo.png ..... recorte da lesão, vista MLO
+        <caso>_recorte.png ......... recorte da lesão, vista não informada
+
+    Tudo o que tem o mesmo <caso> é a MESMA MAMA. Use um <caso> por mama (paciente + lado),
+    por exemplo  maria_silva_esq  e  maria_silva_dir.
+    Exemplo de pasta:
+        exames\
+           maria_silva_esq_completa_cc.png    -> mama "maria_silva_esq", completa, CC
+           maria_silva_esq_completa_mlo.png   -> mama "maria_silva_esq", completa, MLO
+           maria_silva_esq_recorte_cc.png     -> recorte da lesão, CC   } combinados na análise
+           maria_silva_esq_recorte_mlo.png    -> recorte da lesão, MLO  } multivista
+           joana_dir_completa_cc.png          -> outra mama: só a completa (o modelo procura lesões)
+    PNG/JPG fora desse padrão e não citados na planilha são IGNORADOS (o MARIA lista quais foram
+    ignorados no log). Imagens de mamografia digital exportadas em PNG/JPG funcionam; prefira
+    imagens em tons de cinza e na resolução original, sem marcas, réguas ou anotações por cima.
+
+ O QUE NÃO FAZER
+   - Não misture pacientes diferentes com o mesmo <caso> (seriam tratados como a mesma mama).
+   - Não reduza nem corte a mamografia completa antes (o detector precisa da imagem inteira).
+   - Não coloque na pasta imagens que não sejam mamografias (fotos, laudos escaneados etc.).
+
+
+===============================================================================================
+ 9. COMO PREENCHER A PLANILHA DO MÉDICO (CSV)
+===============================================================================================
+ A planilha é OPCIONAL. Serve para informar o que o médico já sabe (densidade do laudo, lesões
+ marcadas) e para dizer quais arquivos são de quem quando os nomes não seguem o padrão da seção 8.
+ Pode ser feita no Excel, no próprio dashboard (seção 6) ou em qualquer editor de texto.
+
+ FORMATO DO ARQUIVO
+   - CSV com separador ponto e vírgula (;) ou vírgula (,). O MARIA descobre sozinho.
+   - No Excel: Arquivo > Salvar como > "CSV (separado por vírgulas)" ou "CSV UTF-8". (No Excel em
+     português o primeiro já sai com ponto e vírgula; os dois funcionam.)
+   - A primeira linha é o cabeçalho com os nomes das colunas. Maiúsculas/minúsculas e acentos no
+     cabeçalho não importam ("Lesão" = "lesao").
+   - Números decimais podem usar vírgula ou ponto (ex.: 300,5 ou 300.5).
+
+ COLUNAS (só "mama" é obrigatória; as outras podem ficar em branco)
+   mama ............. Identificador da MAMA (paciente + lado), ex.: P0001_ESQ, maria_silva_esq.
+                      Todas as linhas com a mesma "mama" são da mesma mama.
+   densidade ........ Densidade do laudo: 1, 2, 3, 4 ou A, B, C, D (A=1 ... D=4). Basta preencher
+                      em UMA das linhas da mama. Tem prioridade sobre a densidade inferida.
+   vista ............ CC ou MLO (vista da imagem daquela linha).
+   arquivo_completa . Nome do arquivo da mamografia completa (ex.: exame123.dcm). Pode ser só o nome
+                      (o MARIA procura na pasta e nas subpastas) ou o caminho a partir da pasta
+                      escolhida (ex.: paciente1/exame123.dcm). Se houver dois arquivos com o mesmo
+                      nome em subpastas diferentes, use o caminho.
+   arquivo_recorte .. Nome do arquivo do recorte da lesão, quando houver.
+   lesao ............ Número ou nome da lesão (1, 2, ...). Use quando a mesma mama tem mais de uma
+                      lesão: os recortes com o mesmo número de lesão (CC e MLO) são combinados.
+   x0, y0, x1, y1 ... CAIXA da lesão marcada pelo médico na mamografia completa, em pixels da
+                      imagem ORIGINAL: (x0, y0) = canto superior esquerdo da lesão e (x1, y1) =
+                      canto inferior direito. O ponto (0, 0) é o canto superior esquerdo da imagem;
+                      x cresce para a direita e y para baixo. Tem de ter x1 > x0 e y1 > y0.
+                      Como obter: abra a imagem num visualizador que mostre a posição do mouse em
+                      pixels (PNG/JPG: o Paint mostra no rodapé; DICOM: visualizadores como Weasis
+                      ou RadiAnt) e anote os dois cantos. Caixas um pouco maiores que a lesão são
+                      melhores que caixas cortando a lesão.
+
+ REGRAS
+   - Uma linha por IMAGEM ou por LESÃO. Duas lesões na mesma imagem = duas linhas (mesmo
+     arquivo_completa, lesao diferente, cada uma com a sua caixa).
+   - Uma linha com caixa precisa de arquivo_completa (a caixa é nessa imagem).
+   - A mesma imagem pode aparecer em várias linhas; o MARIA analisa cada imagem uma vez só.
+   - Arquivos que estão na pasta mas não estão na planilha continuam sendo lidos pelas regras da
+     seção 8 (B e C).
+   - Mamas sem densidade na planilha: o modelo infere (se houver a mamografia completa).
+   - O formato antigo, só com "amostra" e "densidade", também é aceito.
+
+ EXEMPLOS (separador ;)
+   (a) Só a densidade do laudo (arquivos com nomes no padrão da seção 8):
+        mama;densidade
+        maria_silva_esq;C
+        joana_dir;2
+
+   (b) Arquivos com nomes livres (completa + recorte, duas vistas da mesma lesão):
+        mama;densidade;vista;arquivo_completa;arquivo_recorte;lesao;x0;y0;x1;y1
+        P0001_ESQ;B;CC;IMG_0001.dcm;IMG_0002.dcm;1;;;;
+        P0001_ESQ;;MLO;IMG_0003.dcm;IMG_0004.dcm;1;;;;
+
+   (c) Lesão marcada pelo médico (sem recorte; o MARIA recorta a caixa e classifica):
+        mama;densidade;vista;arquivo_completa;arquivo_recorte;lesao;x0;y0;x1;y1
+        P0002_DIR;D;CC;exame55.png;;1;1753;2300;2013;2529
+
+   (d) Duas lesões na mesma imagem:
+        mama;densidade;vista;arquivo_completa;arquivo_recorte;lesao;x0;y0;x1;y1
+        P0003_ESQ;;MLO;mlo_esq.dcm;;1;1200;800;1450;1010
+        P0003_ESQ;;MLO;mlo_esq.dcm;;2;900;2100;1100;2290
+
+   Veja um exemplo completo em exemplos\planilha_medico.csv.
+
+ MENSAGENS DE AVISO (aparecem no log; a rodada continua)
+   "arquivo(s) da planilha não encontrado(s)" ... o nome está errado ou o arquivo está em outra pasta.
+   "caixa inválida (x1 <= x0 ou y1 <= y0)" ...... a caixa foi ignorada; confira os números.
+   "caixa sem arquivo_completa" .................. a linha tem caixa mas não diz em qual imagem.
+   Caixa que passa da borda da imagem é cortada na borda automaticamente.
+
+
+===============================================================================================
+ 10. O QUE O MARIA FAZ COM CADA TIPO DE ENTRADA
+===============================================================================================
+   RECORTE DA LESÃO ........ classificado direto: patologia e achado. Recortes CC e MLO da mesma
+                             lesão são combinados (análise multivista para o achado).
+   MAMOGRAFIA COMPLETA ..... 1) densidade mamária (se o médico não informou);
+                             2) o detector procura lesões; cada caixa é recortada (com 20 px de
+                                margem) e classificada;
+                             3) se o médico marcou lesões nessa imagem, cada marcação também é
+                                recortada e classificada, e o MARIA compara as caixas do médico
+                                com as do modelo (coluna "concordancia").
+   DENSIDADE ............... vale para a mama inteira (média das vistas) e acompanha cada lesão
+                             com um aviso do desempenho do modelo naquela densidade.
+
+
+===============================================================================================
+ 11. RESULTADOS: O QUE SIGNIFICA CADA COLUNA (results.csv e tabela do dashboard)
+===============================================================================================
+   amostra ........... identificador da lesão classificada
+   mama .............. mama a que a lesão pertence
+   vista ............. CC, MLO ou "CC + MLO" (recortes das duas vistas)
+   origem_lesao ...... recorte fornecido | marcada pelo usuário | detectada pelo modelo |
+                       nenhuma lesão encontrada (mamografia completa sem nenhuma lesão)
+   imagens_usadas .... imagens que entraram na classificação
+   patologia ......... Benigno ou Maligno (pelo limiar escolhido)
+   conf_patologia .... confiança na patologia (50% = dúvida total, 100% = certeza)
+   p_maligno ......... probabilidade de malignidade, de 0 a 1
+   achado ............ Massa/Nódulo ou Microcalcificação
+   conf_achado ....... confiança no achado
+   densidade ......... BI-RADS 1 a 4
+   densidade_origem .. informada pelo usuário | inferida pelo modelo
+   aviso_densidade ... desempenho medido do modelo naquela densidade
+   concordancia ...... marcação do médico x detecção do modelo: "o modelo também detectou",
+                       "o modelo NÃO detectou", "confere com marcação do usuário",
+                       "não marcada pelo usuário" (vazio quando não há marcação do médico na imagem)
+   score_deteccao .... confiança do detector na caixa (só para lesões detectadas pelo modelo)
+   imagem ............ arquivo de onde a lesão veio
+   x0, y0, x1, y1 .... caixa da lesão na mamografia completa (pixels da imagem original)
+
+
+===============================================================================================
+ 12. DESEMPENHO MEDIDO E LIMITAÇÕES
+===============================================================================================
+ Medido em pacientes que os modelos NÃO viram no treino (bases públicas CBIS-DDSM e CDD-CESM).
+
+   PATOLOGIA (recortes): acurácia 76,3%, AUC 0,840 (2.781 lesões). Piora em mama densa:
+        densidade 1: AUC 0,89 | 2: 0,85 | 3: 0,84 | 4: 0,75 (especificidade cai para 62%).
+   DETECTOR (mamografia completa), por sensibilidade do detector:
+        0,30 -> acha 64% das lesões em filme / 62% em digital, ~1,7 caixa falsa por exame normal
+        0,50 -> acha 59% / 55%, ~0,9 caixa falsa por exame normal (padrão)
+        0,70 -> acha 50% / 49%, ~0,4 caixa falsa por exame normal
+   DENSIDADE: acerta densa x não densa em 86% dos casos; concordância com o laudo (kappa) 0,68.
+        Reconhece 76% das mamas extremamente densas (só ~37% em mamografia digital).
+
+ LIMITAÇÕES
+   - O limiar 0,5 foi calibrado no CBIS-DDSM (filme digitalizado). Em outros equipamentos o modelo
+     tende a chamar mais lesões de malignas; ajuste o limiar se for o caso.
+   - O detector serve para APONTAR regiões ao radiologista, não para triagem automática: ele marca
+     alguma caixa em cerca de metade dos exames normais e não encontra todas as lesões.
+   - Poucos exames normais e de um único hospital foram usados para medir os alarmes falsos.
+   - Protótipo de pesquisa: não substitui a avaliação do radiologista.
+
+
+===============================================================================================
+ 13. PROBLEMAS COMUNS E SOLUÇÕES
+===============================================================================================
+ "Python nao encontrado" (janela preta do Windows)
+     Instale o Python 3.12 em https://www.python.org/downloads/ marcando "Add python.exe to PATH"
+     e rode o atalho de novo.
+ A janela preta fecha sozinha ou mostra "Falha ao instalar as bibliotecas"
+     Verifique a internet e o espaço em disco e rode config\preparar_ambiente.bat de novo.
+     Em redes com proxy/antivírus corporativo, o download pode ser bloqueado: peça liberação do
+     site pypi.org e download.pytorch.org.
+ O navegador não abriu
+     Abra manualmente o endereço que aparece na janela preta (ex.: http://localhost:8501).
+ O dashboard avisa "precisa do Streamlit 1.67 ou mais novo"
+     Rode config\preparar_ambiente.bat (Windows) ou  pip install -U streamlit .
+ Muito lento / "Dispositivo: cpu" no log
+     Sem placa NVIDIA o MARIA usa a CPU (funciona, mas é mais lento). Com placa NVIDIA, atualize o
+     driver e rode config\preparar_ambiente.bat para instalar o PyTorch com GPU.
+ "PNG/JPG ignorado(s)" no log
+     O nome não segue o padrão da seção 8 e o arquivo não está na planilha. Renomeie ou cite-o na
+     planilha.
+ "Nada para classificar"
+     A pasta não tem recortes, nem lesões marcadas, nem mamografias completas reconhecidas.
+     Confira a pasta escolhida e os nomes dos arquivos.
+ Densidade "não disponível"
+     A mama só tem recorte (sem mamografia completa) e a densidade não foi informada na planilha.
+ O results.csv abre tudo numa coluna só no Excel
+     Use Dados > Obter Dados > De Texto/CSV (delimitador "Vírgula"), ou baixe a tabela pelo
+     dashboard ("Baixar tabela (CSV para Excel)"), que já vem no formato do Excel em português.
+ Uma imagem aparece como "indisponível"
+     O arquivo está corrompido ou não é uma imagem válida; as demais são processadas normalmente.
+ O botão "Retreinar o modelo" está desativado
+     Esta máquina não tem os dados completos de treino (a aba mostra o que falta; seção 14.3), ou
+     nenhum modelo foi escolhido, ou a caixa de confirmação não foi marcada, ou já há um retreino em
+     andamento.
+ "faltam ... biblioteca Python 'scikit-learn'" (ou 'openpyxl') na aba de retreino
+     Na máquina de treino:  pip install scikit-learn openpyxl
+ O retreino aparece como "interrompido"
+     O processo parou antes de terminar (computador desligado, falta de memória). Nada foi alterado;
+     clique em "Retreinar o modelo" de novo. O log fica em anotacoes\retreinos\.
+ "Não consegui importar" ao importar anotações
+     O arquivo não é um .zip exportado pelo MARIA (precisa conter anotacoes.csv).
+ Os modelos pioraram depois de um retreino
+     Na aba 3, abra "Versões anteriores dos modelos (restaurar)", escolha a versão e restaure.
+
+
+===============================================================================================
+ 14. REVISAR RESULTADOS, BANCO DE ANOTAÇÕES E RETREINO DO MODELO
+===============================================================================================
+ AVISO IMPORTANTE
+   Os resultados de PATOLOGIA e ACHADO do MARIA são apenas apoio. Eles devem ser confirmados por
+   exames adicionais — BIÓPSIA (anatomopatológico), RESSONÂNCIA MAGNÉTICA ou outro exame considerado
+   PADRÃO-OURO na literatura — antes de qualquer conduta e antes de serem registrados como confirmados.
+
+ 14.1 REVISAR E CONFIRMAR (aba "2) Resultados", seção "Revisar e confirmar resultados")
+   Para cada lesão, preencha SÓ o que foi confirmado (o resto pode ficar em branco):
+     lesão real? ............ "sim" (é lesão) ou "não" (falso positivo). Para lesões marcadas ou
+                              detectadas na mamografia completa. Para o detector aprender, revise
+                              TODAS as caixas do modelo naquela imagem (uma caixa sem revisão faz a
+                              imagem inteira ficar fora do retreino do detector).
+     patologia confirmada ... Benigno ou Maligno (fica registrada; NÃO é usada no retreino).
+     achado confirmado ...... Massa/Nódulo ou Microcalcificação.
+     exame de confirmação ... Biópsia (anatomopatológico), Ressonância magnética, Ultrassonografia ou
+                              Outro exame padrão-ouro. SEM o exame, a confirmação é guardada mas não
+                              entra no retreino (a tela avisa quantas linhas estão nessa situação).
+     densidade confirmada ... densidade do laudo (1-4 ou A-D); vale para a mama inteira.
+     observação ............. texto livre.
+   Clique em "Salvar anotações". As linhas preenchidas vão para o banco: pasta anotacoes\, arquivo
+   anotacoes.csv, com cópia das imagens em anotacoes\imagens\ (assim o banco não depende da pasta
+   original dos exames). Salvar de novo a mesma rodada atualiza as linhas.
+   "Baixar resultados revisados (CSV para Excel)" salva a tabela revisada para abrir no Excel.
+
+ 14.2 BANCO DE ANOTAÇÕES (aba "3) Anotações e retreino")
+   Mostra quantas lesões foram anotadas, quantas têm exame de confirmação e quantas caixas foram
+   revisadas; "Ver o banco de anotações" mostra a planilha inteira.
+   - "Exportar anotações (.zip)": empacota o banco (planilha + imagens) para levar a outro computador.
+   - "Importar anotações (.zip)": junta ao banco local um .zip exportado pelo MARIA. Anotações com o
+     mesmo id são atualizadas. Por segurança, só são aceitos a planilha e as imagens da pasta
+     "imagens" do .zip; qualquer outro arquivo é ignorado (e a tela avisa).
+   Use exportar/importar para juntar, na máquina de treino, as revisões feitas em vários computadores.
+   O banco contém dados e imagens de pacientes: trate como informação sensível (LGPD).
+
+ 14.3 RETREINAR O MODELO
+   DISPONÍVEL APENAS NA MÁQUINA COM OS DADOS COMPLETOS DO MODELO. O retreino mistura as anotações com
+   os dados originais de treino (CBIS-DDSM e CDD-CESM, ~160 GB) — sem eles o modelo "esqueceria" o que
+   aprendeu. Em qualquer outro computador a aba mostra "Esta máquina NÃO tem os dados completos" (com a
+   lista do que falta) e o botão fica desativado: exporte as anotações e importe-as na máquina de treino.
+
+   Requisitos da máquina de treino: os dados preparados (dados_deteccao, CBIS-DDSM e a planilha do
+   CDD-CESM), placa NVIDIA e as bibliotecas scikit-learn e openpyxl. Os caminhos padrão estão no início
+   de modelo\retreinar.py; para mudá-los, crie modelo\retreino_config.json, por exemplo:
+       {"dados_deteccao": "D:/MARIA/dados_deteccao", "cbis": "D:/CBIS_DDSM",
+        "cdd_xlsx": "D:/cdd_cesm/Radiology-manual-annotations.xlsx", "cache": "D:/MARIA/dados_retreino"}
+
+   O que pode ser retreinado (a PATOLOGIA benigno/maligno NÃO é retreinada):
+     Densidade .......... mamas com densidade confirmada E com a mamografia completa.
+     Detector de lesões . mamografias completas em que todas as caixas do modelo foram revisadas
+                          (lesão real sim/não), mais as lesões marcadas pelo usuário.
+     Achado ............. lesões com achado confirmado E exame de confirmação informado
+                          (lesões marcadas como falso positivo são ignoradas).
+   Mínimo de 10 casos utilizáveis por modelo (a aba mostra quantos há; modelos abaixo do mínimo são
+   pulados). Com poucos casos o efeito tende a ser pequeno e o modelo atual costuma ser mantido; o
+   ganho real aparece com dezenas a centenas de casos confirmados do seu serviço.
+
+   Como usar: escolha os modelos, marque a caixa de confirmação e clique em "Retreinar o modelo".
+   Tempo aproximado com GPU: densidade ~15 min, detector ~40 min, achado ~10 min (+ ~10 min na
+   primeira vez, para preparar os recortes do achado). O retreino roda em segundo plano e continua
+   mesmo fechando o navegador; a aba mostra o andamento e se atualiza sozinha.
+   Se o retreino for interrompido (computador desligado, falta de memória), a aba avisa, os modelos
+   em uso NÃO são alterados e o botão volta a ficar disponível.
+
+   Proteções automáticas:
+     - ajuste fino a partir do modelo ATUAL, com os casos do usuário misturados aos dados originais;
+     - 20% das mamas anotadas ficam de fora do treino, para conferir o resultado;
+     - o modelo novo SÓ SUBSTITUI o atual se não piorar no teste fixo (pacientes que nunca entram no
+       treino) nem nos casos guardados do usuário. Regras: densidade — concordância (kappa) não pode
+       cair mais de 0,01; detector — sensibilidade não pode cair mais de 1 ponto e as caixas falsas em
+       exames normais não podem subir mais de 10%; achado — AUC não pode cair mais de 0,005.
+       Caso contrário, o modelo atual é mantido;
+     - a versão anterior vai para modelo\historico\ (ficam as 3 últimas de cada modelo) e pode ser
+       restaurada em "Versões anteriores dos modelos (restaurar)".
+   O resultado de cada retreino (antes x depois, no teste fixo e nos casos guardados do usuário)
+   aparece na aba e fica em anotacoes\retreinos\ (relatório .json e log .txt).

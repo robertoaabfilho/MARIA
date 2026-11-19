@@ -1,0 +1,20 @@
+# ---- dados de pacientes (LGPD): nunca versionar ----
+resultados/
+anotacoes/
+auditoria/
+modelo/results.csv
+*.zip
+
+# ---- segredos e configurações locais ----
+config/usuarios.json
+modelo/retreino_config.json
+.streamlit/secrets.toml
+
+# ---- arquivos grandes: rastreados por hash em modelo/MANIFESTO.json ----
+*.pth
+exemplos/**/*.dcm
+modelo/historico/
+
+# ---- gerados ----
+__pycache__/
+*.pyc

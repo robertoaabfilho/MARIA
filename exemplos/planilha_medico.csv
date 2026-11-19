@@ -1,0 +1,12 @@
+﻿mama;densidade;vista;arquivo_completa;arquivo_recorte;lesao;x0;y0;x1;y1
+P00118_RIGHT;1;CC;P_00118_RIGHT_CC_completa.dcm;P_00118_RIGHT_CC_recorte.dcm;1;;;;
+P00118_RIGHT;1;MLO;P_00118_RIGHT_MLO_completa.dcm;P_00118_RIGHT_MLO_recorte.dcm;1;;;;
+P00066_LEFT;;CC;P_00066_LEFT_CC_completa.dcm;P_00066_LEFT_CC_recorte.dcm;1;1753;2300;2013;2529
+P00066_LEFT;;MLO;P_00066_LEFT_MLO_completa.dcm;P_00066_LEFT_MLO_recorte.dcm;1;;;;
+P00127_RIGHT;;CC;P_00127_RIGHT_CC_completa.dcm;;1;1501;4265;1758;4538
+P00127_RIGHT;;MLO;P_00127_RIGHT_MLO_completa.dcm;;1;1267;4314;1508;4595
+pacienteA_esq;C;CC;pacienteA_esq_completa_cc.png;pacienteA_esq_recorte_cc.png;1;6;290;472;861
+pacienteA_esq;C;MLO;pacienteA_esq_completa_mlo.png;pacienteA_esq_recorte_mlo.png;1;280;438;908;927
+pacienteB_esq;;CC;pacienteB_esq_completa_cc.png;pacienteB_esq_recorte_cc.png;1;;;;
+pacienteB_esq;;MLO;pacienteB_esq_completa_mlo.png;pacienteB_esq_recorte_mlo.png;1;;;;
+pacienteC_dir;D;CC;pacienteC_dir_completa_cc.png;;;;;;
