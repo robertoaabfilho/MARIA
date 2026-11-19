@@ -1232,6 +1232,77 @@ def pagina_executar():
             st.warning(f"{len(faltando)} arquivo(s) da planilha não estão nesta pasta: " + ", ".join(faltando[:5])
                        + (" …" if len(faltando) > 5 else ""), icon=":material/warning:")
 
+        # ---- marcação de lesões na tela (o radiologista desenha a caixa) ----
+        with st.expander("Marcar lesões na imagem", icon=":material/draw:", expanded=False):
+            st.caption("Escolha a mamografia completa, **arraste o mouse sobre a lesão** para desenhar a caixa e clique em "
+                       "**Adicionar à planilha**. As caixas viram linhas da planilha acima (editáveis) e o MARIA "
+                       "classifica cada lesão marcada e a compara com o que o detector encontrar.")
+            candidatas = [a for a in arquivos_pasta if not re.search(r"recorte", a, re.I)] or arquivos_pasta
+            arq_marcar = st.selectbox("Mamografia completa", candidatas, index=None, key="arquivo_marcacao",
+                                      placeholder="escolha a imagem…")
+            if arq_marcar:
+                cheia = ler_cinza(atual / arq_marcar)
+                if cheia is None:
+                    st.error("Não consegui abrir esta imagem.")
+                else:
+                    W, H = cheia.size
+                    fator = min(560 / W, 720 / H, 1.0)
+                    w_tela, h_tela = max(1, int(W * fator)), max(1, int(H * fator))
+                    buf = io.BytesIO()
+                    cheia.resize((w_tela, h_tela)).save(buf, format="PNG")
+                    url = "data:image/png;base64," + __import__("base64").b64encode(buf.getvalue()).decode()
+                    esc_x = alt.Scale(domain=[0, W], nice=False, zero=False)
+                    esc_y = alt.Scale(domain=[0, H], nice=False, zero=False, reverse=True)
+                    fundo = alt.Chart(pd.DataFrame({"x": [0], "y": [0], "url": [url]})).mark_image(
+                        width=w_tela, height=h_tela, align="left", baseline="top").encode(
+                        x=alt.X("x:Q", scale=esc_x, title="x (pixels da imagem original)"),
+                        y=alt.Y("y:Q", scale=esc_y, title="y (pixels)"), url="url:N")
+                    sel = alt.selection_interval(name="caixa", encodings=["x", "y"])
+                    camadas = fundo.add_params(sel)
+                    marcadas = st.session_state.planilha_base
+                    marcadas = marcadas[(marcadas["arquivo_completa"] == arq_marcar)
+                                        & marcadas[["x0", "y0", "x1", "y1"]].notna().all(axis=1)]
+                    if len(marcadas):
+                        camadas = camadas + alt.Chart(marcadas.assign(rotulo="lesão " + marcadas["lesao"].fillna("?")
+                                                                      .astype(str))).mark_rect(
+                            fill=None, stroke="#2e7d32", strokeWidth=2).encode(
+                            x=alt.X("x0:Q", scale=esc_x), x2="x1:Q", y=alt.Y("y0:Q", scale=esc_y), y2="y1:Q",
+                            tooltip=["rotulo:N"])
+                    evento = st.altair_chart(camadas.properties(width=w_tela, height=h_tela), on_select="rerun",
+                                             key=f"marcacao_{arq_marcar}", width="content",
+                                             alt="Mamografia para marcar a lesão: arraste para desenhar a caixa")
+                    caixa = (evento.selection.get("caixa") if evento and getattr(evento, "selection", None) else None) or {}
+                    if caixa.get("x") and caixa.get("y"):
+                        x0, x1 = sorted(int(round(v)) for v in caixa["x"])
+                        y0, y1 = sorted(int(round(v)) for v in caixa["y"])
+                        x0, x1 = max(0, x0), min(W, x1)
+                        y0, y1 = max(0, y0), min(H, y1)
+                        st.success(f"Caixa: x {x0}–{x1}, y {y0}–{y1} ({x1 - x0} × {y1 - y0} px).",
+                                   icon=":material/crop_free:")
+                        linha_arq = st.session_state.planilha_base
+                        linha_arq = linha_arq[linha_arq["arquivo_completa"] == arq_marcar]
+                        mama_pad = (linha_arq["mama"].dropna().iloc[0] if len(linha_arq) and linha_arq["mama"].notna().any()
+                                    else re.sub(r"_(completa|cc|mlo).*$", "", Path(arq_marcar).stem, flags=re.I))
+                        vista_pad = re.search(r"(?:^|[^a-z])(cc|mlo)(?:[^a-z]|$)", Path(arq_marcar).stem.lower())
+                        with st.container(horizontal=True, vertical_alignment="bottom"):
+                            mama_m = st.text_input("Mama", value=mama_pad, key="mama_marcacao")
+                            vista_m = st.segmented_control("Vista", ["CC", "MLO"], key="vista_marcacao",
+                                                           default=vista_pad.group(1).upper() if vista_pad else None)
+                            lesao_m = st.text_input("Lesão", value=str(len(marcadas) + 1), key="lesao_marcacao")
+                            if st.button("Adicionar à planilha", type="primary", icon=":material/add_box:",
+                                         key="adicionar_marcacao", disabled=(x1 - x0) < 5 or (y1 - y0) < 5):
+                                nova = {c: None for c in COLUNAS_PLANILHA}
+                                nova.update({"mama": mama_m.strip(), "vista": vista_m, "arquivo_completa": arq_marcar,
+                                             "lesao": lesao_m.strip() or None, "x0": float(x0), "y0": float(y0),
+                                             "x1": float(x1), "y1": float(y1)})
+                                nova_planilha(pd.concat([st.session_state.planilha_base, pd.DataFrame([nova])],
+                                                        ignore_index=True))
+                                registrar("lesão marcada na tela", {"arquivo": Path(arq_marcar).name,
+                                                                    "caixa": [x0, y0, x1, y1]})
+                                st.rerun()
+                    else:
+                        st.caption("Arraste sobre a imagem para desenhar a caixa da lesão. Caixas verdes = já marcadas.")
+
         # ---- rodar ----
         st.divider()
         rodar_btn = st.button("Classificar", type="primary", icon=":material/play_arrow:", key="classificar",
