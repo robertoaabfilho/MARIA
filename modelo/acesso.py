@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-ARQ_USUARIOS = RAIZ / "config" / "usuarios.json"
+ARQ_USUARIOS = Path(os.environ.get("MARIA_USUARIOS") or RAIZ / "config" / "usuarios.json")   # variável: testes
 PERFIS = ("usuario", "administrador")
 SENHA_MINIMA = 8
 

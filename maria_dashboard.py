@@ -666,9 +666,9 @@ def tela_de_acesso():
 
     st.subheader("Entrar")
     with st.form("login"):
-        login = st.text_input("Login")
-        senha = st.text_input("Senha", type="password")
-        entrar = st.form_submit_button("Entrar", type="primary")
+        login = st.text_input("Login", key="login_usuario")
+        senha = st.text_input("Senha", type="password", key="login_senha")
+        entrar = st.form_submit_button("Entrar", type="primary", key="login_entrar")
     if entrar:
         falhas = [t for t in tentativas_login().get(login.strip().lower(), []) if agora - t < 300]
         if len(falhas) >= 5:

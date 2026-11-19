@@ -18,14 +18,24 @@
   11. Resultados: o que significa cada coluna
   12. Desempenho medido e limitações
   13. Problemas comuns e soluções
-  14. Revisar resultados, banco de anotações e RETREINO do modelo
+  14. Revisar resultados, banco de anotações, calibração local e RETREINO do modelo
+  15. Integração com o PACS (nó DICOM)
+  16. Acesso, auditoria e LGPD
+  17. Documentação de qualidade, testes e versões
 
 
 ===============================================================================================
  1. O QUE O MARIA FAZ
 ===============================================================================================
- Recebe uma pasta com mamografias (DICOM, PNG ou JPG) e, para cada lesão, informa:
+ O MARIA PRIORIZA casos para a leitura do radiologista; ele NÃO dá o diagnóstico. Recebe mamografias
+ (DICOM, PNG ou JPG) e, para cada lesão, informa:
 
+   - PRIORIDADE ........ alta, média ou baixa (pela probabilidade de malignidade CALIBRADA), para
+                         ordenar a fila de leitura. Imagens inadequadas recebem "não avaliar".
+   - QUALIDADE ......... ok, atenção ou NÃO USAR (modalidade errada, imagem colorida, sem contraste,
+                         recorte minúsculo, baixa resolução, resultado incerto...).
+   - ONDE O MODELO OLHOU  mapa de calor de cada lesão (regiões que mais pesaram na suspeita).
+   - INCERTEZA ......... discordância entre as 5 redes de patologia.
    - PATOLOGIA ......... Benigno ou Maligno, com a confiança e a probabilidade de malignidade.
    - ACHADO ............ Massa/nódulo ou microcalcificação, com a confiança.
    - LOCALIZAÇÃO ....... Nas mamografias completas, o modelo procura as lesões e desenha uma caixa
@@ -47,16 +57,25 @@
        preparar_ambiente.bat .... (Windows) instala tudo o que é preciso
        iniciar_dashboard.bat .... (Windows) abre o dashboard          | iniciar_dashboard.sh (Linux/macOS)
        rodar_exemplos.bat ....... (Windows) testa com os exemplos     | rodar_exemplos.sh    (Linux/macOS)
-       requirements.txt ......... lista de bibliotecas Python
+       iniciar_no_dicom.bat ..... (Windows) liga o nó DICOM           | iniciar_no_dicom.sh  (Linux/macOS)
+       requirements.txt ......... lista de bibliotecas Python (versões mínimas)
+       requirements-validado.txt  versões EXATAS validadas
+       usuarios.json ............ usuários e hashes das senhas (criado no primeiro acesso; NÃO compartilhe)
    modelo\ .............. o programa (maria.py), o retreino (retreinar.py), os modelos treinados e o
                           desempenho.json (números e curvas da página "Sobre o modelo"); não mexa nos .pth/.json
    exemplos\ ............ casos reais para demonstração (veja exemplos\LEIAME.txt)
+   integracao\ .......... nó DICOM para o PACS (no_dicom.py) e configuração de exemplo (seção 15)
+   docs\ ................ documentação de conformidade: regulatório, qualidade, riscos, LGPD (seção 17)
+   testes\ .............. testes automatizados (seção 17)
+   auditoria\ ........... registro de quem usou o MARIA (criada sozinha; seção 16)
    resultados\ .......... resultados das rodadas do dashboard (criada sozinha)
    anotacoes\ ........... banco de anotações do usuário (criada ao salvar a primeira revisão; seção 14)
    modelo\historico\ .... versões anteriores dos modelos, guardadas pelo retreino (seção 14)
 
- Para levar o MARIA para outro computador, copie a pasta inteira. ATENÇÃO: as pastas "anotacoes" e
- "resultados" contêm dados e imagens de pacientes; só copie/compartilhe se houver autorização (LGPD).
+ Para levar o MARIA para outro computador, copie a pasta inteira. ATENÇÃO: as pastas "resultados",
+ "anotacoes", "auditoria" e "integracao\saida" e os arquivos config\usuarios.json e
+ config\chave_pseudonimizacao.key contêm dados de pacientes, senhas ou chaves: só copie com autorização
+ (LGPD). Numa instalação nova, deixe-os para trás: o primeiro acesso cria um administrador novo.
 
 
 ===============================================================================================
@@ -128,11 +147,19 @@
  O navegador abre sozinho (normalmente em http://localhost:8501; o endereço também aparece na
  janela preta). Deixe a janela preta aberta enquanto usa; fechá-la desliga o MARIA.
 
- O dashboard tem duas PÁGINAS, escolhidas na barra lateral (esquerda):
+ PRIMEIRO ACESSO E LOGIN
+   Na primeira vez, o dashboard pede para CRIAR O ADMINISTRADOR (login, nome e senha com pelo menos 8
+   caracteres, letras e números). Depois, todos entram com login e senha. A sessão expira após 30 minutos
+   sem uso; 5 senhas erradas bloqueiam o login por 5 minutos. "Sair" fica na barra lateral.
+   Perfis: "usuário" (classifica, revisa, anota) e "administrador" (também retreina, calibra, restaura
+   versões, exporta/importa anotações, administra usuários e vê a auditoria).
+
+ O dashboard tem PÁGINAS, escolhidas na barra lateral (esquerda):
    - Sobre o modelo ... descrição do MARIA: como funciona (diagrama), arquitetura de cada modelo, bases de
                         dados, resultados medidos e gráficos detalhados (curvas de aprendizado, matrizes de
                         confusão, curvas ROC e FROC, calibração), limitações, versão dos modelos e referências.
    - Executar ......... a página de uso (abre primeiro), com as abas descritas abaixo.
+   - Administração .... (só administradores) usuários, registro de auditoria e retenção de dados.
 
  BARRA LATERAL (esquerda)
    - Pasta do modelo ......... já vem preenchida; só mude se moveu a pasta "modelo".
@@ -156,13 +183,18 @@
         - "Baixar planilha editada": salva a planilha no formato do Excel em português.
         - "Limpar planilha": começa do zero.
       Abaixo da tabela aparecem quantas linhas são válidas e avisos de arquivos que não estão na pasta.
-   c) Clique em "Classificar". O andamento aparece na tela. No fim, vá para a aba 2.
+   c) Marcar lesões na imagem (opcional): abra "Marcar lesões na imagem", escolha a mamografia completa,
+      ARRASTE O MOUSE sobre a lesão para desenhar a caixa, confira mama/vista/lesão e clique em
+      "Adicionar à planilha". As caixas já marcadas aparecem em verde.
+   d) Clique em "Classificar". O andamento aparece na tela. No fim, vá para a aba 2.
 
  ABA "2) Resultados"
-   - Resumo: número de lesões, malignas, benignas, mamas e o limiar usado.
-   - Resultados por lesão: tabela com uma linha por lesão. Passe o mouse no título de uma coluna
-     para ver o que ela significa (ou abra "O que significa cada coluna"). Filtre por patologia,
-     origem da lesão ou pelo nome. "Baixar tabela (CSV para Excel)" salva a tabela filtrada.
+   - Resumo: lesões por prioridade (alta, média, baixa, não avaliar) e a versão do modelo. Um aviso
+     vermelho lista as imagens com qualidade NÃO USAR.
+   - Fila de leitura (priorizada): uma linha por lesão, ordenada da prioridade alta para a baixa e,
+     dentro dela, pela probabilidade calibrada. Passe o mouse no título de uma coluna para ver o que
+     ela significa. Filtre por prioridade, origem da lesão ou pelo nome. "Baixar tabela (CSV para
+     Excel)" salva a tabela filtrada.
    - Gráficos:
        * Densidade: quantas mamas em cada densidade, separando a informada pelo médico da inferida.
        * Lesões marcadas pelo usuário x detectadas pelo modelo: quantas foram marcadas pelos dois,
@@ -171,17 +203,22 @@
          lesões em cada grupo; à direita, a confiança de cada lesão (um ponto por lesão; o traço
          preto é a média). Confiança perto de 50% = o modelo está em dúvida.
        * Distribuição de P(maligno) (recolhida).
-   - Detalhe da lesão: escolha a lesão na lista. Aparecem a imagem com as caixas (vermelho = a
-     lesão escolhida, verde = marcadas pelo médico, amarelo = detectadas pelo modelo), o recorte
-     que foi classificado e, à direita, os blocos Identificação (mama, vista, imagens analisadas),
-     Localização e detecção (posição, tamanho, confiança do detector, comparação médico x modelo),
-     Patologia, Achado e Densidade, com o aviso de confiabilidade.
+   - Resultados por subgrupo: prioridades e probabilidade média por densidade, faixa etária, tipo de
+     achado, equipamento ou vista (sem confirmação, NÃO é acerto; o acerto local fica na aba 3).
+   - Detalhe da lesão: escolha a lesão na lista. No topo, as etiquetas de PRIORIDADE e QUALIDADE (com o
+     motivo, se for "atenção" ou "não usar"). À esquerda: a imagem com as caixas (vermelho = a lesão
+     escolhida, verde = marcadas pelo médico, amarelo = detectadas pelo modelo), o recorte classificado e
+     o MAPA DE CALOR ("onde o modelo olhou" — confira se ele olhou para a lesão, e não para bordas ou
+     marcações). À direita: Identificação (mama, vista, idade, equipamento, versão do modelo),
+     Localização e detecção, Prioridade, P calibrada e incerteza, Patologia, Achado e Densidade, com o
+     aviso de confiabilidade.
    - Revisar e confirmar resultados: tabela editável para registrar o que foi CONFIRMADO (lesão real ou
      falso positivo, patologia, achado, exame de confirmação, densidade, observação). Veja a seção 14.
    - Os arquivos de cada rodada (resultado e planilha usada) ficam na pasta "resultados".
 
  ABA "3) Anotações e retreino"
-   Banco de anotações (exportar/importar) e o botão "Retreinar o modelo". Veja a seção 14.
+   Banco de anotações (exportar/importar), desempenho local e calibração do limiar, e o botão
+   "Retreinar o modelo". Veja a seção 14.
 
 
 ===============================================================================================
@@ -199,6 +236,8 @@
      --sem_deteccao ............ não procura lesões nas mamografias completas (só classifica os
                                  recortes e as lesões marcadas pelo médico; a densidade continua)
      --saida_csv ARQUIVO ....... onde gravar o resultado (padrão: modelo\results.csv)
+     --sem_mapas ............... não gera os mapas de calor (mais rápido, sobretudo sem GPU). Os mapas
+                                 ficam na pasta <nome do resultado>_mapas, ao lado do CSV.
 
    Retreino pela linha de comando (só na máquina com os dados completos; seção 14):
        python retreinar.py --verificar                        mostra se a máquina pode retreinar e
@@ -299,6 +338,8 @@
                       escolhida (ex.: paciente1/exame123.dcm). Se houver dois arquivos com o mesmo
                       nome em subpastas diferentes, use o caminho.
    arquivo_recorte .. Nome do arquivo do recorte da lesão, quando houver.
+   idade ............ Idade da paciente (anos). Opcional; tem prioridade sobre a idade do DICOM.
+   fabricante ....... Fabricante/modelo do equipamento. Opcional; tem prioridade sobre o do DICOM.
    lesao ............ Número ou nome da lesão (1, 2, ...). Use quando a mesma mama tem mais de uma
                       lesão: os recortes com o mesmo número de lesão (CC e MLO) são combinados.
    x0, y0, x1, y1 ... CAIXA da lesão marcada pelo médico na mamografia completa, em pixels da
@@ -368,6 +409,15 @@
  11. RESULTADOS: O QUE SIGNIFICA CADA COLUNA (results.csv e tabela do dashboard)
 ===============================================================================================
    amostra ........... identificador da lesão classificada
+   prioridade ........ alta / média / baixa (pela P calibrada: alta ≥ 0,50; média ≥ 0,20) ou
+                       "não avaliar (qualidade)"; "baixa (nada detectado)" para imagem sem lesão
+   p_maligno_calibrada probabilidade de malignidade calibrada (0 a 1)
+   incerteza ......... desvio-padrão entre as 5 redes (acima de 0,15 = incerto)
+   qualidade ......... ok / atenção / não usar;  avisos_qualidade: os motivos
+   idade, fabricante . da paciente e do equipamento (DICOM ou planilha)
+   mapa_calor ........ arquivo(s) PNG do mapa de calor da lesão
+   versao_modelo ..... versão do modelo que gerou o resultado (hash; "+cal-local-..." = calibração local)
+   calibracao ........ qual calibração foi usada (CBIS-DDSM padrão ou local)
    mama .............. mama a que a lesão pertence
    vista ............. CC, MLO ou "CC + MLO" (recortes das duas vistas)
    origem_lesao ...... recorte fornecido | marcada pelo usuário | detectada pelo modelo |
@@ -400,6 +450,11 @@
         0,30 -> acha 64% das lesões em filme / 62% em digital, ~1,7 caixa falsa por exame normal
         0,50 -> acha 59% / 55%, ~0,9 caixa falsa por exame normal (padrão)
         0,70 -> acha 50% / 49%, ~0,4 caixa falsa por exame normal
+   VALIDAÇÃO EXTERNA (CDD-CESM, mamografia digital, outro país, nunca usada no treino da patologia):
+        AUC 0,81 (0,85–0,87 em massas e calcificações; 0,71 em assimetria/distorção e em < 40 anos);
+        com limiar 0,5: sensibilidade 84%, especificidade 65% — o limiar NÃO transfere: calibre
+        localmente (seção 14.4).
+   CALIBRAÇÃO (CBIS-DDSM, validação cruzada): erro de calibração ECE 3,9% → 1,6%.
    DENSIDADE: acerta densa x não densa em 86% dos casos; concordância com o laudo (kappa) 0,68.
         Reconhece 76% das mamas extremamente densas (só ~37% em mamografia digital).
 
@@ -442,6 +497,15 @@
      dashboard ("Baixar tabela (CSV para Excel)"), que já vem no formato do Excel em português.
  Uma imagem aparece como "indisponível"
      O arquivo está corrompido ou não é uma imagem válida; as demais são processadas normalmente.
+ Esqueci a senha
+     Um administrador troca a senha na página Administração. Se o único administrador esqueceu, na
+     pasta modelo rode:  python acesso.py --senha <login>   (pede a nova senha).
+ Uma lesão aparece com qualidade "não usar"
+     Não use aquele resultado: o motivo aparece no detalhe da lesão (ex.: modalidade não é mamografia,
+     imagem colorida ou sem contraste). Reenvie a imagem correta.
+ O nó DICOM não recebe ou não devolve ao PACS
+     Confira AE title, IP e porta em integracao\config_dicom.json e o cadastro do nó "MARIA" no PACS;
+     teste com  python integracao\no_dicom.py --teste-eco ; veja integracao\saida\<estudo>\log.txt.
  O botão "Retreinar o modelo" está desativado
      Esta máquina não tem os dados completos de treino (a aba mostra o que falta; seção 14.3), ou
      nenhum modelo foi escolhido, ou a caixa de confirmação não foi marcada, ou já há um retreino em
@@ -473,14 +537,15 @@
                               imagem inteira ficar fora do retreino do detector).
      patologia confirmada ... Benigno ou Maligno (fica registrada; NÃO é usada no retreino).
      achado confirmado ...... Massa/Nódulo ou Microcalcificação.
-     exame de confirmação ... Biópsia (anatomopatológico), Ressonância magnética, Ultrassonografia ou
-                              Outro exame padrão-ouro. SEM o exame, a confirmação é guardada mas não
+     exame de confirmação ... Biópsia (anatomopatológico), Seguimento (estável por ≥ 2 anos),
+                              Ressonância magnética, Ultrassonografia ou Outro exame padrão-ouro. SEM o exame, a confirmação é guardada mas não
                               entra no retreino (a tela avisa quantas linhas estão nessa situação).
      densidade confirmada ... densidade do laudo (1-4 ou A-D); vale para a mama inteira.
      observação ............. texto livre.
    Clique em "Salvar anotações". As linhas preenchidas vão para o banco: pasta anotacoes\, arquivo
    anotacoes.csv, com cópia das imagens em anotacoes\imagens\ (assim o banco não depende da pasta
-   original dos exames). Salvar de novo a mesma rodada atualiza as linhas.
+   original dos exames). Salvar de novo a mesma rodada atualiza as linhas. No banco, os identificadores
+   são PSEUDONIMIZADOS (viram códigos) e as imagens DICOM são ANONIMIZADAS (seção 16).
    "Baixar resultados revisados (CSV para Excel)" salva a tabela revisada para abrir no Excel.
 
  14.2 BANCO DE ANOTAÇÕES (aba "3) Anotações e retreino")
@@ -534,3 +599,68 @@
        restaurada em "Versões anteriores dos modelos (restaurar)".
    O resultado de cada retreino (antes x depois, no teste fixo e nos casos guardados do usuário)
    aparece na aba e fica em anotacoes\retreinos\ (relatório .json e log .txt).
+
+ 14.4 DESEMPENHO LOCAL E CALIBRAÇÃO DO LIMIAR (aba "3) Anotações e retreino")
+   Com casos do SEU serviço com patologia confirmada por BIÓPSIA, SEGUIMENTO (estável ≥ 2 anos) ou outro
+   exame padrão-ouro, a aba mostra: AUC local, sensibilidade e especificidade da prioridade alta, curva
+   de calibração no serviço e desempenho por densidade, faixa etária, tipo de achado e EQUIPAMENTO.
+   "Aplicar calibração local" (administrador; exige 50 casos, com pelo menos 15 malignos e 15 benignos)
+   recalibra a probabilidade e escolhe o limite de prioridade alta para a SENSIBILIDADE DESEJADA
+   (controle deslizante; a prioridade média usa 98%). Passa a valer nas próximas classificações, e a
+   versão do modelo no resultado indica "+cal-local". "Remover calibração local" volta à do CBIS-DDSM.
+   Os números são calculados nos mesmos casos usados para calibrar (otimistas): reavalie com casos novos.
+
+
+===============================================================================================
+ 15. INTEGRAÇÃO COM O PACS (NÓ DICOM)
+===============================================================================================
+ O nó DICOM leva o resultado para DENTRO do fluxo do radiologista:
+   1. O PACS (ou o mamógrafo) envia os estudos para o MARIA (C-STORE). Só AE titles autorizados.
+   2. O MARIA processa e devolve ao PACS, NO MESMO ESTUDO da paciente, a série "MARIA - apoio à
+      priorização (não é diagnóstico)": a mamografia com as caixas e a prioridade + um resumo. O
+      radiologista vê ao abrir o exame no visualizador do PACS.
+   3. Grava integracao\saida\fila_priorizada.csv (estudo, accession, maior prioridade), que o sistema
+      do serviço (RIS) pode ler para ordenar a lista de trabalho.
+   4. Apaga as imagens recebidas depois de processar e registra tudo na auditoria.
+ Como ligar:
+   - Copie integracao\config_dicom.exemplo.json para integracao\config_dicom.json e ajuste: AE title e
+     porta do MARIA, PACS de destino (AE, IP, porta) e a lista ae_permitidos.
+   - Cadastre o nó "MARIA" no PACS (AE title, IP desta máquina e porta).
+   - Teste a conexão: python integracao\no_dicom.py --teste-eco
+   - Ligue: config\iniciar_no_dicom.bat (Windows) ou ./config/iniciar_no_dicom.sh (Linux).
+ SISMAMA: foi substituído pelo SISCAN. O MARIA não preenche laudo nem BI-RADS (decisão do radiologista);
+ o registro no SISCAN segue o fluxo normal do serviço (docs\integracao).
+
+
+===============================================================================================
+ 16. ACESSO, AUDITORIA E LGPD
+===============================================================================================
+   - Login obrigatório, senhas guardadas só como hash, perfis, sessão com tempo limite (seção 6).
+   - AUDITORIA: todo login, classificação (pasta, quantidade, versão do modelo, hash do resultado),
+     anotação, exportação, retreino, calibração e estudo do nó DICOM fica em auditoria\auditoria.jsonl,
+     com hash encadeado: apagar ou alterar uma linha é detectado ("Registro de auditoria" na página
+     Administração; ou  python modelo\auditoria.py --verificar).
+   - PSEUDONIMIZAÇÃO E ANONIMIZAÇÃO: fora do atendimento (banco de anotações, exportação .zip,
+     retreino), os identificadores viram códigos (chave em config\chave_pseudonimizacao.key — guarde
+     com segurança) e os DICOM perdem nome, ID, nascimento, instituição, médicos, datas e tags
+     privadas. Textos gravados dentro dos pixels NÃO são removidos.
+   - RETENÇÃO: na página Administração, apague resultados com mais de N dias.
+   - A instituição precisa: definir a base legal e o RIPD com o encarregado (DPO), criptografar o disco,
+     fazer backup e manter o MARIA só na rede interna (docs\seguranca).
+
+
+===============================================================================================
+ 17. DOCUMENTAÇÃO DE QUALIDADE, TESTES E VERSÕES
+===============================================================================================
+   - docs\README.md: matriz de conformidade com o que está pronto e o que falta (SaMD/ANVISA, ISO 13485,
+     IEC 62304, ISO 14971, LGPD, dados brasileiros, integração).
+   - VERSÃO DO MODELO: modelo\MANIFESTO.json guarda o hash de cada peso e da calibração; o maria.py confere
+     a cada execução e grava a versão em cada resultado. Ao liberar uma versão nova:
+       python modelo\manifesto.py --gerar --descricao "o que mudou"
+   - TESTES AUTOMATIZADOS (na pasta principal):
+       python -m pytest testes -q                         (rápidos)
+       MARIA_TESTES_LENTOS=1 python -m pytest testes -q   (inclui regressão dos exemplos e PACS simulado;
+                                                          no Windows: set MARIA_TESTES_LENTOS=1 antes)
+   - CONTROLE DE VERSÃO: a pasta é um repositório git (git log mostra o histórico); dados de pacientes,
+     senhas e pesos ficam fora do git.
+   - Protótipo de pesquisa, SEM registro na ANVISA: veja docs\regulatorio antes de qualquer uso clínico.
