@@ -1,0 +1,32 @@
+{
+  "patologia": {
+    "metodo": "platt",
+    "a": 0.9542942705484211,
+    "b": -0.23040190980893585,
+    "n": 2781,
+    "origem": "OOF sem vazamento do CBIS-DDSM (lesões já suspeitas, ~42% malignas)",
+    "avaliacao": {
+      "antes": {
+        "brier": 0.1611430531032003,
+        "ece": 0.0386670046745775
+      },
+      "depois_validacao_cruzada": {
+        "brier": 0.1600700137733988,
+        "ece": 0.016239143431892318
+      }
+    }
+  },
+  "prioridade": {
+    "alta": 0.5,
+    "media": 0.2,
+    "nota": "sobre a P(maligno) CALIBRADA: alta >= 0,50; média >= 0,20; baixa < 0,20"
+  },
+  "incerteza": {
+    "desvio_maximo": 0.15,
+    "faixa_incerta": [
+      0.35,
+      0.65
+    ],
+    "nota": "desvio-padrão entre as 5 redes acima do máximo, ou P calibrada na faixa incerta = resultado incerto"
+  }
+}

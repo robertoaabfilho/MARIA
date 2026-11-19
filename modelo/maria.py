@@ -238,6 +238,8 @@ SINONIMOS = {
     "arquivo_completa": ("arquivo_completa", "completa", "imagem_completa", "mamografia"),
     "arquivo_recorte": ("arquivo_recorte", "recorte", "imagem_recorte"),
     "lesao": ("lesao", "id_lesao"),
+    "idade": ("idade", "idade_anos"),
+    "fabricante": ("fabricante", "equipamento", "aparelho"),
     "x0": ("x0", "xmin"), "y0": ("y0", "ymin"), "x1": ("x1", "xmax"), "y1": ("y1", "ymax"),
 }
 
@@ -530,10 +532,121 @@ ORIGEM_RECORTE, ORIGEM_USUARIO, ORIGEM_MODELO, ORIGEM_NENHUMA = (
     "recorte fornecido", "marcada pelo usuário", "detectada pelo modelo", "nenhuma lesão encontrada")
 
 
+# contexto da execução (preenchido no main): calibração, pasta dos mapas de calor, versão do modelo
+CONTEXTO = {"cal": None, "pasta_mapas": None, "mapas": True}
+
+
 def prob_maligno(modelos_mc, arr, device):
+    """-> (P média das 5 redes, desvio-padrão entre as redes = incerteza). Cada rede usa 5 variações (TTA)."""
     x = torch.from_numpy(entrada_patologia(arr)).float().div_(255.0).view(1, 1, MC_TELA, MC_TELA)
     lote = TF.normalize(tta(x).repeat(1, 3, 1, 1), MEDIA, DESVIO).to(device)
-    return float(torch.stack([F.softmax(m(lote).float(), 1)[:, 1].mean() for m in modelos_mc]).mean())
+    ps = torch.stack([F.softmax(m(lote).float(), 1)[:, 1].mean() for m in modelos_mc])
+    return float(ps.mean()), float(ps.std(unbiased=False))
+
+
+def calibrar(p):
+    """P(maligno) calibrada (Platt; ver modelo/calibracao.json)."""
+    cal = (CONTEXTO["cal"] or {}).get("patologia")
+    if not cal or p is None:
+        return p
+    p = min(max(p, 1e-4), 1 - 1e-4)
+    return float(1 / (1 + np.exp(-(cal["a"] * np.log(p / (1 - p)) + cal["b"]))))
+
+
+def mapa_calor(modelos_mc, arr, device, nome):
+    """Grad-CAM da classe 'maligno' (média das 5 redes) sobre o recorte: onde o modelo 'olhou'.
+    Salva um PNG lado a lado (recorte | mapa) e devolve o caminho."""
+    if not CONTEXTO["mapas"] or CONTEXTO["pasta_mapas"] is None:
+        return ""
+    x = torch.from_numpy(entrada_patologia(arr)).float().div_(255.0).view(1, 1, MC_TELA, MC_TELA)
+    x = TF.normalize(x.repeat(1, 3, 1, 1), MEDIA, DESVIO).to(device)
+    cams = []
+    with torch.enable_grad():
+        for m in modelos_mc:
+            f = m.encoder.net.extract_features(x)
+            f.retain_grad()
+            logit = m.fc_patologia(m.encoder.net._avg_pooling(f).flatten(1))[0, 1]
+            m.zero_grad(set_to_none=True)
+            logit.backward()
+            cam = F.relu((f.grad.mean(dim=(2, 3), keepdim=True) * f).sum(1))[0]
+            cams.append((cam / (cam.max() + 1e-8)).detach())
+    cam = F.interpolate(torch.stack(cams).mean(0)[None, None], size=(MC_TELA, MC_TELA), mode="bilinear",
+                        align_corners=False)[0, 0].cpu().numpy()
+    # só a região do recorte dentro da tela (a tela é preta em volta)
+    h, w = arr.shape
+    fator = min(MC_ESCALA, MC_TELA / float(max(h, w)))
+    nh, nw = max(1, round(h * fator)), max(1, round(w * fator))
+    y0, x0 = (MC_TELA - nh) // 2, (MC_TELA - nw) // 2
+    cinza = entrada_patologia(arr)[y0:y0 + nh, x0:x0 + nw].astype(np.float32) / 255
+    c = cam[y0:y0 + nh, x0:x0 + nw]
+    c = (c - c.min()) / (c.max() - c.min() + 1e-8)
+    cor = np.stack([np.clip(1.5 - np.abs(4 * c - 3), 0, 1), np.clip(1.5 - np.abs(4 * c - 2), 0, 1),
+                    np.clip(1.5 - np.abs(4 * c - 1), 0, 1)], -1)
+    base = np.repeat(cinza[..., None], 3, -1)
+    sobre = base * (1 - 0.45 * c[..., None]) + cor * 0.45 * c[..., None]
+    painel = np.concatenate([base, np.ones((nh, 6, 3)), sobre], 1)
+    destino = CONTEXTO["pasta_mapas"] / f"{re.sub(r'[^A-Za-z0-9_.-]', '_', nome)}.png"
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray((np.clip(painel, 0, 1) * 255).astype(np.uint8)).save(destino)
+    return str(destino)
+
+
+def metadados_imagem(caminho):
+    """Informações para qualidade e subgrupos: modalidade, região, fabricante, idade; e se o PNG/JPG é colorido."""
+    meta = {"modalidade": "", "regiao": "", "fabricante": "", "idade": "", "colorida": False}
+    if Path(caminho).suffix.lower() in EXTENSOES_IMAGEM:
+        try:
+            img = Image.open(caminho)
+            if img.mode in ("RGB", "RGBA"):
+                a = np.asarray(img.convert("RGB").resize((128, 128))).astype(np.int16)
+                meta["colorida"] = bool(np.abs(a[..., 0] - a[..., 1]).mean() + np.abs(a[..., 1] - a[..., 2]).mean() > 8)
+        except Exception:
+            pass
+        return meta
+    try:
+        ds = pydicom.dcmread(str(caminho), stop_before_pixels=True)
+    except Exception:
+        return meta
+    meta["modalidade"] = str(getattr(ds, "Modality", "") or "").upper()
+    meta["regiao"] = str(getattr(ds, "BodyPartExamined", "") or "").upper()
+    meta["fabricante"] = " ".join(str(getattr(ds, t, "") or "").strip()
+                                  for t in ("Manufacturer", "ManufacturerModelName")).strip()
+    idade = str(getattr(ds, "PatientAge", "") or "")
+    if re.fullmatch(r"\d{3}Y", idade):
+        meta["idade"] = str(int(idade[:3]))
+    else:
+        nasc, exame = str(getattr(ds, "PatientBirthDate", "") or ""), str(getattr(ds, "StudyDate", "") or "")
+        if re.fullmatch(r"\d{8}", nasc) and re.fullmatch(r"\d{8}", exame):
+            meta["idade"] = str(int(exame[:4]) - int(nasc[:4]) - (exame[4:] < nasc[4:]))
+    return meta
+
+
+def checar_qualidade(arr, meta, tipo):
+    """-> lista de (nível, motivo); nível 'não usar' ou 'atenção'. tipo = 'completa' ou 'recorte'."""
+    avisos = []
+    if meta.get("modalidade") and meta["modalidade"] != "MG":
+        avisos.append(("não usar", f"modalidade DICOM '{meta['modalidade']}' (não é mamografia, MG)"))
+    if meta.get("regiao") and meta["regiao"] not in ("BREAST", "MAMA"):
+        avisos.append(("atenção", f"região examinada '{meta['regiao']}' (esperado: BREAST)"))
+    if meta.get("colorida"):
+        avisos.append(("não usar", "imagem colorida (não parece mamografia)"))
+    h, w = arr.shape
+    lo, hi = np.percentile(arr, [1, 99])
+    if hi <= lo:
+        avisos.append(("não usar", "imagem sem contraste (praticamente uniforme)"))
+        return avisos
+    if tipo == "recorte" and min(h, w) < 32:
+        avisos.append(("não usar", f"recorte muito pequeno ({w}×{h} px)"))
+    if tipo == "completa":
+        if max(h, w) < 1000:
+            avisos.append(("atenção", f"resolução baixa para mamografia completa ({w}×{h} px)"))
+        frac = float((arr > lo + 0.1 * (hi - lo)).mean())
+        if not 0.05 <= frac <= 0.97:
+            avisos.append(("atenção", "mama não identificada com clareza (imagem fora do padrão)"))
+    sat = float((arr >= hi).mean()) if tipo == "recorte" else float((arr >= arr.max()).mean())
+    if sat > 0.30:
+        avisos.append(("atenção", "imagem muito saturada (muitos pixels no brilho máximo)"))
+    return avisos
 
 
 def prob_achado_recorte(modelo, img, device):
@@ -548,35 +661,66 @@ def prob_achado_multivista(modelo, img_a, img_b, device):
     return F.softmax(modelo(a, b), 1)[0]
 
 
-def resultado(amostra_id, origem, imagens_usadas, ps_mal, fontes_ach, limiar, **extra):
-    r = {"amostra": amostra_id, "origem_lesao": origem, "imagens_usadas": imagens_usadas, **extra}
+def prioridade_de(p_cal, desvio, nivel_qualidade):
+    """Prioridade de leitura para o radiologista (o MARIA prioriza; quem diagnostica é o radiologista)."""
+    if nivel_qualidade == "não usar":
+        return "não avaliar (qualidade)"
+    if p_cal is None:
+        return "indisponível"
+    cfg = (CONTEXTO["cal"] or {}).get("prioridade", {"alta": 0.5, "media": 0.2})
+    return "alta" if p_cal >= cfg["alta"] else "média" if p_cal >= cfg["media"] else "baixa"
+
+
+def resultado(amostra_id, origem, imagens_usadas, ps_mal, fontes_ach, limiar, avisos=(), mapas=(), meta=None, **extra):
+    """ps_mal = [(P média, desvio)] por vista; avisos = [(nível, motivo)] de qualidade."""
+    meta = meta or {}
+    r = {"amostra": amostra_id, "origem_lesao": origem, "imagens_usadas": imagens_usadas,
+         "idade": meta.get("idade", ""), "fabricante": meta.get("fabricante", ""),
+         "mapa_calor": ";".join(m for m in mapas if m), **extra}
+    avisos = list(avisos)
+    p_cal = desvio = None
     if ps_mal:
-        p = float(np.mean(ps_mal))
+        p = float(np.mean([m for m, _ in ps_mal]))
+        desvio = float(max(d for _, d in ps_mal))
+        p_cal = calibrar(p)
         pred = int(p >= limiar)
         r.update(patologia=NOMES_PATOLOGIA[pred], conf_patologia=f"{(p if pred else 1 - p) * 100:.2f}%",
-                 p_maligno=f"{p:.4f}")
+                 p_maligno=f"{p:.4f}", p_maligno_calibrada=f"{p_cal:.4f}", incerteza=f"{desvio:.3f}")
+        inc = (CONTEXTO["cal"] or {}).get("incerteza", {"desvio_maximo": 0.15, "faixa_incerta": [0.35, 0.65]})
+        if desvio > inc["desvio_maximo"]:
+            avisos.append(("atenção", f"resultado incerto: as 5 redes discordam (desvio {desvio:.2f})"))
+        elif inc["faixa_incerta"][0] <= p_cal <= inc["faixa_incerta"][1]:
+            avisos.append(("atenção", f"resultado incerto: probabilidade intermediária ({p_cal:.2f})"))
     else:
-        r.update(patologia="indisponível", conf_patologia="N/D", p_maligno="N/D")
+        r.update(patologia="indisponível", conf_patologia="N/D", p_maligno="N/D", p_maligno_calibrada="N/D",
+                 incerteza="N/D")
     if fontes_ach:
         prob = torch.stack(fontes_ach).mean(0)
         pred = int(prob.argmax())
         r.update(achado=NOMES_ACHADO[pred], conf_achado=f"{prob[pred].item() * 100:.2f}%")
     else:
         r.update(achado="indisponível", conf_achado="N/D")
+    nivel = "não usar" if any(n == "não usar" for n, _ in avisos) else "atenção" if avisos else "ok"
+    r.update(qualidade=nivel, avisos_qualidade="; ".join(dict.fromkeys(m for _, m in avisos)),
+             prioridade=prioridade_de(p_cal, desvio, nivel))
     return r
 
 
 def diagnosticar(amostra_id, vistas, m_recorte, m_multivista, modelos_mc, device, limiar):
-    usadas, ps_mal, ps_ach, imgs = [], [], [], {}
+    usadas, ps_mal, ps_ach, imgs, avisos, mapas, meta = [], [], [], {}, [], [], {}
     for vista, info in vistas.items():
         try:
             arr, eh_dicom = ler_imagem(info["caminho"])
+            meta = metadados_imagem(info["caminho"]) if not meta.get("fabricante") else meta
+            avisos += checar_qualidade(arr, meta, "recorte")
             imgs[vista] = entrada_achado(arr, eh_dicom)
             ps_mal.append(prob_maligno(modelos_mc, arr, device))
             ps_ach.append(prob_achado_recorte(m_recorte, imgs[vista], device))
+            mapas.append(mapa_calor(modelos_mc, arr, device, f"{amostra_id}_{vista}"))
             usadas.append("recorte" if vista == "SEM_VISTA" else f"recorte {vista}")
         except Exception as e:
             print(f"   ⚠️  {amostra_id}: falha no recorte {vista} ({e})")
+            avisos.append(("não usar", f"falha ao ler o recorte {vista}"))
 
     fontes_ach = [torch.stack(ps_ach).mean(0)] if ps_ach else []
     nomeadas = [v for v in imgs if v != "SEM_VISTA"]
@@ -587,6 +731,7 @@ def diagnosticar(amostra_id, vistas, m_recorte, m_multivista, modelos_mc, device
         except Exception as e:
             print(f"   ⚠️  {amostra_id}: falha no multivista ({e})")
     return resultado(amostra_id, ORIGEM_RECORTE, " + ".join(sorted(usadas)) or "nenhuma", ps_mal, fontes_ach, limiar,
+                     avisos=avisos, mapas=mapas, meta=meta,
                      imagem=vistas[next(iter(vistas))]["caminho"], concordancia="",
                      vista=" + ".join(sorted(v for v in vistas if v != "SEM_VISTA")))
 
@@ -614,9 +759,11 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
     except Exception as e:
         print(f"   ⚠️  {imagem_id}: falha ao ler a imagem ({e})")
         return []
+    meta = metadados_imagem(caminho)
+    avisos_img = checar_qualidade(arr, meta, "completa")
     H, W = arr.shape
     do_modelo = []
-    if detector is not None:
+    if detector is not None and not any(n == "não usar" for n, _ in avisos_img):
         try:
             do_modelo = sorted(detector.detectar(arr, limiar_det), key=lambda c: -c[4])
         except Exception as e:
@@ -626,12 +773,13 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
     nome_img = Path(caminho).name
     vista = vista_da_imagem(imagem_id, caminho)
 
-    def classificar(x0, y0, x1, y1):
+    def classificar(x0, y0, x1, y1, nome):
         cx0, cy0 = max(0, int(x0) - MARGEM_RECORTE), max(0, int(y0) - MARGEM_RECORTE)
         cx1, cy1 = min(W, int(np.ceil(x1)) + MARGEM_RECORTE), min(H, int(np.ceil(y1)) + MARGEM_RECORTE)
         recorte = arr[cy0:cy1, cx0:cx1]
         return ([prob_maligno(modelos_mc, recorte, device)],
-                [prob_achado_recorte(m_recorte, entrada_achado(recorte, eh_dicom), device)])
+                [prob_achado_recorte(m_recorte, entrada_achado(recorte, eh_dicom), device)],
+                avisos_img + checar_qualidade(recorte, {}, "recorte"), [mapa_calor(modelos_mc, recorte, device, nome)])
 
     linhas = []
     for n, (cx, lesao) in enumerate(do_usuario, 1):
@@ -640,28 +788,34 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
         else:
             conc = ("o modelo também detectou" if any(coincide(m[:4], cx) for m in do_modelo)
                     else "o modelo NÃO detectou")
-        p, a = classificar(*cx)
-        linhas.append(resultado(f"{imagem_id}_usuario{lesao or n}", ORIGEM_USUARIO, f"mamografia completa ({nome_img})",
-                                p, a, limiar, imagem=caminho, x0=round(cx[0]), y0=round(cx[1]), x1=round(cx[2]),
-                                y1=round(cx[3]), score_deteccao="", concordancia=conc, _imagem=imagem_id,
-                                vista=vista))
+        amostra = f"{imagem_id}_usuario{lesao or n}"
+        p, a, av, mp = classificar(*cx, amostra)
+        linhas.append(resultado(amostra, ORIGEM_USUARIO, f"mamografia completa ({nome_img})",
+                                p, a, limiar, avisos=av, mapas=mp, meta=meta, imagem=caminho, x0=round(cx[0]),
+                                y0=round(cx[1]), x1=round(cx[2]), y1=round(cx[3]), score_deteccao="",
+                                concordancia=conc, _imagem=imagem_id, vista=vista))
     for n, m in enumerate(do_modelo, 1):
         if do_usuario:
             conc = ("confere com marcação do usuário" if any(coincide(m[:4], u) for u, _ in do_usuario)
                     else "não marcada pelo usuário")
         else:
             conc = ""
-        p, a = classificar(*m[:4])
-        linhas.append(resultado(f"{imagem_id}_modelo{n}", ORIGEM_MODELO, f"mamografia completa ({nome_img})",
-                                p, a, limiar, imagem=caminho, x0=round(m[0]), y0=round(m[1]), x1=round(m[2]),
-                                y1=round(m[3]), score_deteccao=f"{m[4]:.3f}", concordancia=conc, _imagem=imagem_id,
-                                vista=vista))
+        amostra = f"{imagem_id}_modelo{n}"
+        p, a, av, mp = classificar(*m[:4], amostra)
+        linhas.append(resultado(amostra, ORIGEM_MODELO, f"mamografia completa ({nome_img})",
+                                p, a, limiar, avisos=av, mapas=mp, meta=meta, imagem=caminho, x0=round(m[0]),
+                                y0=round(m[1]), x1=round(m[2]), y1=round(m[3]), score_deteccao=f"{m[4]:.3f}",
+                                concordancia=conc, _imagem=imagem_id, vista=vista))
     if not linhas:
+        nivel = "não usar" if any(n == "não usar" for n, _ in avisos_img) else "atenção" if avisos_img else "ok"
         linhas.append({"amostra": imagem_id, "origem_lesao": ORIGEM_NENHUMA,
                        "imagens_usadas": f"mamografia completa ({nome_img})", "imagem": caminho,
                        "patologia": "sem lesão detectada", "achado": "—", "conf_patologia": "N/D",
-                       "conf_achado": "N/D", "p_maligno": "N/D", "concordancia": "", "_imagem": imagem_id,
-                       "vista": vista})
+                       "conf_achado": "N/D", "p_maligno": "N/D", "p_maligno_calibrada": "N/D", "incerteza": "N/D",
+                       "concordancia": "", "_imagem": imagem_id, "vista": vista,
+                       "qualidade": nivel, "avisos_qualidade": "; ".join(m for _, m in avisos_img),
+                       "prioridade": "não avaliar (qualidade)" if nivel == "não usar" else "baixa (nada detectado)",
+                       "idade": meta.get("idade", ""), "fabricante": meta.get("fabricante", ""), "mapa_calor": ""})
     return linhas
 
 
@@ -669,9 +823,10 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
 # 5. PRINCIPAL
 # =============================================================================
 
-CAMPOS_SAIDA = ["amostra", "mama", "vista", "origem_lesao", "imagens_usadas", "patologia", "conf_patologia", "p_maligno",
+CAMPOS_SAIDA = ["amostra", "mama", "vista", "prioridade", "p_maligno_calibrada", "incerteza", "qualidade",
+                "avisos_qualidade", "origem_lesao", "imagens_usadas", "patologia", "conf_patologia", "p_maligno",
                 "achado", "conf_achado", "densidade", "densidade_origem", "aviso_densidade", "concordancia",
-                "score_deteccao", "imagem", "x0", "y0", "x1", "y1"]
+                "score_deteccao", "idade", "fabricante", "mapa_calor", "versao_modelo", "imagem", "x0", "y0", "x1", "y1"]
 
 
 def main():
@@ -691,6 +846,7 @@ def main():
     ap.add_argument("--pasta_densidade", default=str(PASTA_DENSIDADE), help="pasta com densidade.pth/.json")
     ap.add_argument("--modelo_recorte", default=str(PASTA_ACHADO / "resnet50_multitask_mama_do_zero.pth"))
     ap.add_argument("--modelo_multivista", default=str(PASTA_ACHADO / "resnet50_multivista.pth"))
+    ap.add_argument("--sem_mapas", action="store_true", help="não gera os mapas de calor (mais rápido, sobretudo na CPU)")
     args = ap.parse_args()
 
     pesos_mc = [Path(args.pasta_pesos) / f"mammoclip512_dobra_{k}.pth" for k in range(1, N_DOBRAS + 1)]
@@ -704,9 +860,27 @@ def main():
     planilha = ler_planilha(Path(arq_planilha).expanduser()) if arq_planilha else None
     saida = Path(args.saida_csv).expanduser() if args.saida_csv else PASTA_SCRIPT / "results.csv"
 
+    # rastreabilidade: versão do modelo (hash dos pesos) conferida contra o manifesto
+    sys.path.insert(0, str(PASTA_SCRIPT))
+    import manifesto  # noqa: E402
+    versao_modelo, versao_registrada, divergencias = manifesto.verificar()
+    print(f"🔖 Versão do modelo: {versao_modelo}" + ("" if not divergencias else
+          f" — ⚠️ diferente da registrada ({versao_registrada}): " + "; ".join(divergencias[:3])))
+    arq_cal = PASTA_SCRIPT / "calibracao.json"
+    CONTEXTO["cal"] = json.loads(arq_cal.read_text(encoding="utf-8")) if arq_cal.is_file() else None
+    if CONTEXTO["cal"] is None:
+        print("⚠️  calibracao.json não encontrado: P(maligno) sem calibração e prioridade com limites padrão.")
+    CONTEXTO["mapas"] = not args.sem_mapas
+    CONTEXTO["pasta_mapas"] = saida.parent / f"{saida.stem}_mapas"
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🖥️  Dispositivo: {device}")
     recortes, completas, mama_de, caixas_usuario, dens_informada = montar_amostras(pasta, planilha)
+    info_mama = {}
+    for linha in planilha or []:
+        for c in ("idade", "fabricante"):
+            if linha.get(c):
+                info_mama.setdefault(linha["mama"], {})[c] = linha[c]
     tem_detector = all((Path(args.pasta_deteccao) / f).is_file() for f in ("detector_lesao.pth", "detector_lesao.json"))
     tem_densidade = all((Path(args.pasta_densidade) / f).is_file() for f in ("densidade.pth", "densidade.json"))
     detectar = bool(completas) and not args.sem_deteccao and tem_detector
@@ -757,7 +931,11 @@ def main():
         if d is None and r["_mama"] in dens_modelo:
             d, origem = dens_modelo[r["_mama"]], "inferida pelo modelo"
         r.update(mama=r["_mama"], densidade=d or "", densidade_origem=origem,
-                 aviso_densidade=texto_densidade(d) if d else "")
+                 aviso_densidade=texto_densidade(d) if d else "", versao_modelo=versao_modelo)
+        info = info_mama.get(r["_mama"], {})                     # idade/fabricante da planilha têm prioridade
+        for c in ("idade", "fabricante"):
+            if info.get(c):
+                r[c] = info[c]
     print(f"   densidade: {len(dens_informada)} informada(s) pelo usuário, {len(dens_modelo)} mama(s) inferida(s) "
           f"pelo modelo")
 
@@ -768,14 +946,14 @@ def main():
 
     print(f"\n💾 Resultado salvo em: {saida}")
     print("\n" + "=" * 132)
-    print(f"{'AMOSTRA':<28}{'ORIGEM DA LESÃO':<26}{'PATOLOGIA':<21}{'CONF.PAT':<10}{'ACHADO':<20}{'CONF.ACH':<10}"
-          f"{'DENSIDADE'}")
+    print(f"{'AMOSTRA':<28}{'PRIORIDADE':<14}{'P(CAL.)':<9}{'QUALIDADE':<11}{'ORIGEM DA LESÃO':<24}{'PATOLOGIA':<13}"
+          f"{'ACHADO':<19}{'DENSIDADE'}")
     print("-" * 132)
     for r in resultados:
         dens = f"{r['densidade']} ({r['densidade_origem']})" if r["densidade"] else "—"
         nome = r["amostra"] if len(r["amostra"]) <= 27 else r["amostra"][:26] + "…"
-        print(f"{nome:<28}{r['origem_lesao']:<26}{r['patologia']:<21}{r['conf_patologia']:<10}"
-              f"{r['achado']:<20}{r['conf_achado']:<10}{dens}")
+        print(f"{nome:<28}{r['prioridade'][:13]:<14}{r['p_maligno_calibrada']:<9}{r['qualidade']:<11}"
+              f"{r['origem_lesao'][:23]:<24}{r['patologia'][:12]:<13}{r['achado'][:18]:<19}{dens}")
     print("=" * 132)
 
 

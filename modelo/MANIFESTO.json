@@ -1,0 +1,141 @@
+{
+  "gerado_em": "2026-11-19 13:08:53",
+  "descricao": "Versão de referência: patologia Mammo-CLIP 512 (5 dobras), achado ResNet-50 + multivista, detector Faster R-CNN CBIS+CDD (limiar 0,50), densidade ResNet-50 768 px",
+  "modelos": {
+    "desempenho.json": {
+      "sha256": "cf3027d7f288ce264be0a97147c184191cad593dd87d9c7e187287fc79626365",
+      "bytes": 18244
+    },
+    "modelo_achado/resnet50_multitask_mama_do_zero.pth": {
+      "sha256": "39312504f0076db06c6318fdb856ead7335030eefa290bc8fa456ca75ece9e31",
+      "bytes": 94394875
+    },
+    "modelo_achado/resnet50_multivista.pth": {
+      "sha256": "3a1ed6db8659b4e0274ba6e8dbcf8c6a63ab35915b0fbd8cadaf2c7dbbb07b4b",
+      "bytes": 94424603
+    },
+    "modelo_densidade/densidade.json": {
+      "sha256": "7a03748b3a9ce082a9ff8c00f6596b542da2917ba8407ab33793a6e964cbba84",
+      "bytes": 846
+    },
+    "modelo_densidade/densidade.pth": {
+      "sha256": "ceb0ec3bb31c335be12acead46bf253250aa5b6f9026a20034d3c8dcd3c8a60d",
+      "bytes": 94383237
+    },
+    "modelo_deteccao/detector_lesao.json": {
+      "sha256": "5e314209f54a50f491d0ee113c161511e45a5734e5806b723072b720081dab3c",
+      "bytes": 1161
+    },
+    "modelo_deteccao/detector_lesao.pth": {
+      "sha256": "4e260a5ac12494182b5bca248d041dd81196709d98663b3d5404a16bc68cb864",
+      "bytes": 173408565
+    },
+    "modelo_patologia/mammoclip512_dobra_1.pth": {
+      "sha256": "d9361c767b66e9ef4ad2f6ca5b708e949cfb495833e25074afc68488aa3edd41",
+      "bytes": 36923625
+    },
+    "modelo_patologia/mammoclip512_dobra_2.pth": {
+      "sha256": "d78bfe76fa632c35a26333dcc2fcf501fc1a713ac1575a46c5665f4ba3f3ce9e",
+      "bytes": 36923625
+    },
+    "modelo_patologia/mammoclip512_dobra_3.pth": {
+      "sha256": "af2bc21ddd739990ab4f5a4aa9d3553d7cf0ae13dcb202d7771708abfe455b09",
+      "bytes": 36923625
+    },
+    "modelo_patologia/mammoclip512_dobra_4.pth": {
+      "sha256": "b59d39163d76070a9e6a55f0339a28a80006e4cc1c75a5969d90251da9c838d9",
+      "bytes": 36923625
+    },
+    "modelo_patologia/mammoclip512_dobra_5.pth": {
+      "sha256": "fa0702e6251eda89221a23e783d22a0f2e193142a6ddef60a365812ef4094fcf",
+      "bytes": 36923625
+    }
+  },
+  "exemplos": {
+    "exemplos/1_dicom_filme_cbis/P_00066_LEFT_CC_completa.dcm": {
+      "sha256": "2e08478b003877f29ce3343a616e4279eeb7591c9467fc1b13260b482cd1101a",
+      "bytes": 18545050
+    },
+    "exemplos/1_dicom_filme_cbis/P_00066_LEFT_CC_recorte.dcm": {
+      "sha256": "0fd8eb7d5b02b79092382311ba47d25bc95980a4d58740fd07418e764c220ed5",
+      "bytes": 162484
+    },
+    "exemplos/1_dicom_filme_cbis/P_00066_LEFT_MLO_completa.dcm": {
+      "sha256": "3456ecf65cf8d736b7ed5ca8ea4bce8e1cc7aaa88a6a95c40765752b5f42bf92",
+      "bytes": 24063222
+    },
+    "exemplos/1_dicom_filme_cbis/P_00066_LEFT_MLO_recorte.dcm": {
+      "sha256": "fc8cbde6faea609e46125fd412f2f2083accd3fa9385b95444bb5b269939398e",
+      "bytes": 284102
+    },
+    "exemplos/1_dicom_filme_cbis/P_00118_RIGHT_CC_completa.dcm": {
+      "sha256": "5545560f5649e859c854e307d0cb7a4c1ed587764ec8a5ce1bf20d8f79bb37aa",
+      "bytes": 56911810
+    },
+    "exemplos/1_dicom_filme_cbis/P_00118_RIGHT_CC_recorte.dcm": {
+      "sha256": "06013ee0eb03d6412c7716023a33c2f4f3b47c721cfb863bb248ea1f839023eb",
+      "bytes": 191164
+    },
+    "exemplos/1_dicom_filme_cbis/P_00118_RIGHT_MLO_completa.dcm": {
+      "sha256": "6e5b0780cf96f6cc3f6c1848efceed1f48b404e56da3968765383ed7d75269d3",
+      "bytes": 57744886
+    },
+    "exemplos/1_dicom_filme_cbis/P_00118_RIGHT_MLO_recorte.dcm": {
+      "sha256": "466e460877c2ce4e514b260b4ed30217d8dce1e061649e9915920a34064eb641",
+      "bytes": 223362
+    },
+    "exemplos/1_dicom_filme_cbis/P_00127_RIGHT_CC_completa.dcm": {
+      "sha256": "9ccf2ece89b8a52f7f3eef12d4b4c425a422af16e9447f90bd850f66d0e0eb78",
+      "bytes": 50912966
+    },
+    "exemplos/1_dicom_filme_cbis/P_00127_RIGHT_MLO_completa.dcm": {
+      "sha256": "38b1c020f00b7d362bf37da18bb6a38c815619ddf452b8cb6966fc9d89773f19",
+      "bytes": 49279830
+    },
+    "exemplos/2_png_digital_cdd/pacienteA_esq_completa_cc.png": {
+      "sha256": "55c6753031c3fc61d9bd3f09a1e8cb53e58210fa4f3f486e7bd2615dca71cc73",
+      "bytes": 922550
+    },
+    "exemplos/2_png_digital_cdd/pacienteA_esq_completa_mlo.png": {
+      "sha256": "88f92389cd9c10ffc0d333e866f0febb8f302c5551f9a45603559b26f8cbc013",
+      "bytes": 991518
+    },
+    "exemplos/2_png_digital_cdd/pacienteA_esq_recorte_cc.png": {
+      "sha256": "12edb259e7e44458190a8519551fbfc611471f2cdaa53dfe150920f49590276a",
+      "bytes": 186470
+    },
+    "exemplos/2_png_digital_cdd/pacienteA_esq_recorte_mlo.png": {
+      "sha256": "7e685edb73a17da2228a5f0568725d4d8f4779cbaa05fc3cb59291467d036f3f",
+      "bytes": 179000
+    },
+    "exemplos/2_png_digital_cdd/pacienteB_esq_completa_cc.png": {
+      "sha256": "138e785b17f2d2d239d6b25ed257a0005bd23c215a6ab6d0c3aef1ed56edf354",
+      "bytes": 529669
+    },
+    "exemplos/2_png_digital_cdd/pacienteB_esq_completa_mlo.png": {
+      "sha256": "1bb01669ad07b78a8d4d06e5215ea6819ddb6f33864ed1f7051412562cbc3adf",
+      "bytes": 849725
+    },
+    "exemplos/2_png_digital_cdd/pacienteB_esq_recorte_cc.png": {
+      "sha256": "f45c08237d236958061e039c4e61d96b80c833b0f88d53d14086afd5773d06d4",
+      "bytes": 2603
+    },
+    "exemplos/2_png_digital_cdd/pacienteB_esq_recorte_mlo.png": {
+      "sha256": "363f30a61a613a105ae4295b2f312dedc08b574d34f9475c7bc3c21d4f8434ff",
+      "bytes": 3556
+    },
+    "exemplos/2_png_digital_cdd/pacienteC_dir_completa_cc.png": {
+      "sha256": "2c77ce8753e650f5ce1c6e728a129a6746e939458bd8eb8621660632ca9d74f5",
+      "bytes": 418303
+    },
+    "exemplos/gabarito.csv": {
+      "sha256": "c3afbd79bdf8e7acfda3612fd017fbfd0fbc82953ef751183079c63df38272e6",
+      "bytes": 1064
+    },
+    "exemplos/planilha_medico.csv": {
+      "sha256": "783a8a913596b9ab5ffb5b7f40f7bbc9bf551608d4c81952306d125b0a139a85",
+      "bytes": 992
+    }
+  },
+  "versao_modelo": "f939d940beae"
+}
