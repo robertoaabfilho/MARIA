@@ -6,9 +6,8 @@ Cada requisito aponta para onde está implementado e como é verificado. Testes 
 | ID | Requisito | Implementação | Verificação |
 |---|---|---|---|
 | REQ_ENT_01 | Ler a planilha do médico em CSV com "," ou ";", UTF-8 ou cp1252, nomes de coluna flexíveis, vírgula decimal | maria.py `ler_planilha` | test_REQ_ENT_01 |
-| REQ_ENT_01b | Formato padrão de 14 colunas (paciente, idade, arquivos, lado, vista, tipo de achado, patologia, caixa, exame, densidade) com valores normalizados; cabeçalhos do CBIS-DDSM aceitos | maria.py `ler_planilha`; dashboard `padronizar_planilha` | test_REQ_ENT_01b, 01c, 06 |
-| REQ_ENT_04 | Juntar CC + MLO (multivista) só quando há exatamente um recorte de cada vista do mesmo tipo de achado na mama (o "abnormality id" do CBIS não identifica a lesão entre vistas) | maria.py `montar_amostras` | test_REQ_ENT_04 |
-| REQ_ENT_05 | Levar tipo, patologia e exame de confirmação da planilha para o resultado e pré-preencher a revisão | maria.py `montar_amostras`/`main`; dashboard `confirmacao_da_planilha` | test_REQ_ENT_05 |
+| REQ_ENT_01b | Formato padrão de 11 colunas (paciente, idade, arquivos, lado, vista, caixa x/y início/fim, densidade) com valores normalizados; cabeçalhos do CBIS-DDSM aceitos | maria.py `ler_planilha`; dashboard `padronizar_planilha` | test_REQ_ENT_01b, 01c, 06 |
+| REQ_ENT_04 | Juntar CC + MLO (multivista) só quando a mama tem exatamente um recorte de cada vista com o mesmo achado previsto pelo modelo; achados diferentes ficam separados; a coluna opcional "lesao" força o par (o "abnormality id" do CBIS não identifica a lesão entre vistas) | maria.py `montar_amostras`, `parear_por_achado` | test_REQ_ENT_04, 04b |
 | REQ_ENT_02 | Ignorar caixas inválidas (x1 ≤ x0 ou y1 ≤ y0) com aviso | maria.py `ler_planilha` | test_REQ_ENT_02 |
 | REQ_ENT_03 | Reconhecer DICOM pelos metadados e PNG/JPG pelo nome ou pela planilha | maria.py `montar_amostras` | regressão dos exemplos |
 | REQ_DET_01 | Detectar lesões em mamografia completa e comparar com as marcadas pelo médico | maria.py `DetectorLesao`, `diagnosticar_completa`, `coincide` | test_REQ_DET_01; FROC (desempenho.json) |

@@ -22,77 +22,77 @@ def test_REQ_ENT_01_planilha_excel_ptbr(tmp_path):
     assert l["caixa"] == (10.0, 20.0, 30.5, 40.0) and l["idade"] == "52" and l["fabricante"] == "GE Senographe"
 
 
-def test_REQ_ENT_01b_formato_padrao_14_colunas(tmp_path):
-    """Formato padrão: paciente, idade, arquivos, lado, vista, tipo, patologia, x/y_inicio/fim, exame, densidade."""
+def test_REQ_ENT_01b_formato_padrao_11_colunas(tmp_path):
+    """Formato padrão: paciente, idade, arquivos, lado, vista, x/y_inicio/fim, densidade."""
     import maria
     arq = tmp_path / "p.csv"
-    arq.write_bytes(("paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;x_inicio;"
-                     "y_inicio;x_fim;y_fim;exame_confirmacao;densidade\r\n"
-                     "P_00001;52;a.dcm;r.dcm;Esquerdo;mlo;Calcificação;Maligno;10;20;30,5;40;Biópsia;C\r\n"
-                     "P_00002;;b.dcm;;R;CC;mass;BENIGN_WITHOUT_CALLBACK;;;;;seguimento;\r\n").encode("cp1252"))
+    arq.write_bytes(("paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;x_inicio;y_inicio;x_fim;y_fim;"
+                     "densidade\r\n"
+                     "P_00001;52;a.dcm;r.dcm;Esquerdo;mlo;10;20;30,5;40;C\r\n"
+                     "P_00002;;b.dcm;;R;CC;;;;;\r\n").encode("cp1252"))
     l1, l2 = maria.ler_planilha(arq)
     assert l1["mama"] == "P_00001_esquerdo" and l1["vista"] == "MLO" and l1["idade"] == "52"
-    assert (l1["tipo_achado"], l1["patologia"], l1["exame_confirmacao"]) == ("calcificação", "maligno", "biópsia")
     assert l1["caixa"] == (10.0, 20.0, 30.5, 40.0) and l1["densidade"] == 3
-    assert l2["mama"] == "P_00002_direito" and l2["tipo_achado"] == "massa" and l2["patologia"] == "benigno"
+    assert l2["mama"] == "P_00002_direito" and l2["caixa"] is None
 
 
 def test_REQ_ENT_01c_nomes_das_bases_cbis_cdd(tmp_path):
     """Cabeçalhos originais do CBIS-DDSM são reconhecidos."""
     import maria
     arq = tmp_path / "p.csv"
-    arq.write_text("patient_id,breast_density,left or right breast,image view,abnormality type,pathology\n"
-                   "P_00005,3,RIGHT,CC,calcification,MALIGNANT\n", encoding="utf-8")
+    arq.write_text("patient_id,breast_density,left or right breast,image view\n"
+                   "P_00005,3,RIGHT,CC\n", encoding="utf-8")
     l = maria.ler_planilha(arq)[0]
-    assert (l["mama"], l["densidade"], l["vista"], l["tipo_achado"], l["patologia"]) == \
-        ("P_00005_direito", 3, "CC", "calcificação", "maligno")
+    assert (l["mama"], l["densidade"], l["vista"]) == ("P_00005_direito", 3, "CC")
 
 
-def _pasta_com_recortes(tmp_path, nomes):
+def test_REQ_ENT_04_pareamento_cc_mlo_pelo_achado_previsto(monkeypatch, tmp_path):
+    """CC + MLO só são juntados quando a mama tem exatamente um recorte de cada vista com o MESMO achado previsto;
+    achados diferentes nas duas vistas ficam como casos separados."""
+    import maria
+    import torch
     from PIL import Image
-    for n in nomes:
-        Image.new("L", (64, 64), 128).save(tmp_path / n)
-
-
-def test_REQ_ENT_04_pareamento_cc_mlo_pelo_tipo(tmp_path):
-    """CC + MLO só são juntados quando há exatamente um recorte de cada vista do mesmo tipo na mesma mama."""
-    import maria
-    _pasta_com_recortes(tmp_path, ["a.png", "b.png", "c.png", "d.png", "e.png"])
+    for n in ("a", "b", "c", "d", "e", "f", "g"):
+        Image.new("L", (64, 64), 128).save(tmp_path / f"{n}.png")
     arq = tmp_path / "p.csv"
-    arq.write_text("paciente,lado,vista,tipo_achado,arquivo_recorte\n"
-                   "P1,esquerdo,CC,massa,a.png\nP1,esquerdo,MLO,massa,b.png\n"          # par único -> junta
-                   "P1,esquerdo,CC,calcificação,c.png\nP1,esquerdo,CC,calcificação,d.png\n"  # 2 na CC -> separa
-                   "P1,esquerdo,MLO,calcificação,e.png\n", encoding="utf-8")
-    recortes = maria.montar_amostras(tmp_path, maria.ler_planilha(arq))[0]
-    assert sorted(recortes["P1_esquerdo_massa"]) == ["CC", "MLO"]
-    calc = sorted(k for k in recortes if "calcificacao" in k)
-    assert len(calc) == 3 and all(len(recortes[k]) == 1 for k in calc)
-
-
-def test_REQ_ENT_05_planilha_informa_confirmacao(tmp_path):
-    """Patologia, tipo e exame da planilha vão para o resultado; imagem normal marca as detecções como normais."""
-    import maria
-    _pasta_com_recortes(tmp_path, ["a.png", "n.png"])
-    arq = tmp_path / "p.csv"
-    arq.write_text("paciente,lado,vista,tipo_achado,patologia,exame_confirmacao,arquivo_completa,arquivo_recorte\n"
-                   "P1,direito,CC,massa,maligno,biópsia,,a.png\nP2,esquerdo,CC,normal,normal,,n.png,\n",
+    arq.write_text("paciente,lado,vista,arquivo_recorte\n"
+                   "P1,esquerdo,CC,a.png\nP1,esquerdo,MLO,b.png\n"                      # mesmo achado -> junta
+                   "P2,direito,CC,c.png\nP2,direito,MLO,d.png\n"                         # achados diferentes -> separa
+                   "P3,direito,CC,e.png\nP3,direito,CC,f.png\nP3,direito,MLO,g.png\n",  # 2 massas na CC -> separa
                    encoding="utf-8")
-    *_, informado = maria.montar_amostras(tmp_path, maria.ler_planilha(arq))
-    assert informado["amostra"]["P1_direito_massa_cc"] == {"achado_informado": "massa",
-                                                           "patologia_informada": "maligno",
-                                                           "exame_confirmacao": "biópsia"}
-    assert informado["imagem"]["P2_esquerdo_cc"]["patologia_informada"] == "normal"
+    previsto = {"a": 0, "b": 0, "c": 0, "d": 1, "e": 0, "f": 0, "g": 0}      # 0 = massa, 1 = calcificação
+    monkeypatch.setattr(maria, "ler_imagem", lambda c: (Path(c).stem, False))
+    monkeypatch.setattr(maria, "entrada_achado", lambda arr, eh: arr)
+    monkeypatch.setattr(maria, "prob_achado_recorte",
+                        lambda m, nome, d: torch.tensor([1.0, 0.0] if previsto[nome] == 0 else [0.0, 1.0]))
+    recortes, _, mama_de, _, _, fixos = maria.montar_amostras(tmp_path, maria.ler_planilha(arq))
+    assert maria.parear_por_achado(recortes, mama_de, fixos, None, "cpu") == 1
+    assert sorted(recortes["P1_esquerdo_massa"]) == ["CC", "MLO"]
+    assert all(len(v) == 1 for k, v in recortes.items() if k != "P1_esquerdo_massa")
+    assert len(recortes) == 6
+
+
+def test_REQ_ENT_04b_coluna_lesao_forca_o_par(tmp_path):
+    """Com a coluna opcional "lesao", o par CC + MLO é o que o médico informou (não passa pelo modelo)."""
+    import maria
+    from PIL import Image
+    for n in ("a", "b"):
+        Image.new("L", (64, 64), 128).save(tmp_path / f"{n}.png")
+    arq = tmp_path / "p.csv"
+    arq.write_text("paciente,lado,vista,arquivo_recorte,lesao\nP1,esquerdo,CC,a.png,1\nP1,esquerdo,MLO,b.png,1\n",
+                   encoding="utf-8")
+    recortes, *_, fixos = maria.montar_amostras(tmp_path, maria.ler_planilha(arq))
+    assert sorted(recortes["P1_esquerdo_1"]) == ["CC", "MLO"] and "P1_esquerdo_1" in fixos
 
 
 def test_REQ_ENT_06_dashboard_padroniza_valores():
     """O editor do dashboard aceita sinônimos e deixa vazio o que não reconhece."""
     import pandas as pd
     ns = funcoes_do_dashboard("_chave_coluna", "planilha_vazia", "padronizar_planilha", "separar_lado")
-    df = ns["padronizar_planilha"](pd.DataFrame({"Patient_ID": ["P_1"], "Side": ["L"], "caixa_esq": ["5,5"],
-                                                 "Tipo de achado": ["Nódulo"], "Patologia": ["xyz"]}))
-    r = df.iloc[0]
-    assert (r["paciente"], r["lado"], r["tipo_achado"], r["x_inicio"]) == ("P_1", "esquerdo", "massa", 5.5)
-    assert r["patologia"] is None
+    df = ns["padronizar_planilha"](pd.DataFrame({"Patient_ID": ["P_1", "P_2"], "Side": ["L", "xyz"],
+                                                 "caixa_esq": ["5,5", ""]}))
+    assert (df.at[0, "paciente"], df.at[0, "lado"], df.at[0, "x_inicio"]) == ("P_1", "esquerdo", 5.5)
+    assert pd.isna(df.at[1, "lado"])
     assert ns["separar_lado"]("pacienteA_esq") == ("pacienteA", "esquerdo")
 
 
