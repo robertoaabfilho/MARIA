@@ -92,6 +92,19 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.transforms import InterpolationMode
 from tqdm import tqdm
 
+
+def progresso(itens, desc, total_geral=None):
+    """Itera mostrando o andamento. Pelo dashboard (MARIA_DASHBOARD), imprime uma linha por imagem
+    "@@PROGRESSO|etapa|i|n|nome" (o dashboard transforma em barra de progresso); no terminal, usa o tqdm."""
+    itens = list(itens)
+    if not os.environ.get("MARIA_DASHBOARD"):
+        yield from tqdm(itens, desc=desc, disable=not itens)
+        return
+    for i, item in enumerate(itens, 1):
+        nome = item[0] if isinstance(item, tuple) else item
+        print(f"@@PROGRESSO|{desc}|{i}|{len(itens)}|{nome}", flush=True)
+        yield item
+
 try:
     from pydicom.pixels import apply_voi_lut
 except ImportError:
@@ -555,8 +568,9 @@ def montar_amostras(pasta, planilha=None):
 def parear_por_achado(recortes, mama_de, fixos, m_recorte, device):
     """Junta CC + MLO (análise multivista) quando a mama tem exatamente UM recorte CC e UM MLO com o MESMO
     achado previsto pelo modelo (massa/nódulo ou microcalcificação). Achados diferentes nas duas vistas,
-    ou mais de um do mesmo tipo numa vista, ficam separados (cada recorte é um caso)."""
-    grupos = {}
+    ou mais de um do mesmo tipo numa vista, ficam separados (cada recorte é um caso).
+    -> (nº de pares, {amostra: aviso}) — o aviso marca CC e MLO únicas da mama com achados diferentes."""
+    grupos, por_mama = {}, {}
     for a, vistas in recortes.items():
         if a in fixos or len(vistas) != 1 or next(iter(vistas)) not in ("CC", "MLO"):
             continue
@@ -567,6 +581,13 @@ def parear_por_achado(recortes, mama_de, fixos, m_recorte, device):
         except Exception:
             continue
         grupos.setdefault((mama_de[a], classe), {}).setdefault(vista, []).append(a)
+        por_mama.setdefault(mama_de[a], {}).setdefault(vista, []).append((a, classe))
+    divergentes = {}
+    for mama, vs in por_mama.items():
+        if sorted(vs) == ["CC", "MLO"] and len(vs["CC"]) == len(vs["MLO"]) == 1 and vs["CC"][0][1] != vs["MLO"][0][1]:
+            for a, _ in (vs["CC"][0], vs["MLO"][0]):
+                divergentes[a] = ("achado previsto diferente na CC e na MLO: vistas analisadas separadamente "
+                                  "(correlacione as vistas)")
     pares = 0
     for (mama, classe), por_vista in grupos.items():
         if sorted(por_vista) != ["CC", "MLO"] or any(len(v) != 1 for v in por_vista.values()):
@@ -578,7 +599,7 @@ def parear_por_achado(recortes, mama_de, fixos, m_recorte, device):
         recortes[novo] = {**recortes.pop(cc), **recortes.pop(mlo)}
         mama_de[novo] = mama
         pares += 1
-    return pares
+    return pares, divergentes
 
 
 def id_usuario(imagem_id, rotulo):
@@ -991,20 +1012,25 @@ def main():
     if completas and not tem_densidade:
         print(f"⚠️  classificador de densidade não encontrado em {args.pasta_densidade}: densidade não estimada.")
 
+    divergentes = {}
     if recortes:
         n_antes = len(recortes)
         with torch.no_grad():
-            pares = parear_por_achado(recortes, mama_de, fixos, m_recorte, device)
+            pares, divergentes = parear_por_achado(recortes, mama_de, fixos, m_recorte, device)
         print(f"   pareamento CC + MLO pelo achado previsto: {pares} par(es); {n_antes} recorte(s)/grupo(s) -> "
               f"{len(recortes)} lesão(ões)")
 
     print("\n🔎 Diagnosticando...")
     resultados, probs_mama = [], {}
     with torch.no_grad():
-        for a, v in tqdm(sorted(recortes.items()), desc="Recortes", disable=not recortes):
-            resultados.append(dict(diagnosticar(a, v, m_recorte, m_multivista, modelos_mc, device, args.limiar),
-                                   _mama=mama_de[a]))
-        for a, info in tqdm(sorted(completas.items()), desc="Completas", disable=not completas):
+        for a, v in progresso(sorted(recortes.items()), "Recortes"):
+            r = dict(diagnosticar(a, v, m_recorte, m_multivista, modelos_mc, device, args.limiar), _mama=mama_de[a])
+            if a in divergentes:                                   # aviso, sem mudar a prioridade
+                r["avisos_qualidade"] = "; ".join(x for x in (r.get("avisos_qualidade"), divergentes[a]) if x)
+                if r.get("qualidade") == "ok":
+                    r["qualidade"] = "atenção"
+            resultados.append(r)
+        for a, info in progresso(sorted(completas.items()), "Mamografias completas"):
             if m_dens and mama_de[a] not in dens_informada:      # densidade informada dispensa a estimativa
                 try:
                     probs_mama.setdefault(mama_de[a], []).append(m_dens.estimar(ler_imagem(info["caminho"])[0]))

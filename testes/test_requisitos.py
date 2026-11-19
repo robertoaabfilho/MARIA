@@ -66,7 +66,8 @@ def test_REQ_ENT_04_pareamento_cc_mlo_pelo_achado_previsto(monkeypatch, tmp_path
     monkeypatch.setattr(maria, "prob_achado_recorte",
                         lambda m, nome, d: torch.tensor([1.0, 0.0] if previsto[nome] == 0 else [0.0, 1.0]))
     recortes, _, mama_de, _, _, fixos = maria.montar_amostras(tmp_path, maria.ler_planilha(arq))
-    assert maria.parear_por_achado(recortes, mama_de, fixos, None, "cpu") == 1
+    pares, divergentes = maria.parear_por_achado(recortes, mama_de, fixos, None, "cpu")
+    assert pares == 1 and sorted(divergentes) == ["P2_direito_cc", "P2_direito_mlo"]   # só a P2 diverge
     assert sorted(recortes["P1_esquerdo_massa"]) == ["CC", "MLO"]
     assert all(len(v) == 1 for k, v in recortes.items() if k != "P1_esquerdo_massa")
     assert len(recortes) == 6

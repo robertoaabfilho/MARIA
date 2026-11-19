@@ -2,7 +2,7 @@ amostra,prioridade,patologia,achado,p_maligno,p_maligno_calibrada,qualidade
 P_00066_esquerdo_massa,alta,Maligno,Massa/Nódulo,0.9184,0.8889,ok
 P_00118_direito_massa,alta,Maligno,Massa/Nódulo,0.9039,0.8708,ok
 pacienteA_esquerdo_cc,alta,Maligno,Massa/Nódulo,0.6101,0.5490,atenção
-pacienteA_esquerdo_mlo,alta,Maligno,Microcalcificação,0.8000,0.7488,ok
+pacienteA_esquerdo_mlo,alta,Maligno,Microcalcificação,0.8000,0.7488,atenção
 pacienteB_esquerdo_calcificacao,baixa,Benigno,Microcalcificação,0.0857,0.0766,ok
 P_00066_esquerdo_cc_usuario1,alta,Maligno,Massa/Nódulo,0.8702,0.8300,ok
 P_00066_esquerdo_cc_modelo1,alta,Maligno,Microcalcificação,0.7342,0.6768,ok

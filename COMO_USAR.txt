@@ -156,9 +156,12 @@
 
  O dashboard tem PÁGINAS, escolhidas na barra lateral (esquerda):
    - Sobre o modelo ... descrição do MARIA: como funciona (diagrama), arquitetura de cada modelo, bases de
-                        dados, resultados medidos e gráficos detalhados (curvas de aprendizado, matrizes de
-                        confusão, curvas ROC e FROC, calibração), limitações, versão dos modelos e referências.
-   - Executar ......... a página de uso (abre primeiro), com as abas descritas abaixo.
+                        dados, resultados medidos e gráficos detalhados (validação cruzada k-fold por dobra,
+                        curvas de aprendizado, matrizes de confusão, curvas ROC e FROC, calibração),
+                        limitações, versão dos modelos e referências.
+   - Executar ......... imagens, planilha e o botão Classificar (abre primeiro).
+   - Resultados ....... fila de leitura, gráficos, detalhe de cada lesão e revisão (depois de classificar).
+   - Anotações e retreino  banco de anotações, desempenho local, calibração e retreino.
    - Administração .... (só administradores) usuários, registro de auditoria e retenção de dados.
 
  BARRA LATERAL (esquerda)
@@ -170,7 +173,7 @@
    - Sensibilidade do detector  score mínimo de uma caixa do modelo (padrão 0,50). Menor = encontra
                                mais lesões, mas marca mais caixas falsas. Veja os números na seção 12.
 
- ABA "1) Imagens e planilha"
+ PÁGINA "Executar"
    a) Pasta de imagens: digite (ou cole) o caminho da pasta, por exemplo C:\Exames\paciente1.
       Use "Pasta acima" e a lista "Subpastas" para navegar. O MARIA procura também nas subpastas.
    b) Planilha do médico (opcional, veja a seção 9):
@@ -186,37 +189,44 @@
    c) Marcar lesões na imagem (opcional): abra "Marcar lesões na imagem", escolha a mamografia completa,
       ARRASTE O MOUSE sobre a lesão para desenhar a caixa, confira paciente/lado/vista e clique em
       "Adicionar à planilha". As caixas já marcadas aparecem em verde.
-   d) Clique em "Classificar". O andamento aparece na tela. No fim, vá para a aba 2.
+   d) Clique em "Classificar" (botão grande, no centro). A barra de progresso mostra qual imagem está
+      sendo analisada (ex.: "Mamografias completas: imagem 3 de 11") e o log aparece logo abaixo. No
+      fim, clique em "Ver os resultados" (ou escolha a página Resultados na barra lateral).
+      A planilha editada continua lá quando você volta para a página Executar.
 
- ABA "2) Resultados"
+ PÁGINA "Resultados"
    - Resumo: lesões por prioridade (alta, média, baixa, não avaliar) e a versão do modelo. Um aviso
      vermelho lista as imagens com qualidade NÃO USAR.
    - Fila de leitura (priorizada): uma linha por lesão, ordenada da prioridade alta para a baixa e,
      dentro dela, pela probabilidade calibrada. Passe o mouse no título de uma coluna para ver o que
      ela significa. Filtre por prioridade, origem da lesão ou pelo nome. "Baixar tabela (CSV para
      Excel)" salva a tabela filtrada.
-   - Gráficos:
+   - Gráficos: cada análise fica num bloco que abre e recolhe com um clique:
        * Densidade: quantas mamas em cada densidade, separando a informada pelo médico da inferida.
        * Lesões marcadas pelo usuário x detectadas pelo modelo: quantas foram marcadas pelos dois,
          só pelo médico, só pelo modelo, e detectadas em imagens sem marcação do médico.
        * Densidade x patologia, Densidade x achado e Achado x patologia: à esquerda, quantas
          lesões em cada grupo; à direita, a confiança de cada lesão (um ponto por lesão; o traço
          preto é a média). Confiança perto de 50% = o modelo está em dúvida.
-       * Distribuição de P(maligno) (recolhida).
-   - Resultados por subgrupo: prioridades e probabilidade média por densidade, faixa etária, tipo de
-     achado, equipamento ou vista (sem confirmação, NÃO é acerto; o acerto local fica na aba 3).
+       * Distribuição de P(maligno).
+       * Resultados por subgrupo: prioridades e probabilidade média por densidade, faixa etária, tipo
+         de achado, equipamento ou vista (sem confirmação, NÃO é acerto; o acerto local fica na página
+         Anotações e retreino).
    - Detalhe da lesão: escolha a lesão na lista. No topo, as etiquetas de PRIORIDADE e QUALIDADE (com o
-     motivo, se for "atenção" ou "não usar"). À esquerda: a imagem com as caixas (vermelho = a lesão
-     escolhida, verde = marcadas pelo médico, amarelo = detectadas pelo modelo), o recorte classificado e
-     o MAPA DE CALOR ("onde o modelo olhou" — confira se ele olhou para a lesão, e não para bordas ou
+     motivo, se for "atenção" ou "não usar"). À esquerda: a imagem com as caixas e a LEGENDA (vermelho =
+     esta lesão, verde = marcada pelo usuário, amarelo = detectada pelo modelo, com a confiança do
+     detector), o recorte classificado e o MAPA DE CALOR ("onde o modelo olhou" — confira se ele olhou para a lesão, e não para bordas ou
      marcações). À direita: Identificação (mama, vista, idade, equipamento, versão do modelo),
      Localização e detecção, Prioridade, P calibrada e incerteza, Patologia, Achado e Densidade, com o
      aviso de confiabilidade.
+     ZOOM: role a roda do mouse sobre a imagem para aproximar e arraste para mover; duplo clique volta.
+     Para TELA CHEIA, use o botão no canto superior direito da imagem (o zoom continua funcionando).
+     Clicar num item da legenda esconde/mostra aquelas caixas.
    - Revisar e confirmar resultados: tabela editável para registrar o que foi CONFIRMADO (lesão real ou
      falso positivo, patologia, achado, exame de confirmação, densidade, observação). Veja a seção 14.
    - Os arquivos de cada rodada (resultado e planilha usada) ficam na pasta "resultados".
 
- ABA "3) Anotações e retreino"
+ PÁGINA "Anotações e retreino"
    Banco de anotações (exportar/importar), desempenho local e calibração do limiar, e o botão
    "Retreinar o modelo". Veja a seção 14.
 
@@ -352,7 +362,7 @@
    Cabeçalhos das bases públicas também são aceitos (patient_id, left or right breast, image view,
    breast_density...). O formato antigo (mama, x0, y0, x1, y1) continua aceito.
    Tipo de achado e patologia NÃO vão na planilha: o tipo de achado o MARIA classifica; a patologia
-   confirmada (biópsia ou seguimento) é registrada depois, na revisão (aba 2, seção 14).
+   confirmada (biópsia ou seguimento) é registrada depois, na revisão (página Resultados, seção 14).
 
  REGRAS
    - Uma linha por IMAGEM ou por LESÃO. Duas lesões na mesma imagem = duas linhas (mesmo
@@ -361,7 +371,8 @@
    - CC + MLO DA MESMA LESÃO: o MARIA classifica o achado de cada recorte e junta CC + MLO (análise
      multivista) quando a mama tem exatamente UM recorte na CC e UM na MLO com o MESMO achado
      previsto. Achados diferentes nas duas vistas, ou mais de um recorte do mesmo achado numa vista,
-     são analisados como casos separados. Se você souber o par, use a coluna opcional "lesao" (mesmo
+     são analisados como casos separados. Quando a mama tem uma CC e uma MLO com achados diferentes,
+     as duas recebem qualidade "atenção" (correlacione as vistas); a prioridade NÃO muda. Se você souber o par, use a coluna opcional "lesao" (mesmo
      número na CC e na MLO = mesma lesão): aí vale o que você informou.
    - Arquivos que estão na pasta mas não estão na planilha continuam sendo lidos pelas regras da
      seção 8 (B e C).
@@ -523,7 +534,7 @@
  "Não consegui importar" ao importar anotações
      O arquivo não é um .zip exportado pelo MARIA (precisa conter anotacoes.csv).
  Os modelos pioraram depois de um retreino
-     Na aba 3, abra "Versões anteriores dos modelos (restaurar)", escolha a versão e restaure.
+     Na página Anotações e retreino, abra "Versões anteriores dos modelos (restaurar)", escolha a versão e restaure.
 
 
 ===============================================================================================
@@ -534,7 +545,7 @@
    exames adicionais — BIÓPSIA (anatomopatológico), RESSONÂNCIA MAGNÉTICA ou outro exame considerado
    PADRÃO-OURO na literatura — antes de qualquer conduta e antes de serem registrados como confirmados.
 
- 14.1 REVISAR E CONFIRMAR (aba "2) Resultados", seção "Revisar e confirmar resultados")
+ 14.1 REVISAR E CONFIRMAR (página "Resultados", seção "Revisar e confirmar resultados")
    Para cada lesão, preencha SÓ o que foi confirmado (o resto pode ficar em branco):
      lesão real? ............ "sim" (é lesão) ou "não" (falso positivo). Para lesões marcadas ou
                               detectadas na mamografia completa. Para o detector aprender, revise
@@ -553,7 +564,7 @@
    são PSEUDONIMIZADOS (viram códigos) e as imagens DICOM são ANONIMIZADAS (seção 16).
    "Baixar resultados revisados (CSV para Excel)" salva a tabela revisada para abrir no Excel.
 
- 14.2 BANCO DE ANOTAÇÕES (aba "3) Anotações e retreino")
+ 14.2 BANCO DE ANOTAÇÕES (página "Anotações e retreino")
    Mostra quantas lesões foram anotadas, quantas têm exame de confirmação e quantas caixas foram
    revisadas; "Ver o banco de anotações" mostra a planilha inteira.
    - "Exportar anotações (.zip)": empacota o banco (planilha + imagens) para levar a outro computador.
@@ -605,7 +616,7 @@
    O resultado de cada retreino (antes x depois, no teste fixo e nos casos guardados do usuário)
    aparece na aba e fica em anotacoes\retreinos\ (relatório .json e log .txt).
 
- 14.4 DESEMPENHO LOCAL E CALIBRAÇÃO DO LIMIAR (aba "3) Anotações e retreino")
+ 14.4 DESEMPENHO LOCAL E CALIBRAÇÃO DO LIMIAR (página "Anotações e retreino")
    Com casos do SEU serviço com patologia confirmada por BIÓPSIA, SEGUIMENTO (estável ≥ 2 anos) ou outro
    exame padrão-ouro, a aba mostra: AUC local, sensibilidade e especificidade da prioridade alta, curva
    de calibração no serviço e desempenho por densidade, faixa etária, tipo de achado e EQUIPAMENTO.

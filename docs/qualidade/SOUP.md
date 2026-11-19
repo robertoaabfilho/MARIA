@@ -14,6 +14,7 @@ Gerado em 2026-11-19 a partir do ambiente de desenvolvimento (Python 3.14.10, Li
 | pandas | 3.1.0 | Tabelas (dashboard) | BSD-3-Clause | Versão exata em config/requirements-validado.txt; mudança de versão exige rodar `python -m pytest testes` e a regressão dos exemplos |
 | streamlit | 1.67.0 | Interface (dashboard) | Apache-2.0 | Versão exata em config/requirements-validado.txt; mudança de versão exige rodar `python -m pytest testes` e a regressão dos exemplos |
 | altair | 6.3.0 | Gráficos do dashboard | Copyright (c) 2015-2025, Vega-Altair Dev | Versão exata em config/requirements-validado.txt; mudança de versão exige rodar `python -m pytest testes` e a regressão dos exemplos |
+| plotly | 7.1.0 | Imagens com zoom e legenda das caixas (dashboard) | MIT | Versão exata em config/requirements-validado.txt; mudança de versão exige rodar `python -m pytest testes` e a regressão dos exemplos |
 | tqdm | 4.70.1 | Barra de progresso | MPL-2.0 AND MIT | Versão exata em config/requirements-validado.txt; mudança de versão exige rodar `python -m pytest testes` e a regressão dos exemplos |
 | scikit-learn | 1.9.1 | Retreino e geração de métricas (só máquina de treino) | BSD-3-Clause | Versão exata em config/requirements-validado.txt; mudança de versão exige rodar `python -m pytest testes` e a regressão dos exemplos |
 | openpyxl | 3.1.5 | Leitura da planilha do CDD-CESM (só máquina de treino) | MIT | Versão exata em config/requirements-validado.txt; mudança de versão exige rodar `python -m pytest testes` e a regressão dos exemplos |

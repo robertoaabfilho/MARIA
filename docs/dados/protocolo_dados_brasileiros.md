@@ -44,6 +44,6 @@ por **fabricante, densidade, faixa etária e tipo de achado**, com intervalos de
 (desempenho local e calibração local) faz parte dessas análises a partir do banco de anotações.
 
 ## 7. Fluxo no MARIA
-1. Cada centro roda o MARIA, revisa os resultados e registra a confirmação (biópsia/seguimento) na aba 3.
+1. Cada centro roda o MARIA, revisa os resultados e registra a confirmação (biópsia/seguimento) na revisão (página Resultados).
 2. Exporta o banco **anonimizado** (.zip) e envia ao centro coordenador.
 3. O centro coordenador importa, analisa, recalibra/retreina e valida no centro de teste.
