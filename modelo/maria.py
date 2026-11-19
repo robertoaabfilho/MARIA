@@ -233,7 +233,7 @@ def texto_densidade(d):
 ACR = {"A": 1, "B": 2, "C": 3, "D": 4, "1": 1, "2": 2, "3": 3, "4": 4}
 # nomes de coluna aceitos na planilha do usuário (sem acento, minúsculas; espaços viram "_")
 # Formato padrão (colunas 1-14): paciente; idade; arquivo_completa; arquivo_recorte; lado; vista; tipo_achado;
-# patologia; caixa_esq; caixa_topo; caixa_dir; caixa_base; exame_confirmacao; densidade.
+# patologia; x_inicio; y_inicio; x_fim; y_fim; exame_confirmacao; densidade.
 # Também aceita os nomes das bases CBIS-DDSM/CDD-CESM e o formato antigo (mama, lesao, x0..y1).
 SINONIMOS = {
     "paciente": ("paciente", "id_paciente", "patient_id", "mama", "amostra", "caso", "id"),
@@ -244,8 +244,8 @@ SINONIMOS = {
     "vista": ("vista", "incidencia", "view", "image_view"),
     "tipo_achado": ("tipo_achado", "tipo_de_achado", "achado", "abnormality_type"),
     "patologia": ("patologia", "pathology", "pathology_classification/_follow_up"),
-    "x0": ("caixa_esq", "x0", "xmin"), "y0": ("caixa_topo", "y0", "ymin"),
-    "x1": ("caixa_dir", "x1", "xmax"), "y1": ("caixa_base", "y1", "ymax"),
+    "x0": ("x_inicio", "x0", "xmin", "caixa_esq"), "y0": ("y_inicio", "y0", "ymin", "caixa_topo"),
+    "x1": ("x_fim", "x1", "xmax", "caixa_dir"), "y1": ("y_fim", "y1", "ymax", "caixa_base"),
     "exame_confirmacao": ("exame_confirmacao", "exame_de_confirmacao", "confirmacao"),
     "densidade": ("densidade", "densidade_mamaria", "densidade_birads", "acr", "breast_density",
                   "breast_density_(acr)"),
@@ -290,7 +290,7 @@ def _valor_padrao(texto, tabela, campo, n):
 def ler_planilha(caminho):
     """Planilha do usuário (CSV, separador "," ou ";", UTF-8 ou Windows/cp1252) -> lista de linhas.
     Uma linha por imagem e achado: paciente, idade, arquivos da mamografia completa e do recorte, lado, vista,
-    tipo de achado, patologia, caixa da lesão (caixa_esq, caixa_topo, caixa_dir, caixa_base, em pixels da
+    tipo de achado, patologia, caixa da lesão (x_inicio, y_inicio, x_fim, y_fim, em pixels da
     imagem original), exame de confirmação e densidade. Todas opcionais, menos o paciente.
     "mama" (id interno) = paciente + lado."""
     bruto = Path(caminho).read_bytes()

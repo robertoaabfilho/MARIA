@@ -23,11 +23,11 @@ def test_REQ_ENT_01_planilha_excel_ptbr(tmp_path):
 
 
 def test_REQ_ENT_01b_formato_padrao_14_colunas(tmp_path):
-    """Formato padrão: paciente, idade, arquivos, lado, vista, tipo, patologia, caixa_*, exame, densidade."""
+    """Formato padrão: paciente, idade, arquivos, lado, vista, tipo, patologia, x/y_inicio/fim, exame, densidade."""
     import maria
     arq = tmp_path / "p.csv"
-    arq.write_bytes(("paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;caixa_esq;"
-                     "caixa_topo;caixa_dir;caixa_base;exame_confirmacao;densidade\r\n"
+    arq.write_bytes(("paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;x_inicio;"
+                     "y_inicio;x_fim;y_fim;exame_confirmacao;densidade\r\n"
                      "P_00001;52;a.dcm;r.dcm;Esquerdo;mlo;Calcificação;Maligno;10;20;30,5;40;Biópsia;C\r\n"
                      "P_00002;;b.dcm;;R;CC;mass;BENIGN_WITHOUT_CALLBACK;;;;;seguimento;\r\n").encode("cp1252"))
     l1, l2 = maria.ler_planilha(arq)
@@ -88,10 +88,10 @@ def test_REQ_ENT_06_dashboard_padroniza_valores():
     """O editor do dashboard aceita sinônimos e deixa vazio o que não reconhece."""
     import pandas as pd
     ns = funcoes_do_dashboard("_chave_coluna", "planilha_vazia", "padronizar_planilha", "separar_lado")
-    df = ns["padronizar_planilha"](pd.DataFrame({"Patient_ID": ["P_1"], "Side": ["L"], "x0": ["5,5"],
+    df = ns["padronizar_planilha"](pd.DataFrame({"Patient_ID": ["P_1"], "Side": ["L"], "caixa_esq": ["5,5"],
                                                  "Tipo de achado": ["Nódulo"], "Patologia": ["xyz"]}))
     r = df.iloc[0]
-    assert (r["paciente"], r["lado"], r["tipo_achado"], r["caixa_esq"]) == ("P_1", "esquerdo", "massa", 5.5)
+    assert (r["paciente"], r["lado"], r["tipo_achado"], r["x_inicio"]) == ("P_1", "esquerdo", "massa", 5.5)
     assert r["patologia"] is None
     assert ns["separar_lado"]("pacienteA_esq") == ("pacienteA", "esquerdo")
 

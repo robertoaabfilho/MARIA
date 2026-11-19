@@ -340,10 +340,11 @@
     6 vista .............. CC ou MLO.
     7 tipo_achado ........ massa, calcificação, assimetria, distorção ou normal (exame sem achado).
     8 patologia .......... maligno, benigno ou normal — o resultado CONFIRMADO, se já houver.
-    9 caixa_esq ......... } CAIXA da lesão marcada pelo médico na mamografia completa, em pixels da
-   10 caixa_topo ........ } imagem ORIGINAL: borda esquerda, borda de cima, borda direita e borda de
-   11 caixa_dir ......... } baixo da lesão. O ponto (0, 0) é o canto superior esquerdo da IMAGEM (não
-   12 caixa_base ........ } tem a ver com o lado da mama). caixa_dir > caixa_esq e caixa_base > caixa_topo.
+    9 x_inicio .......... } CAIXA da lesão marcada pelo médico na mamografia completa, em pixels da
+   10 y_inicio .......... } imagem ORIGINAL: (x_inicio, y_inicio) = canto superior esquerdo da lesão e
+   11 x_fim ............. } (x_fim, y_fim) = canto inferior direito. O ponto (0, 0) é o canto superior
+   12 y_fim ............. } esquerdo da imagem; x cresce para a direita e y para baixo.
+                           Tem de ter x_fim > x_inicio e y_fim > y_inicio.
                            O jeito mais fácil: desenhe a caixa no dashboard ("Marcar lesões na imagem").
                            Ou abra a imagem num visualizador que mostre a posição do mouse em pixels
                            (PNG/JPG: Paint; DICOM: Weasis ou RadiAnt) e anote os cantos. Caixas um
@@ -373,7 +374,7 @@
 
  EXEMPLOS (separador ;)
    Cabeçalho (igual em todos):
-   paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;caixa_esq;caixa_topo;caixa_dir;caixa_base;exame_confirmacao;densidade
+   paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;x_inicio;y_inicio;x_fim;y_fim;exame_confirmacao;densidade
 
    (a) Mesma massa nas duas vistas, com recorte, confirmada por biópsia:
         P_00001;54;IMG_0001.dcm;IMG_0002.dcm;esquerdo;CC;massa;maligno;;;;;biópsia;B
@@ -393,7 +394,7 @@
 
  MENSAGENS DE AVISO (aparecem no log; a rodada continua)
    "arquivo(s) da planilha não encontrado(s)" ... o nome está errado ou o arquivo está em outra pasta.
-   "caixa inválida (x1 <= x0 ou y1 <= y0)" ...... caixa_dir <= caixa_esq ou caixa_base <= caixa_topo:
+   "caixa inválida (x1 <= x0 ou y1 <= y0)" ...... x_fim <= x_inicio ou y_fim <= y_inicio:
                                                    a caixa foi ignorada; confira os números.
    "lado/tipo de achado/patologia ... não reconhecido" o valor não está na lista; ficou em branco.
    "CC e MLO de ... com tipo/patologia diferentes" as duas vistas da mesma lesão discordam.

@@ -86,9 +86,9 @@ SAIDAS = AQUI / "resultados"
 # planilha do médico: colunas na ordem em que aparecem, e nomes alternativos aceitos ao carregar um CSV
 # (as colunas 1-14 aparecem no editor; "fabricante" e "lesao" são opcionais e ficam ocultas, mas são preservadas)
 COLUNAS_VISIVEIS = ["paciente", "idade", "arquivo_completa", "arquivo_recorte", "lado", "vista", "tipo_achado",
-                    "patologia", "caixa_esq", "caixa_topo", "caixa_dir", "caixa_base", "exame_confirmacao", "densidade"]
+                    "patologia", "x_inicio", "y_inicio", "x_fim", "y_fim", "exame_confirmacao", "densidade"]
 COLUNAS_PLANILHA = COLUNAS_VISIVEIS + ["fabricante", "lesao"]
-CAIXA = ["caixa_esq", "caixa_topo", "caixa_dir", "caixa_base"]          # = x0, y0, x1, y1 (pixels da imagem original)
+CAIXA = ["x_inicio", "y_inicio", "x_fim", "y_fim"]          # = x0, y0, x1, y1 (pixels da imagem original)
 SINONIMOS = {
     "paciente": ("paciente", "id_paciente", "patient_id", "mama", "amostra", "caso", "id"),
     "idade": ("idade", "idade_anos", "age"),
@@ -98,8 +98,8 @@ SINONIMOS = {
     "vista": ("vista", "incidencia", "view", "image_view"),
     "tipo_achado": ("tipo_achado", "tipo_de_achado", "achado", "abnormality_type"),
     "patologia": ("patologia", "pathology", "pathology_classification/_follow_up"),
-    "caixa_esq": ("caixa_esq", "x0", "xmin"), "caixa_topo": ("caixa_topo", "y0", "ymin"),
-    "caixa_dir": ("caixa_dir", "x1", "xmax"), "caixa_base": ("caixa_base", "y1", "ymax"),
+    "x_inicio": ("x_inicio", "x0", "xmin", "caixa_esq"), "y_inicio": ("y_inicio", "y0", "ymin", "caixa_topo"),
+    "x_fim": ("x_fim", "x1", "xmax", "caixa_dir"), "y_fim": ("y_fim", "y1", "ymax", "caixa_base"),
     "exame_confirmacao": ("exame_confirmacao", "exame_de_confirmacao", "confirmacao"),
     "densidade": ("densidade", "densidade_mamaria", "densidade_birads", "acr", "breast_density",
                   "breast_density_(acr)"),
@@ -1367,14 +1367,12 @@ def pagina_executar():
                          "um só de cada vista."),
                 "patologia": st.column_config.SelectboxColumn(
                     "patologia", options=OPCOES_PATOLOGIA, help="Resultado confirmado (se houver)."),
-                "caixa_esq": st.column_config.NumberColumn("caixa esq.", min_value=0, step=1, format="%d",
-                                                           help="Borda ESQUERDA da caixa da lesão (pixels da imagem)."),
-                "caixa_topo": st.column_config.NumberColumn("caixa topo", min_value=0, step=1, format="%d",
-                                                            help="Borda de CIMA da caixa da lesão (pixels)."),
-                "caixa_dir": st.column_config.NumberColumn("caixa dir.", min_value=0, step=1, format="%d",
-                                                           help="Borda DIREITA da caixa da lesão (pixels)."),
-                "caixa_base": st.column_config.NumberColumn("caixa base", min_value=0, step=1, format="%d",
-                                                            help="Borda de BAIXO da caixa da lesão (pixels)."),
+                **{c: st.column_config.NumberColumn(c, min_value=0, step=1, format="%d", help=h) for c, h in (
+                    ("x_inicio", "Caixa da lesão: x do canto superior esquerdo (pixels da imagem original; "
+                                 "x cresce para a direita)."),
+                    ("y_inicio", "Caixa da lesão: y do canto superior esquerdo (pixels; y cresce para baixo)."),
+                    ("x_fim", "Caixa da lesão: x do canto inferior direito (maior que x_inicio)."),
+                    ("y_fim", "Caixa da lesão: y do canto inferior direito (maior que y_inicio)."))},
                 "exame_confirmacao": st.column_config.SelectboxColumn(
                     "exame de confirmação", options=OPCOES_EXAME,
                     help="Biópsia, ou seguimento com estabilidade por ≥ 2 anos."),
@@ -1434,8 +1432,8 @@ def pagina_executar():
                         camadas = camadas + alt.Chart(marcadas.assign(rotulo=marcadas["tipo_achado"].fillna("lesão")
                                                                       .astype(str))).mark_rect(
                             fill=None, stroke="#2e7d32", strokeWidth=2).encode(
-                            x=alt.X("caixa_esq:Q", scale=esc_x), x2="caixa_dir:Q", y=alt.Y("caixa_topo:Q", scale=esc_y),
-                            y2="caixa_base:Q",
+                            x=alt.X("x_inicio:Q", scale=esc_x), x2="x_fim:Q", y=alt.Y("y_inicio:Q", scale=esc_y),
+                            y2="y_fim:Q",
                             tooltip=["rotulo:N"])
                     evento = st.altair_chart(camadas.properties(width=w_tela, height=h_tela), on_select="rerun",
                                              key=f"marcacao_{arq_marcar}", width="content",
@@ -1473,8 +1471,8 @@ def pagina_executar():
                                 nova.update({"paciente": pac_m.strip(), "lado": lado_m, "vista": vista_m,
                                              "arquivo_completa": arq_marcar, "tipo_achado": tipo_m,
                                              "idade": da_linha("idade"), "densidade": da_linha("densidade"),
-                                             "caixa_esq": float(x0), "caixa_topo": float(y0),
-                                             "caixa_dir": float(x1), "caixa_base": float(y1)})
+                                             "x_inicio": float(x0), "y_inicio": float(y0),
+                                             "x_fim": float(x1), "y_fim": float(y1)})
                                 nova_planilha(pd.concat([st.session_state.planilha_base, pd.DataFrame([nova])],
                                                         ignore_index=True))
                                 registrar("lesão marcada na tela", {"arquivo": Path(arq_marcar).name,

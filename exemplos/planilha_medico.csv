@@ -1,4 +1,4 @@
-﻿paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;caixa_esq;caixa_topo;caixa_dir;caixa_base;exame_confirmacao;densidade
+﻿paciente;idade;arquivo_completa;arquivo_recorte;lado;vista;tipo_achado;patologia;x_inicio;y_inicio;x_fim;y_fim;exame_confirmacao;densidade
 P_00118;;P_00118_RIGHT_CC_completa.dcm;P_00118_RIGHT_CC_recorte.dcm;direito;CC;massa;maligno;;;;;biópsia;1
 P_00118;;P_00118_RIGHT_MLO_completa.dcm;P_00118_RIGHT_MLO_recorte.dcm;direito;MLO;massa;maligno;;;;;biópsia;1
 P_00066;;P_00066_LEFT_CC_completa.dcm;P_00066_LEFT_CC_recorte.dcm;esquerdo;CC;massa;maligno;1753;2300;2013;2529;biópsia;
