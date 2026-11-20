@@ -838,7 +838,7 @@ flowchart LR
     E --> C["Mamografia completa"]
     C --> D["Detector de lesões<br/>(Faster R-CNN)"]
     C --> M["Lesões marcadas<br/>pelo médico"]
-    C --> DE["Densidade BI-RADS<br/>(ResNet-50)"]
+    C --> DE["Densidade BI-RADS<br/>(Mammo-CLIP)"]
     D --> RC["Recorte da caixa<br/>(+20 px)"]
     M --> RC
     R --> P["Patologia<br/>benigno × maligno<br/>(5 × Mammo-CLIP)"]
@@ -872,7 +872,8 @@ flowchart LR
          "Entrada": "Mamografia completa reduzida ao lado maior de 1.536 px",
          "Detalhes": "Score mínimo padrão 0,50; cada caixa é recortada com 20 px de margem e classificada"},
         {"Componente": "Densidade mamária (BI-RADS 1–4)",
-         "Arquitetura": "ResNet-50 (pré-treino ImageNet), 4 classes",
+         "Arquitetura": "EfficientNet-B2 com o codificador do Mammo-CLIP (pré-treinado em mamografias), "
+                        "4 classes",
          "Entrada": "Mamografia completa em 768 × 768 px",
          "Detalhes": "Média de 2 variações (original e espelhada) e das vistas da mesma mama; a densidade "
                      "informada pelo médico tem prioridade"},
@@ -963,12 +964,15 @@ flowchart LR
     with st.container(border=True):
         st.markdown("**Densidade mamária** — teste: 1.050 mamografias (674 do CBIS-DDSM, 376 do CDD-CESM)")
         with st.container(horizontal=True):
-            st.metric("Densa × não densa", "86,5%", border=True)
-            st.metric("Categoria exata", "73,2%", border=True)
-            st.metric("Concordância (kappa)", "0,68", border=True)
-            st.metric("Densidade 4 reconhecida", "76%", border=True)
-        st.caption("Por base: filme — kappa 0,69, densidade 4 reconhecida em 89%; digital — kappa 0,62, densidade 4 "
-                   "reconhecida em só 37% (poucos exemplos de densidade 4 em mamografia digital no treino).")
+            st.metric("Densa × não densa", "88,0%", border=True)
+            st.metric("Categoria exata", "74,6%", border=True)
+            st.metric("Concordância (kappa)", "0,70", border=True)
+            st.metric("Densidade 4 reconhecida", "75%", border=True)
+        st.caption("Por base: filme — kappa 0,71, densidade 4 reconhecida em 83%; digital — kappa 0,65, densidade 4 "
+                   "reconhecida em 50% (só 38 casos; ainda poucos exemplos de densidade 4 digital no treino). "
+                   "Desde 20/11/2026 a densidade usa o codificador do Mammo-CLIP, pré-treinado em mamografias: "
+                   "na validação cruzada, kappa 0,712 × 0,684 da ResNet-50 anterior (IC 95% da diferença +0,009 a "
+                   "+0,048) e, no digital, 0,615 × 0,540.")
 
     # ---- gráficos detalhados (lidos de modelo/desempenho.json) ----
     st.subheader("Gráficos detalhados")

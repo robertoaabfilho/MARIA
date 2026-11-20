@@ -235,12 +235,10 @@ def retreinar_densidade(casos, c, device, rapido, log):
     import numpy as np
     import pandas as pd
     import torch
-    import torch.nn as nn
     import torch.nn.functional as F
     import torchvision.transforms.functional as TF
     from PIL import Image
     from sklearn.metrics import cohen_kappa_score
-    from torchvision import models
     M = maria()
     cfg = json.loads((AQUI / "modelo_densidade/densidade.json").read_text())
     tam = cfg["tam"]
@@ -296,8 +294,7 @@ def retreinar_densidade(casos, c, device, rapido, log):
         return TF.normalize(x.expand(3, -1, -1), M.MEDIA, M.DESVIO)
 
     def novo_modelo():
-        m = models.resnet50(weights=None)
-        m.fc = nn.Linear(m.fc.in_features, 4)
+        m = M.modelo_densidade(cfg.get("arquitetura", "resnet50"))     # mesma rede do modelo em uso
         m.load_state_dict(torch.load(AQUI / "modelo_densidade/densidade.pth", map_location=device))
         return m.to(device)
 

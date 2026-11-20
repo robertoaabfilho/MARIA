@@ -1,6 +1,6 @@
 {
-  "gerado_em": "2026-11-19 23:11:16",
-  "descricao": "Patologia retreinada com atributos da lesão como alvos auxiliares (AUC OOF 0,841; CDD-CESM 0,815); calibração refeita",
+  "gerado_em": "2026-11-20 01:12:18",
+  "descricao": "Densidade: codificador Mammo-CLIP (kappa teste 0,703; digital 0,649)",
   "modelos": {
     "calibracao.json": {
       "sha256": "d47781ac22a5c74b95bc38b584153f6a3971b608cf803819af321bc056eace46",
@@ -15,12 +15,12 @@
       "bytes": 94424603
     },
     "modelo_densidade/densidade.json": {
-      "sha256": "7a03748b3a9ce082a9ff8c00f6596b542da2917ba8407ab33793a6e964cbba84",
-      "bytes": 846
+      "sha256": "d4417ad4cdc9aa076346afee1e6e7b2c0fe94141001ff916af8fdfa6895979c5",
+      "bytes": 1011
     },
     "modelo_densidade/densidade.pth": {
-      "sha256": "ceb0ec3bb31c335be12acead46bf253250aa5b6f9026a20034d3c8dcd3c8a60d",
-      "bytes": 94383237
+      "sha256": "945aa17fe050a9a8f7f60851df791838a73290dba29499ba6bc8205a9a892fec",
+      "bytes": 36924395
     },
     "modelo_deteccao/detector_lesao.json": {
       "sha256": "5e314209f54a50f491d0ee113c161511e45a5734e5806b723072b720081dab3c",
@@ -137,5 +137,5 @@
       "bytes": 1055
     }
   },
-  "versao_modelo": "53ae7d8721b2"
+  "versao_modelo": "f3d309c91c2f"
 }

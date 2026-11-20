@@ -1,1 +1,1697 @@
-{"gerado_em": "2026-11-19", "patologia": {"curvas": [{"dobra": 1, "epoca": 1, "perda_treino": 1.845, "acc_val": 0.59, "auc_val": 0.593}, {"dobra": 1, "epoca": 2, "perda_treino": 1.748, "acc_val": 0.599, "auc_val": 0.606}, {"dobra": 1, "epoca": 3, "perda_treino": 1.5, "acc_val": 0.675, "auc_val": 0.713}, {"dobra": 1, "epoca": 4, "perda_treino": 1.369, "acc_val": 0.696, "auc_val": 0.771}, {"dobra": 1, "epoca": 5, "perda_treino": 1.322, "acc_val": 0.733, "auc_val": 0.801}, {"dobra": 1, "epoca": 6, "perda_treino": 1.277, "acc_val": 0.736, "auc_val": 0.815}, {"dobra": 1, "epoca": 7, "perda_treino": 1.249, "acc_val": 0.745, "auc_val": 0.826}, {"dobra": 1, "epoca": 8, "perda_treino": 1.236, "acc_val": 0.743, "auc_val": 0.828}, {"dobra": 1, "epoca": 9, "perda_treino": 1.222, "acc_val": 0.7490000000000001, "auc_val": 0.828}, {"dobra": 1, "epoca": 10, "perda_treino": 1.213, "acc_val": 0.754, "auc_val": 0.827}, {"dobra": 1, "epoca": 11, "perda_treino": 1.194, "acc_val": 0.747, "auc_val": 0.826}, {"dobra": 1, "epoca": 12, "perda_treino": 1.198, "acc_val": 0.747, "auc_val": 0.826}, {"dobra": 1, "epoca": 13, "perda_treino": 1.176, "acc_val": 0.745, "auc_val": 0.827}, {"dobra": 1, "epoca": 14, "perda_treino": 1.173, "acc_val": 0.745, "auc_val": 0.828}, {"dobra": 1, "epoca": 15, "perda_treino": 1.176, "acc_val": 0.747, "auc_val": 0.828}, {"dobra": 2, "epoca": 1, "perda_treino": 1.763, "acc_val": 0.632, "auc_val": 0.663}, {"dobra": 2, "epoca": 2, "perda_treino": 1.743, "acc_val": 0.642, "auc_val": 0.657}, {"dobra": 2, "epoca": 3, "perda_treino": 1.5, "acc_val": 0.6859999999999999, "auc_val": 0.754}, {"dobra": 2, "epoca": 4, "perda_treino": 1.364, "acc_val": 0.7140000000000001, "auc_val": 0.799}, {"dobra": 2, "epoca": 5, "perda_treino": 1.314, "acc_val": 0.742, "auc_val": 0.821}, {"dobra": 2, "epoca": 6, "perda_treino": 1.287, "acc_val": 0.7659999999999999, "auc_val": 0.837}, {"dobra": 2, "epoca": 7, "perda_treino": 1.252, "acc_val": 0.764, "auc_val": 0.847}, {"dobra": 2, "epoca": 8, "perda_treino": 1.241, "acc_val": 0.775, "auc_val": 0.851}, {"dobra": 2, "epoca": 9, "perda_treino": 1.219, "acc_val": 0.78, "auc_val": 0.857}, {"dobra": 2, "epoca": 10, "perda_treino": 1.207, "acc_val": 0.778, "auc_val": 0.858}, {"dobra": 2, "epoca": 11, "perda_treino": 1.187, "acc_val": 0.773, "auc_val": 0.857}, {"dobra": 2, "epoca": 12, "perda_treino": 1.196, "acc_val": 0.78, "auc_val": 0.856}, {"dobra": 2, "epoca": 13, "perda_treino": 1.176, "acc_val": 0.775, "auc_val": 0.857}, {"dobra": 2, "epoca": 14, "perda_treino": 1.17, "acc_val": 0.7709999999999999, "auc_val": 0.857}, {"dobra": 2, "epoca": 15, "perda_treino": 1.171, "acc_val": 0.777, "auc_val": 0.857}, {"dobra": 3, "epoca": 1, "perda_treino": 1.794, "acc_val": 0.599, "auc_val": 0.638}, {"dobra": 3, "epoca": 2, "perda_treino": 1.708, "acc_val": 0.621, "auc_val": 0.646}, {"dobra": 3, "epoca": 3, "perda_treino": 1.497, "acc_val": 0.677, "auc_val": 0.749}, {"dobra": 3, "epoca": 4, "perda_treino": 1.377, "acc_val": 0.7190000000000001, "auc_val": 0.805}, {"dobra": 3, "epoca": 5, "perda_treino": 1.319, "acc_val": 0.759, "auc_val": 0.828}, {"dobra": 3, "epoca": 6, "perda_treino": 1.287, "acc_val": 0.773, "auc_val": 0.832}, {"dobra": 3, "epoca": 7, "perda_treino": 1.264, "acc_val": 0.778, "auc_val": 0.839}, {"dobra": 3, "epoca": 8, "perda_treino": 1.243, "acc_val": 0.775, "auc_val": 0.845}, {"dobra": 3, "epoca": 9, "perda_treino": 1.226, "acc_val": 0.764, "auc_val": 0.845}, {"dobra": 3, "epoca": 10, "perda_treino": 1.214, "acc_val": 0.7659999999999999, "auc_val": 0.845}, {"dobra": 3, "epoca": 11, "perda_treino": 1.195, "acc_val": 0.7709999999999999, "auc_val": 0.847}, {"dobra": 3, "epoca": 12, "perda_treino": 1.19, "acc_val": 0.764, "auc_val": 0.846}, {"dobra": 3, "epoca": 13, "perda_treino": 1.179, "acc_val": 0.764, "auc_val": 0.847}, {"dobra": 3, "epoca": 14, "perda_treino": 1.177, "acc_val": 0.7659999999999999, "auc_val": 0.848}, {"dobra": 3, "epoca": 15, "perda_treino": 1.171, "acc_val": 0.77, "auc_val": 0.848}, {"dobra": 4, "epoca": 1, "perda_treino": 1.812, "acc_val": 0.602, "auc_val": 0.616}, {"dobra": 4, "epoca": 2, "perda_treino": 1.735, "acc_val": 0.602, "auc_val": 0.615}, {"dobra": 4, "epoca": 3, "perda_treino": 1.494, "acc_val": 0.667, "auc_val": 0.74}, {"dobra": 4, "epoca": 4, "perda_treino": 1.352, "acc_val": 0.695, "auc_val": 0.768}, {"dobra": 4, "epoca": 5, "perda_treino": 1.311, "acc_val": 0.7120000000000001, "auc_val": 0.785}, {"dobra": 4, "epoca": 6, "perda_treino": 1.285, "acc_val": 0.7190000000000001, "auc_val": 0.783}, {"dobra": 4, "epoca": 7, "perda_treino": 1.242, "acc_val": 0.693, "auc_val": 0.78}, {"dobra": 4, "epoca": 8, "perda_treino": 1.223, "acc_val": 0.6859999999999999, "auc_val": 0.78}, {"dobra": 4, "epoca": 9, "perda_treino": 1.216, "acc_val": 0.696, "auc_val": 0.779}, {"dobra": 4, "epoca": 10, "perda_treino": 1.185, "acc_val": 0.695, "auc_val": 0.778}, {"dobra": 4, "epoca": 11, "perda_treino": 1.176, "acc_val": 0.684, "auc_val": 0.777}, {"dobra": 4, "epoca": 12, "perda_treino": 1.165, "acc_val": 0.682, "auc_val": 0.777}, {"dobra": 4, "epoca": 13, "perda_treino": 1.161, "acc_val": 0.684, "auc_val": 0.777}, {"dobra": 4, "epoca": 14, "perda_treino": 1.164, "acc_val": 0.688, "auc_val": 0.778}, {"dobra": 4, "epoca": 15, "perda_treino": 1.162, "acc_val": 0.688, "auc_val": 0.777}, {"dobra": 5, "epoca": 1, "perda_treino": 1.754, "acc_val": 0.67, "auc_val": 0.708}, {"dobra": 5, "epoca": 2, "perda_treino": 1.753, "acc_val": 0.647, "auc_val": 0.708}, {"dobra": 5, "epoca": 3, "perda_treino": 1.498, "acc_val": 0.7120000000000001, "auc_val": 0.81}, {"dobra": 5, "epoca": 4, "perda_treino": 1.374, "acc_val": 0.753, "auc_val": 0.842}, {"dobra": 5, "epoca": 5, "perda_treino": 1.315, "acc_val": 0.76, "auc_val": 0.855}, {"dobra": 5, "epoca": 6, "perda_treino": 1.289, "acc_val": 0.762, "auc_val": 0.861}, {"dobra": 5, "epoca": 7, "perda_treino": 1.262, "acc_val": 0.773, "auc_val": 0.863}, {"dobra": 5, "epoca": 8, "perda_treino": 1.24, "acc_val": 0.7809999999999999, "auc_val": 0.864}, {"dobra": 5, "epoca": 9, "perda_treino": 1.223, "acc_val": 0.787, "auc_val": 0.866}, {"dobra": 5, "epoca": 10, "perda_treino": 1.212, "acc_val": 0.785, "auc_val": 0.865}, {"dobra": 5, "epoca": 11, "perda_treino": 1.194, "acc_val": 0.787, "auc_val": 0.866}, {"dobra": 5, "epoca": 12, "perda_treino": 1.186, "acc_val": 0.78, "auc_val": 0.865}, {"dobra": 5, "epoca": 13, "perda_treino": 1.183, "acc_val": 0.7829999999999999, "auc_val": 0.863}, {"dobra": 5, "epoca": 14, "perda_treino": 1.179, "acc_val": 0.787, "auc_val": 0.864}, {"dobra": 5, "epoca": 15, "perda_treino": 1.179, "acc_val": 0.79, "auc_val": 0.865}], "matriz": [[1278, 358], [310, 835]], "classes": ["Benigno", "Maligno"], "roc": {"fpr": [0.0, 0.0037, 0.0086, 0.0141, 0.0226, 0.0287, 0.0342, 0.041, 0.0471, 0.0532, 0.0599, 0.066, 0.074, 0.0844, 0.0899, 0.1015, 0.1094, 0.1186, 0.1253, 0.1326, 0.1412, 0.151, 0.1608, 0.1675, 0.1834, 0.1913, 0.1974, 0.2072, 0.217, 0.2286, 0.2408, 0.2512, 0.261, 0.2763, 0.2958, 0.3026, 0.3166, 0.3282, 0.3405, 0.3539, 0.3661, 0.3771, 0.3936, 0.4163, 0.4322, 0.4542, 0.4743, 0.4872, 0.5049, 0.5306, 0.5544, 0.5819, 0.6039, 0.6418, 0.673, 0.7121, 0.7414, 0.8062, 0.8551, 1.0], "tpr": [0.0, 0.0664, 0.1694, 0.2332, 0.2725, 0.3162, 0.3371, 0.3651, 0.3869, 0.4, 0.4262, 0.4393, 0.4664, 0.4987, 0.5188, 0.5424, 0.5607, 0.579, 0.5904, 0.6, 0.6175, 0.6323, 0.6454, 0.6594, 0.6734, 0.6882, 0.7004, 0.7127, 0.7284, 0.7415, 0.7555, 0.7686, 0.7808, 0.793, 0.8009, 0.8122, 0.8245, 0.8332, 0.8454, 0.8568, 0.8646, 0.8786, 0.8865, 0.8934, 0.9004, 0.91, 0.9179, 0.9249, 0.9319, 0.938, 0.9441, 0.952, 0.9581, 0.9651, 0.9738, 0.9817, 0.9878, 0.9921, 0.9965, 1.0]}, "auc": 0.8413832865333489, "n": 2781, "pacientes": 1217, "calibracao": [{"faixa": "0.0–0.1", "p_media": 0.059101083743842375, "maligno_observado": 0.029556650246305417, "n": 406}, {"faixa": "0.1–0.2", "p_media": 0.14539425, "maligno_observado": 0.13055555555555556, "n": 360}, {"faixa": "0.2–0.3", "p_media": 0.24790671875, "maligno_observado": 0.2, "n": 320}, {"faixa": "0.3–0.4", "p_media": 0.3490412403100775, "maligno_observado": 0.34108527131782945, "n": 258}, {"faixa": "0.4–0.5", "p_media": 0.4485708606557377, "maligno_observado": 0.4057377049180328, "n": 244}, {"faixa": "0.5–0.6", "p_media": 0.5486472765957447, "maligno_observado": 0.502127659574468, "n": 235}, {"faixa": "0.6–0.7", "p_media": 0.6491717083333332, "maligno_observado": 0.5791666666666667, "n": 240}, {"faixa": "0.7–0.8", "p_media": 0.7521363348416289, "maligno_observado": 0.6877828054298643, "n": 221}, {"faixa": "0.8–0.9", "p_media": 0.8508533884297521, "maligno_observado": 0.7727272727272727, "n": 242}, {"faixa": "0.9–1.0", "p_media": 0.9474229411764706, "maligno_observado": 0.9372549019607843, "n": 255}], "histograma": [{"faixa": "0.0–0.1", "classe": "Benigno (verdade)", "n": 394}, {"faixa": "0.0–0.1", "classe": "Maligno (verdade)", "n": 12}, {"faixa": "0.1–0.2", "classe": "Benigno (verdade)", "n": 313}, {"faixa": "0.1–0.2", "classe": "Maligno (verdade)", "n": 47}, {"faixa": "0.2–0.3", "classe": "Benigno (verdade)", "n": 256}, {"faixa": "0.2–0.3", "classe": "Maligno (verdade)", "n": 64}, {"faixa": "0.3–0.4", "classe": "Benigno (verdade)", "n": 170}, {"faixa": "0.3–0.4", "classe": "Maligno (verdade)", "n": 88}, {"faixa": "0.4–0.5", "classe": "Benigno (verdade)", "n": 145}, {"faixa": "0.4–0.5", "classe": "Maligno (verdade)", "n": 99}, {"faixa": "0.5–0.6", "classe": "Benigno (verdade)", "n": 117}, {"faixa": "0.5–0.6", "classe": "Maligno (verdade)", "n": 118}, {"faixa": "0.6–0.7", "classe": "Benigno (verdade)", "n": 101}, {"faixa": "0.6–0.7", "classe": "Maligno (verdade)", "n": 139}, {"faixa": "0.7–0.8", "classe": "Benigno (verdade)", "n": 69}, {"faixa": "0.7–0.8", "classe": "Maligno (verdade)", "n": 152}, {"faixa": "0.8–0.9", "classe": "Benigno (verdade)", "n": 55}, {"faixa": "0.8–0.9", "classe": "Maligno (verdade)", "n": 187}, {"faixa": "0.9–1.0", "classe": "Benigno (verdade)", "n": 16}, {"faixa": "0.9–1.0", "classe": "Maligno (verdade)", "n": 239}], "por_tipo": {"Massa": {"n": 1291, "auc": 0.8563908745027959, "acc": 0.7823392718822618}, "Calcificação": {"n": 1490, "auc": 0.820108799275466, "acc": 0.7402684563758389}}, "kfold": {"dobras": [{"dobra": 1, "lesoes": 564, "pacientes": 245, "malignas": 241, "auc": 0.8397, "acuracia": 0.7589, "sensibilidade": 0.7137, "especificidade": 0.7926}, {"dobra": 2, "lesoes": 561, "pacientes": 245, "malignas": 233, "auc": 0.8645, "acuracia": 0.7843, "sensibilidade": 0.7382, "especificidade": 0.8171}, {"dobra": 3, "lesoes": 563, "pacientes": 245, "malignas": 247, "auc": 0.853, "acuracia": 0.7655, "sensibilidade": 0.749, "especificidade": 0.7785}, {"dobra": 4, "lesoes": 560, "pacientes": 244, "malignas": 226, "auc": 0.7901, "acuracia": 0.7054, "sensibilidade": 0.6549, "especificidade": 0.7395}, {"dobra": 5, "lesoes": 533, "pacientes": 238, "malignas": 198, "auc": 0.862, "acuracia": 0.7861, "sensibilidade": 0.798, "especificidade": 0.7791}], "auc_media": 0.8419, "auc_desvio": 0.0305, "auc_conjunta": 0.8414, "fonte": "previsões fora-da-dobra (OOF) por paciente, sem o teste oficial do CBIS-DDSM"}}, "achado": {"curvas": [{"epoca": 1, "perda_treino": 1.3303, "perda_val": 1.2931, "acc_treino": 0.6527, "acc_val": 0.7406}, {"epoca": 2, "perda_treino": 1.2711, "perda_val": 1.2461, "acc_treino": 0.7298, "acc_val": 0.7428}, {"epoca": 3, "perda_treino": 1.0077, "perda_val": 0.8617, "acc_treino": 0.8345999999999999, "acc_val": 0.8914}, {"epoca": 4, "perda_treino": 0.8364, "perda_val": 0.8437, "acc_treino": 0.8889, "acc_val": 0.9024}, {"epoca": 5, "perda_treino": 0.7614, "perda_val": 0.8399, "acc_treino": 0.9142, "acc_val": 0.9157}, {"epoca": 6, "perda_treino": 0.7295, "perda_val": 0.8158, "acc_treino": 0.9175, "acc_val": 0.9224}, {"epoca": 7, "perda_treino": 0.6904, "perda_val": 0.8344, "acc_treino": 0.9283, "acc_val": 0.8914}, {"epoca": 8, "perda_treino": 0.659, "perda_val": 0.7239, "acc_treino": 0.9290999999999999, "acc_val": 0.9312999999999999}, {"epoca": 9, "perda_treino": 0.6578, "perda_val": 0.8568, "acc_treino": 0.9254000000000001, "acc_val": 0.9201999999999999}, {"epoca": 10, "perda_treino": 0.6391, "perda_val": 0.8053, "acc_treino": 0.9390999999999999, "acc_val": 0.9157}, {"epoca": 11, "perda_treino": 0.6201, "perda_val": 0.796, "acc_treino": 0.9403, "acc_val": 0.9201999999999999}, {"epoca": 12, "perda_treino": 0.5514, "perda_val": 0.8265, "acc_treino": 0.9506999999999999, "acc_val": 0.9224}], "matriz": [[357, 21], [27, 299]], "classes": ["Massa/Nódulo", "Microcalcificação"], "roc": {"fpr": [0.0, 0.0, 0.0, 0.0, 0.0026, 0.0026, 0.0053, 0.0079, 0.0079, 0.0106, 0.0132, 0.0132, 0.0159, 0.0185, 0.0185, 0.0238, 0.0291, 0.0291, 0.0317, 0.037, 0.037, 0.0397, 0.0423, 0.0423, 0.045, 0.0476, 0.0476, 0.0503, 0.0529, 0.0529, 0.0635, 0.0661, 0.0661, 0.0688, 0.0714, 0.0714, 0.0741, 0.0767, 0.0767, 0.0979, 0.1032, 0.1032, 0.1111, 0.1217, 0.1217, 0.127, 0.1323, 0.1323, 0.1614, 0.1772, 0.1772, 0.2143, 0.2196, 0.2196, 0.2381, 0.2831, 0.2831, 0.3757, 0.5476, 1.0], "tpr": [0.0, 0.0031, 0.2209, 0.5767, 0.5767, 0.6288, 0.6503, 0.6503, 0.727, 0.7638, 0.7638, 0.7975, 0.8098, 0.8098, 0.8221, 0.8282, 0.8282, 0.8374, 0.8497, 0.8497, 0.8681, 0.8804, 0.8804, 0.8957, 0.9018, 0.9018, 0.908, 0.9141, 0.9141, 0.9172, 0.9202, 0.9202, 0.9233, 0.9325, 0.9325, 0.9356, 0.9387, 0.9387, 0.9417, 0.9479, 0.9479, 0.9509, 0.9571, 0.9571, 0.9601, 0.9663, 0.9663, 0.9693, 0.9785, 0.9785, 0.9816, 0.9847, 0.9847, 0.9877, 0.9908, 0.9908, 0.9939, 0.9969, 0.9969, 1.0]}, "auc": 0.9815626318693803, "n": 704}, "detector": {"curvas": [{"epoca": 1, "perda_treino": 0.2385, "sens_val_0.25fp": 0.391, "sens_val_0.5fp": 0.51, "sens_val_1fp": 0.591, "sens_val_2fp": 0.6459999999999999, "sens_val_4fp": 0.736}, {"epoca": 2, "perda_treino": 0.2102, "sens_val_0.25fp": 0.41700000000000004, "sens_val_0.5fp": 0.513, "sens_val_1fp": 0.617, "sens_val_2fp": 0.7040000000000001, "sens_val_4fp": 0.797}, {"epoca": 3, "perda_treino": 0.2056, "sens_val_0.25fp": 0.409, "sens_val_0.5fp": 0.507, "sens_val_1fp": 0.638, "sens_val_2fp": 0.728, "sens_val_4fp": 0.7879999999999999}, {"epoca": 4, "perda_treino": 0.199, "sens_val_0.25fp": 0.455, "sens_val_0.5fp": 0.522, "sens_val_1fp": 0.649, "sens_val_2fp": 0.7190000000000001, "sens_val_4fp": 0.768}, {"epoca": 5, "perda_treino": 0.1954, "sens_val_0.25fp": 0.46399999999999997, "sens_val_0.5fp": 0.5539999999999999, "sens_val_1fp": 0.632, "sens_val_2fp": 0.733, "sens_val_4fp": 0.8140000000000001}, {"epoca": 6, "perda_treino": 0.1886, "sens_val_0.25fp": 0.493, "sens_val_0.5fp": 0.6, "sens_val_1fp": 0.6809999999999999, "sens_val_2fp": 0.7829999999999999, "sens_val_4fp": 0.841}, {"epoca": 7, "perda_treino": 0.1819, "sens_val_0.25fp": 0.461, "sens_val_0.5fp": 0.562, "sens_val_1fp": 0.67, "sens_val_2fp": 0.762, "sens_val_4fp": 0.841}, {"epoca": 8, "perda_treino": 0.1777, "sens_val_0.25fp": 0.47200000000000003, "sens_val_0.5fp": 0.586, "sens_val_1fp": 0.67, "sens_val_2fp": 0.742, "sens_val_4fp": 0.8290000000000001}, {"epoca": 9, "perda_treino": 0.1719, "sens_val_0.25fp": 0.499, "sens_val_0.5fp": 0.6, "sens_val_1fp": 0.7040000000000001, "sens_val_2fp": 0.794, "sens_val_4fp": 0.843}, {"epoca": 10, "perda_treino": 0.1642, "sens_val_0.25fp": 0.48700000000000004, "sens_val_0.5fp": 0.597, "sens_val_1fp": 0.696, "sens_val_2fp": 0.7509999999999999, "sens_val_4fp": 0.8320000000000001}, {"epoca": 11, "perda_treino": 0.1592, "sens_val_0.25fp": 0.528, "sens_val_0.5fp": 0.638, "sens_val_1fp": 0.7040000000000001, "sens_val_2fp": 0.7859999999999999, "sens_val_4fp": 0.846}, {"epoca": 12, "perda_treino": 0.15, "sens_val_0.25fp": 0.557, "sens_val_0.5fp": 0.638, "sens_val_1fp": 0.7190000000000001, "sens_val_2fp": 0.78, "sens_val_4fp": 0.858}, {"epoca": 13, "perda_treino": 0.1443, "sens_val_0.25fp": 0.574, "sens_val_0.5fp": 0.652, "sens_val_1fp": 0.6990000000000001, "sens_val_2fp": 0.759, "sens_val_4fp": 0.843}, {"epoca": 14, "perda_treino": 0.1375, "sens_val_0.25fp": 0.539, "sens_val_0.5fp": 0.638, "sens_val_1fp": 0.725, "sens_val_2fp": 0.7859999999999999, "sens_val_4fp": 0.858}, {"epoca": 15, "perda_treino": 0.133, "sens_val_0.25fp": 0.542, "sens_val_0.5fp": 0.655, "sens_val_1fp": 0.7040000000000001, "sens_val_2fp": 0.768, "sens_val_4fp": 0.852}, {"epoca": 16, "perda_treino": 0.1329, "sens_val_0.25fp": 0.551, "sens_val_0.5fp": 0.655, "sens_val_1fp": 0.71, "sens_val_2fp": 0.7859999999999999, "sens_val_4fp": 0.858}], "froc": {"CBIS-DDSM (filme)": {"0.25": 0.4714104193138501, "0.5": 0.576874205844981, "1": 0.6480304955527318, "2": 0.7217280813214739, "4": 0.7890724269377383}, "CDD-CESM (digital)": {"0.25": 0.44594594594594594, "0.5": 0.5148648648648648, "1": 0.5945945945945946, "2": 0.6810810810810811, "4": 0.7581081081081081}}, "normais": {"limiar": 0.5, "todos": {"n": 131, "fp_por_exame": 0.93, "com_caixa": 0.59}, "densa (3-4)": {"n": 91, "fp_por_exame": 1.11, "com_caixa": 0.69}, "não densa (1-2)": {"n": 39, "fp_por_exame": 0.51, "com_caixa": 0.33}}, "pontos": [{"limiar": 0.3, "filme": 0.64, "digital": 0.62, "fp_normal": 1.67}, {"limiar": 0.5, "filme": 0.592, "digital": 0.554, "fp_normal": 0.93}, {"limiar": 0.7, "filme": 0.5, "digital": 0.49, "fp_normal": 0.4}]}, "densidade": {"curvas": [{"epoca": 1, "perda_treino": 1.1322, "acc_val": 0.384, "kappa_val": 0.35, "densa_val": 0.727, "dens4_val": 0.98}, {"epoca": 2, "perda_treino": 1.0836, "acc_val": 0.545, "kappa_val": 0.503, "densa_val": 0.758, "dens4_val": 0.32}, {"epoca": 3, "perda_treino": 1.0082, "acc_val": 0.495, "kappa_val": 0.358, "densa_val": 0.7170000000000001, "dens4_val": 0.28}, {"epoca": 4, "perda_treino": 1.0014, "acc_val": 0.5660000000000001, "kappa_val": 0.487, "densa_val": 0.7170000000000001, "dens4_val": 0.36}, {"epoca": 5, "perda_treino": 0.9723, "acc_val": 0.556, "kappa_val": 0.449, "densa_val": 0.684, "dens4_val": 0.6}, {"epoca": 6, "perda_treino": 0.9541, "acc_val": 0.633, "kappa_val": 0.569, "densa_val": 0.818, "dens4_val": 0.96}, {"epoca": 7, "perda_treino": 0.922, "acc_val": 0.556, "kappa_val": 0.51, "densa_val": 0.737, "dens4_val": 0.36}, {"epoca": 8, "perda_treino": 0.9146, "acc_val": 0.69, "kappa_val": 0.654, "densa_val": 0.8420000000000001, "dens4_val": 0.46}, {"epoca": 9, "perda_treino": 0.8764, "acc_val": 0.653, "kappa_val": 0.613, "densa_val": 0.768, "dens4_val": 0.74}, {"epoca": 10, "perda_treino": 0.8764, "acc_val": 0.7070000000000001, "kappa_val": 0.661, "densa_val": 0.8420000000000001, "dens4_val": 0.58}, {"epoca": 11, "perda_treino": 0.8455, "acc_val": 0.7170000000000001, "kappa_val": 0.682, "densa_val": 0.825, "dens4_val": 0.8}, {"epoca": 12, "perda_treino": 0.8118, "acc_val": 0.731, "kappa_val": 0.713, "densa_val": 0.855, "dens4_val": 0.82}, {"epoca": 13, "perda_treino": 0.782, "acc_val": 0.7070000000000001, "kappa_val": 0.679, "densa_val": 0.8420000000000001, "dens4_val": 0.64}, {"epoca": 14, "perda_treino": 0.7704, "acc_val": 0.71, "kappa_val": 0.693, "densa_val": 0.862, "dens4_val": 0.62}, {"epoca": 15, "perda_treino": 0.7702, "acc_val": 0.727, "kappa_val": 0.705, "densa_val": 0.848, "dens4_val": 0.76}], "matriz": [[38, 39, 0, 2], [14, 290, 83, 5], [0, 49, 323, 52], [0, 3, 34, 118]], "classes": ["1 (A)", "2 (B)", "3 (C)", "4 (D)"]}, "subgrupos_externos": {"base": "CDD-CESM (validação externa da patologia, imagens com lesão)", "geral": {"n": 650, "malignos": 326, "auc": 0.815439672801636, "sens": 0.8466257668711656, "espec": 0.6574074074074074, "p_cal_media_malignos": 0.6223763853925177, "p_cal_media_benignos": 0.34882655704203447}, "subgrupos": {"Faixa etária": {"40–49": {"n": 165, "malignos": 78, "auc": 0.8129973474801061, "sens": 0.8076923076923077, "espec": 0.7126436781609196, "p_cal_media_malignos": 0.5963087095738953, "p_cal_media_benignos": 0.3366396969389736}, "50–59": {"n": 207, "malignos": 106, "auc": 0.8205679058471884, "sens": 0.8679245283018868, "espec": 0.6534653465346535, "p_cal_media_malignos": 0.6341136866124808, "p_cal_media_benignos": 0.34081897885592605}, "60–69": {"n": 127, "malignos": 73, "auc": 0.8579401319127347, "sens": 0.9178082191780822, "espec": 0.6851851851851852, "p_cal_media_malignos": 0.6420398193394242, "p_cal_media_benignos": 0.3257467773544739}, "< 40": {"n": 121, "malignos": 49, "auc": 0.7253401360544217, "sens": 0.7755102040816326, "espec": 0.5555555555555556, "p_cal_media_malignos": 0.5769569581654668, "p_cal_media_benignos": 0.40855855952691505}, "≥ 70": {"n": 30, "malignos": 20, "auc": 0.935, "sens": 0.8, "espec": 0.8, "p_cal_media_malignos": 0.7013386874194083, "p_cal_media_benignos": 0.23028917204004626}}, "Equipamento": {"equipamento 1": {"n": 615, "malignos": 314, "auc": 0.8163764098440444, "sens": 0.8535031847133758, "espec": 0.654485049833887, "p_cal_media_malignos": 0.6263580534005927, "p_cal_media_benignos": 0.3512731288125746}, "equipamento 2": {"n": 35, "malignos": 12, "auc": 0.7246376811594203, "sens": 0.6666666666666666, "espec": 0.6956521739130435, "p_cal_media_malignos": 0.5181894058478932, "p_cal_media_benignos": 0.31680837865366224}}, "Densidade": {"2 (B)": {"n": 197, "malignos": 110, "auc": 0.8242424242424242, "sens": 0.9, "espec": 0.6551724137931034, "p_cal_media_malignos": 0.655020662503341, "p_cal_media_benignos": 0.3616159542740996}, "3 (C)": {"n": 318, "malignos": 161, "auc": 0.8467381413933615, "sens": 0.8509316770186336, "espec": 0.7261146496815286, "p_cal_media_malignos": 0.619436906086183, "p_cal_media_benignos": 0.3062859674430136}, "4 (D)": {"n": 48, "malignos": 26, "auc": 0.8951048951048952, "sens": 0.7692307692307693, "espec": 0.9090909090909091, "p_cal_media_malignos": 0.5563002989955586, "p_cal_media_benignos": 0.2710057984691105}, "sem densidade": {"n": 79, "malignos": 25, "auc": 0.5896296296296297, "sens": 0.68, "espec": 0.3333333333333333, "p_cal_media_malignos": 0.5694821231155688, "p_cal_media_benignos": 0.5000589060305173}}, "Tipo de achado": {"calcificação": {"n": 234, "malignos": 112, "auc": 0.8493852459016392, "sens": 0.8660714285714286, "espec": 0.7786885245901639, "p_cal_media_malignos": 0.6375176517884565, "p_cal_media_benignos": 0.2725418449064457}, "massa": {"n": 201, "malignos": 129, "auc": 0.8794142980189491, "sens": 0.813953488372093, "espec": 0.7777777777777778, "p_cal_media_malignos": 0.6249781296846341, "p_cal_media_benignos": 0.30255445198988695}, "outro": {"n": 215, "malignos": 85, "auc": 0.7291402714932127, "sens": 0.8705882352941177, "espec": 0.47692307692307695, "p_cal_media_malignos": 0.5984770106863043, "p_cal_media_benignos": 0.44604445276739185}}}, "calibracao": [{"p_media": 0.07234320442333954, "maligno_observado": 0.08163265306122448, "n": 49}, {"p_media": 0.1433212782328904, "maligno_observado": 0.1, "n": 70}, {"p_media": 0.2475196172380142, "maligno_observado": 0.1746031746031746, "n": 63}, {"p_media": 0.3507951681123736, "maligno_observado": 0.3584905660377358, "n": 53}, {"p_media": 0.4488270950435026, "maligno_observado": 0.44285714285714284, "n": 70}, {"p_media": 0.5508138715688551, "maligno_observado": 0.5892857142857143, "n": 112}, {"p_media": 0.6503730030366064, "maligno_observado": 0.7840909090909091, "n": 88}, {"p_media": 0.7485159907028441, "maligno_observado": 0.8208955223880597, "n": 67}, {"p_media": 0.8486192150061636, "maligno_observado": 0.8, "n": 60}, {"p_media": 0.9300956120635921, "maligno_observado": 0.8888888888888888, "n": 18}]}}
+{
+ "gerado_em": "2026-11-19",
+ "patologia": {
+  "curvas": [
+   {
+    "dobra": 1,
+    "epoca": 1,
+    "perda_treino": 1.845,
+    "acc_val": 0.59,
+    "auc_val": 0.593
+   },
+   {
+    "dobra": 1,
+    "epoca": 2,
+    "perda_treino": 1.748,
+    "acc_val": 0.599,
+    "auc_val": 0.606
+   },
+   {
+    "dobra": 1,
+    "epoca": 3,
+    "perda_treino": 1.5,
+    "acc_val": 0.675,
+    "auc_val": 0.713
+   },
+   {
+    "dobra": 1,
+    "epoca": 4,
+    "perda_treino": 1.369,
+    "acc_val": 0.696,
+    "auc_val": 0.771
+   },
+   {
+    "dobra": 1,
+    "epoca": 5,
+    "perda_treino": 1.322,
+    "acc_val": 0.733,
+    "auc_val": 0.801
+   },
+   {
+    "dobra": 1,
+    "epoca": 6,
+    "perda_treino": 1.277,
+    "acc_val": 0.736,
+    "auc_val": 0.815
+   },
+   {
+    "dobra": 1,
+    "epoca": 7,
+    "perda_treino": 1.249,
+    "acc_val": 0.745,
+    "auc_val": 0.826
+   },
+   {
+    "dobra": 1,
+    "epoca": 8,
+    "perda_treino": 1.236,
+    "acc_val": 0.743,
+    "auc_val": 0.828
+   },
+   {
+    "dobra": 1,
+    "epoca": 9,
+    "perda_treino": 1.222,
+    "acc_val": 0.7490000000000001,
+    "auc_val": 0.828
+   },
+   {
+    "dobra": 1,
+    "epoca": 10,
+    "perda_treino": 1.213,
+    "acc_val": 0.754,
+    "auc_val": 0.827
+   },
+   {
+    "dobra": 1,
+    "epoca": 11,
+    "perda_treino": 1.194,
+    "acc_val": 0.747,
+    "auc_val": 0.826
+   },
+   {
+    "dobra": 1,
+    "epoca": 12,
+    "perda_treino": 1.198,
+    "acc_val": 0.747,
+    "auc_val": 0.826
+   },
+   {
+    "dobra": 1,
+    "epoca": 13,
+    "perda_treino": 1.176,
+    "acc_val": 0.745,
+    "auc_val": 0.827
+   },
+   {
+    "dobra": 1,
+    "epoca": 14,
+    "perda_treino": 1.173,
+    "acc_val": 0.745,
+    "auc_val": 0.828
+   },
+   {
+    "dobra": 1,
+    "epoca": 15,
+    "perda_treino": 1.176,
+    "acc_val": 0.747,
+    "auc_val": 0.828
+   },
+   {
+    "dobra": 2,
+    "epoca": 1,
+    "perda_treino": 1.763,
+    "acc_val": 0.632,
+    "auc_val": 0.663
+   },
+   {
+    "dobra": 2,
+    "epoca": 2,
+    "perda_treino": 1.743,
+    "acc_val": 0.642,
+    "auc_val": 0.657
+   },
+   {
+    "dobra": 2,
+    "epoca": 3,
+    "perda_treino": 1.5,
+    "acc_val": 0.6859999999999999,
+    "auc_val": 0.754
+   },
+   {
+    "dobra": 2,
+    "epoca": 4,
+    "perda_treino": 1.364,
+    "acc_val": 0.7140000000000001,
+    "auc_val": 0.799
+   },
+   {
+    "dobra": 2,
+    "epoca": 5,
+    "perda_treino": 1.314,
+    "acc_val": 0.742,
+    "auc_val": 0.821
+   },
+   {
+    "dobra": 2,
+    "epoca": 6,
+    "perda_treino": 1.287,
+    "acc_val": 0.7659999999999999,
+    "auc_val": 0.837
+   },
+   {
+    "dobra": 2,
+    "epoca": 7,
+    "perda_treino": 1.252,
+    "acc_val": 0.764,
+    "auc_val": 0.847
+   },
+   {
+    "dobra": 2,
+    "epoca": 8,
+    "perda_treino": 1.241,
+    "acc_val": 0.775,
+    "auc_val": 0.851
+   },
+   {
+    "dobra": 2,
+    "epoca": 9,
+    "perda_treino": 1.219,
+    "acc_val": 0.78,
+    "auc_val": 0.857
+   },
+   {
+    "dobra": 2,
+    "epoca": 10,
+    "perda_treino": 1.207,
+    "acc_val": 0.778,
+    "auc_val": 0.858
+   },
+   {
+    "dobra": 2,
+    "epoca": 11,
+    "perda_treino": 1.187,
+    "acc_val": 0.773,
+    "auc_val": 0.857
+   },
+   {
+    "dobra": 2,
+    "epoca": 12,
+    "perda_treino": 1.196,
+    "acc_val": 0.78,
+    "auc_val": 0.856
+   },
+   {
+    "dobra": 2,
+    "epoca": 13,
+    "perda_treino": 1.176,
+    "acc_val": 0.775,
+    "auc_val": 0.857
+   },
+   {
+    "dobra": 2,
+    "epoca": 14,
+    "perda_treino": 1.17,
+    "acc_val": 0.7709999999999999,
+    "auc_val": 0.857
+   },
+   {
+    "dobra": 2,
+    "epoca": 15,
+    "perda_treino": 1.171,
+    "acc_val": 0.777,
+    "auc_val": 0.857
+   },
+   {
+    "dobra": 3,
+    "epoca": 1,
+    "perda_treino": 1.794,
+    "acc_val": 0.599,
+    "auc_val": 0.638
+   },
+   {
+    "dobra": 3,
+    "epoca": 2,
+    "perda_treino": 1.708,
+    "acc_val": 0.621,
+    "auc_val": 0.646
+   },
+   {
+    "dobra": 3,
+    "epoca": 3,
+    "perda_treino": 1.497,
+    "acc_val": 0.677,
+    "auc_val": 0.749
+   },
+   {
+    "dobra": 3,
+    "epoca": 4,
+    "perda_treino": 1.377,
+    "acc_val": 0.7190000000000001,
+    "auc_val": 0.805
+   },
+   {
+    "dobra": 3,
+    "epoca": 5,
+    "perda_treino": 1.319,
+    "acc_val": 0.759,
+    "auc_val": 0.828
+   },
+   {
+    "dobra": 3,
+    "epoca": 6,
+    "perda_treino": 1.287,
+    "acc_val": 0.773,
+    "auc_val": 0.832
+   },
+   {
+    "dobra": 3,
+    "epoca": 7,
+    "perda_treino": 1.264,
+    "acc_val": 0.778,
+    "auc_val": 0.839
+   },
+   {
+    "dobra": 3,
+    "epoca": 8,
+    "perda_treino": 1.243,
+    "acc_val": 0.775,
+    "auc_val": 0.845
+   },
+   {
+    "dobra": 3,
+    "epoca": 9,
+    "perda_treino": 1.226,
+    "acc_val": 0.764,
+    "auc_val": 0.845
+   },
+   {
+    "dobra": 3,
+    "epoca": 10,
+    "perda_treino": 1.214,
+    "acc_val": 0.7659999999999999,
+    "auc_val": 0.845
+   },
+   {
+    "dobra": 3,
+    "epoca": 11,
+    "perda_treino": 1.195,
+    "acc_val": 0.7709999999999999,
+    "auc_val": 0.847
+   },
+   {
+    "dobra": 3,
+    "epoca": 12,
+    "perda_treino": 1.19,
+    "acc_val": 0.764,
+    "auc_val": 0.846
+   },
+   {
+    "dobra": 3,
+    "epoca": 13,
+    "perda_treino": 1.179,
+    "acc_val": 0.764,
+    "auc_val": 0.847
+   },
+   {
+    "dobra": 3,
+    "epoca": 14,
+    "perda_treino": 1.177,
+    "acc_val": 0.7659999999999999,
+    "auc_val": 0.848
+   },
+   {
+    "dobra": 3,
+    "epoca": 15,
+    "perda_treino": 1.171,
+    "acc_val": 0.77,
+    "auc_val": 0.848
+   },
+   {
+    "dobra": 4,
+    "epoca": 1,
+    "perda_treino": 1.812,
+    "acc_val": 0.602,
+    "auc_val": 0.616
+   },
+   {
+    "dobra": 4,
+    "epoca": 2,
+    "perda_treino": 1.735,
+    "acc_val": 0.602,
+    "auc_val": 0.615
+   },
+   {
+    "dobra": 4,
+    "epoca": 3,
+    "perda_treino": 1.494,
+    "acc_val": 0.667,
+    "auc_val": 0.74
+   },
+   {
+    "dobra": 4,
+    "epoca": 4,
+    "perda_treino": 1.352,
+    "acc_val": 0.695,
+    "auc_val": 0.768
+   },
+   {
+    "dobra": 4,
+    "epoca": 5,
+    "perda_treino": 1.311,
+    "acc_val": 0.7120000000000001,
+    "auc_val": 0.785
+   },
+   {
+    "dobra": 4,
+    "epoca": 6,
+    "perda_treino": 1.285,
+    "acc_val": 0.7190000000000001,
+    "auc_val": 0.783
+   },
+   {
+    "dobra": 4,
+    "epoca": 7,
+    "perda_treino": 1.242,
+    "acc_val": 0.693,
+    "auc_val": 0.78
+   },
+   {
+    "dobra": 4,
+    "epoca": 8,
+    "perda_treino": 1.223,
+    "acc_val": 0.6859999999999999,
+    "auc_val": 0.78
+   },
+   {
+    "dobra": 4,
+    "epoca": 9,
+    "perda_treino": 1.216,
+    "acc_val": 0.696,
+    "auc_val": 0.779
+   },
+   {
+    "dobra": 4,
+    "epoca": 10,
+    "perda_treino": 1.185,
+    "acc_val": 0.695,
+    "auc_val": 0.778
+   },
+   {
+    "dobra": 4,
+    "epoca": 11,
+    "perda_treino": 1.176,
+    "acc_val": 0.684,
+    "auc_val": 0.777
+   },
+   {
+    "dobra": 4,
+    "epoca": 12,
+    "perda_treino": 1.165,
+    "acc_val": 0.682,
+    "auc_val": 0.777
+   },
+   {
+    "dobra": 4,
+    "epoca": 13,
+    "perda_treino": 1.161,
+    "acc_val": 0.684,
+    "auc_val": 0.777
+   },
+   {
+    "dobra": 4,
+    "epoca": 14,
+    "perda_treino": 1.164,
+    "acc_val": 0.688,
+    "auc_val": 0.778
+   },
+   {
+    "dobra": 4,
+    "epoca": 15,
+    "perda_treino": 1.162,
+    "acc_val": 0.688,
+    "auc_val": 0.777
+   },
+   {
+    "dobra": 5,
+    "epoca": 1,
+    "perda_treino": 1.754,
+    "acc_val": 0.67,
+    "auc_val": 0.708
+   },
+   {
+    "dobra": 5,
+    "epoca": 2,
+    "perda_treino": 1.753,
+    "acc_val": 0.647,
+    "auc_val": 0.708
+   },
+   {
+    "dobra": 5,
+    "epoca": 3,
+    "perda_treino": 1.498,
+    "acc_val": 0.7120000000000001,
+    "auc_val": 0.81
+   },
+   {
+    "dobra": 5,
+    "epoca": 4,
+    "perda_treino": 1.374,
+    "acc_val": 0.753,
+    "auc_val": 0.842
+   },
+   {
+    "dobra": 5,
+    "epoca": 5,
+    "perda_treino": 1.315,
+    "acc_val": 0.76,
+    "auc_val": 0.855
+   },
+   {
+    "dobra": 5,
+    "epoca": 6,
+    "perda_treino": 1.289,
+    "acc_val": 0.762,
+    "auc_val": 0.861
+   },
+   {
+    "dobra": 5,
+    "epoca": 7,
+    "perda_treino": 1.262,
+    "acc_val": 0.773,
+    "auc_val": 0.863
+   },
+   {
+    "dobra": 5,
+    "epoca": 8,
+    "perda_treino": 1.24,
+    "acc_val": 0.7809999999999999,
+    "auc_val": 0.864
+   },
+   {
+    "dobra": 5,
+    "epoca": 9,
+    "perda_treino": 1.223,
+    "acc_val": 0.787,
+    "auc_val": 0.866
+   },
+   {
+    "dobra": 5,
+    "epoca": 10,
+    "perda_treino": 1.212,
+    "acc_val": 0.785,
+    "auc_val": 0.865
+   },
+   {
+    "dobra": 5,
+    "epoca": 11,
+    "perda_treino": 1.194,
+    "acc_val": 0.787,
+    "auc_val": 0.866
+   },
+   {
+    "dobra": 5,
+    "epoca": 12,
+    "perda_treino": 1.186,
+    "acc_val": 0.78,
+    "auc_val": 0.865
+   },
+   {
+    "dobra": 5,
+    "epoca": 13,
+    "perda_treino": 1.183,
+    "acc_val": 0.7829999999999999,
+    "auc_val": 0.863
+   },
+   {
+    "dobra": 5,
+    "epoca": 14,
+    "perda_treino": 1.179,
+    "acc_val": 0.787,
+    "auc_val": 0.864
+   },
+   {
+    "dobra": 5,
+    "epoca": 15,
+    "perda_treino": 1.179,
+    "acc_val": 0.79,
+    "auc_val": 0.865
+   }
+  ],
+  "matriz": [
+   [
+    1278,
+    358
+   ],
+   [
+    310,
+    835
+   ]
+  ],
+  "classes": [
+   "Benigno",
+   "Maligno"
+  ],
+  "roc": {
+   "fpr": [
+    0.0,
+    0.0037,
+    0.0086,
+    0.0141,
+    0.0226,
+    0.0287,
+    0.0342,
+    0.041,
+    0.0471,
+    0.0532,
+    0.0599,
+    0.066,
+    0.074,
+    0.0844,
+    0.0899,
+    0.1015,
+    0.1094,
+    0.1186,
+    0.1253,
+    0.1326,
+    0.1412,
+    0.151,
+    0.1608,
+    0.1675,
+    0.1834,
+    0.1913,
+    0.1974,
+    0.2072,
+    0.217,
+    0.2286,
+    0.2408,
+    0.2512,
+    0.261,
+    0.2763,
+    0.2958,
+    0.3026,
+    0.3166,
+    0.3282,
+    0.3405,
+    0.3539,
+    0.3661,
+    0.3771,
+    0.3936,
+    0.4163,
+    0.4322,
+    0.4542,
+    0.4743,
+    0.4872,
+    0.5049,
+    0.5306,
+    0.5544,
+    0.5819,
+    0.6039,
+    0.6418,
+    0.673,
+    0.7121,
+    0.7414,
+    0.8062,
+    0.8551,
+    1.0
+   ],
+   "tpr": [
+    0.0,
+    0.0664,
+    0.1694,
+    0.2332,
+    0.2725,
+    0.3162,
+    0.3371,
+    0.3651,
+    0.3869,
+    0.4,
+    0.4262,
+    0.4393,
+    0.4664,
+    0.4987,
+    0.5188,
+    0.5424,
+    0.5607,
+    0.579,
+    0.5904,
+    0.6,
+    0.6175,
+    0.6323,
+    0.6454,
+    0.6594,
+    0.6734,
+    0.6882,
+    0.7004,
+    0.7127,
+    0.7284,
+    0.7415,
+    0.7555,
+    0.7686,
+    0.7808,
+    0.793,
+    0.8009,
+    0.8122,
+    0.8245,
+    0.8332,
+    0.8454,
+    0.8568,
+    0.8646,
+    0.8786,
+    0.8865,
+    0.8934,
+    0.9004,
+    0.91,
+    0.9179,
+    0.9249,
+    0.9319,
+    0.938,
+    0.9441,
+    0.952,
+    0.9581,
+    0.9651,
+    0.9738,
+    0.9817,
+    0.9878,
+    0.9921,
+    0.9965,
+    1.0
+   ]
+  },
+  "auc": 0.8413832865333489,
+  "n": 2781,
+  "pacientes": 1217,
+  "calibracao": [
+   {
+    "faixa": "0.0–0.1",
+    "p_media": 0.059101083743842375,
+    "maligno_observado": 0.029556650246305417,
+    "n": 406
+   },
+   {
+    "faixa": "0.1–0.2",
+    "p_media": 0.14539425,
+    "maligno_observado": 0.13055555555555556,
+    "n": 360
+   },
+   {
+    "faixa": "0.2–0.3",
+    "p_media": 0.24790671875,
+    "maligno_observado": 0.2,
+    "n": 320
+   },
+   {
+    "faixa": "0.3–0.4",
+    "p_media": 0.3490412403100775,
+    "maligno_observado": 0.34108527131782945,
+    "n": 258
+   },
+   {
+    "faixa": "0.4–0.5",
+    "p_media": 0.4485708606557377,
+    "maligno_observado": 0.4057377049180328,
+    "n": 244
+   },
+   {
+    "faixa": "0.5–0.6",
+    "p_media": 0.5486472765957447,
+    "maligno_observado": 0.502127659574468,
+    "n": 235
+   },
+   {
+    "faixa": "0.6–0.7",
+    "p_media": 0.6491717083333332,
+    "maligno_observado": 0.5791666666666667,
+    "n": 240
+   },
+   {
+    "faixa": "0.7–0.8",
+    "p_media": 0.7521363348416289,
+    "maligno_observado": 0.6877828054298643,
+    "n": 221
+   },
+   {
+    "faixa": "0.8–0.9",
+    "p_media": 0.8508533884297521,
+    "maligno_observado": 0.7727272727272727,
+    "n": 242
+   },
+   {
+    "faixa": "0.9–1.0",
+    "p_media": 0.9474229411764706,
+    "maligno_observado": 0.9372549019607843,
+    "n": 255
+   }
+  ],
+  "histograma": [
+   {
+    "faixa": "0.0–0.1",
+    "classe": "Benigno (verdade)",
+    "n": 394
+   },
+   {
+    "faixa": "0.0–0.1",
+    "classe": "Maligno (verdade)",
+    "n": 12
+   },
+   {
+    "faixa": "0.1–0.2",
+    "classe": "Benigno (verdade)",
+    "n": 313
+   },
+   {
+    "faixa": "0.1–0.2",
+    "classe": "Maligno (verdade)",
+    "n": 47
+   },
+   {
+    "faixa": "0.2–0.3",
+    "classe": "Benigno (verdade)",
+    "n": 256
+   },
+   {
+    "faixa": "0.2–0.3",
+    "classe": "Maligno (verdade)",
+    "n": 64
+   },
+   {
+    "faixa": "0.3–0.4",
+    "classe": "Benigno (verdade)",
+    "n": 170
+   },
+   {
+    "faixa": "0.3–0.4",
+    "classe": "Maligno (verdade)",
+    "n": 88
+   },
+   {
+    "faixa": "0.4–0.5",
+    "classe": "Benigno (verdade)",
+    "n": 145
+   },
+   {
+    "faixa": "0.4–0.5",
+    "classe": "Maligno (verdade)",
+    "n": 99
+   },
+   {
+    "faixa": "0.5–0.6",
+    "classe": "Benigno (verdade)",
+    "n": 117
+   },
+   {
+    "faixa": "0.5–0.6",
+    "classe": "Maligno (verdade)",
+    "n": 118
+   },
+   {
+    "faixa": "0.6–0.7",
+    "classe": "Benigno (verdade)",
+    "n": 101
+   },
+   {
+    "faixa": "0.6–0.7",
+    "classe": "Maligno (verdade)",
+    "n": 139
+   },
+   {
+    "faixa": "0.7–0.8",
+    "classe": "Benigno (verdade)",
+    "n": 69
+   },
+   {
+    "faixa": "0.7–0.8",
+    "classe": "Maligno (verdade)",
+    "n": 152
+   },
+   {
+    "faixa": "0.8–0.9",
+    "classe": "Benigno (verdade)",
+    "n": 55
+   },
+   {
+    "faixa": "0.8–0.9",
+    "classe": "Maligno (verdade)",
+    "n": 187
+   },
+   {
+    "faixa": "0.9–1.0",
+    "classe": "Benigno (verdade)",
+    "n": 16
+   },
+   {
+    "faixa": "0.9–1.0",
+    "classe": "Maligno (verdade)",
+    "n": 239
+   }
+  ],
+  "por_tipo": {
+   "Massa": {
+    "n": 1291,
+    "auc": 0.8563908745027959,
+    "acc": 0.7823392718822618
+   },
+   "Calcificação": {
+    "n": 1490,
+    "auc": 0.820108799275466,
+    "acc": 0.7402684563758389
+   }
+  },
+  "kfold": {
+   "dobras": [
+    {
+     "dobra": 1,
+     "lesoes": 564,
+     "pacientes": 245,
+     "malignas": 241,
+     "auc": 0.8397,
+     "acuracia": 0.7589,
+     "sensibilidade": 0.7137,
+     "especificidade": 0.7926
+    },
+    {
+     "dobra": 2,
+     "lesoes": 561,
+     "pacientes": 245,
+     "malignas": 233,
+     "auc": 0.8645,
+     "acuracia": 0.7843,
+     "sensibilidade": 0.7382,
+     "especificidade": 0.8171
+    },
+    {
+     "dobra": 3,
+     "lesoes": 563,
+     "pacientes": 245,
+     "malignas": 247,
+     "auc": 0.853,
+     "acuracia": 0.7655,
+     "sensibilidade": 0.749,
+     "especificidade": 0.7785
+    },
+    {
+     "dobra": 4,
+     "lesoes": 560,
+     "pacientes": 244,
+     "malignas": 226,
+     "auc": 0.7901,
+     "acuracia": 0.7054,
+     "sensibilidade": 0.6549,
+     "especificidade": 0.7395
+    },
+    {
+     "dobra": 5,
+     "lesoes": 533,
+     "pacientes": 238,
+     "malignas": 198,
+     "auc": 0.862,
+     "acuracia": 0.7861,
+     "sensibilidade": 0.798,
+     "especificidade": 0.7791
+    }
+   ],
+   "auc_media": 0.8419,
+   "auc_desvio": 0.0305,
+   "auc_conjunta": 0.8414,
+   "fonte": "previsões fora-da-dobra (OOF) por paciente, sem o teste oficial do CBIS-DDSM"
+  }
+ },
+ "achado": {
+  "curvas": [
+   {
+    "epoca": 1,
+    "perda_treino": 1.3303,
+    "perda_val": 1.2931,
+    "acc_treino": 0.6527,
+    "acc_val": 0.7406
+   },
+   {
+    "epoca": 2,
+    "perda_treino": 1.2711,
+    "perda_val": 1.2461,
+    "acc_treino": 0.7298,
+    "acc_val": 0.7428
+   },
+   {
+    "epoca": 3,
+    "perda_treino": 1.0077,
+    "perda_val": 0.8617,
+    "acc_treino": 0.8345999999999999,
+    "acc_val": 0.8914
+   },
+   {
+    "epoca": 4,
+    "perda_treino": 0.8364,
+    "perda_val": 0.8437,
+    "acc_treino": 0.8889,
+    "acc_val": 0.9024
+   },
+   {
+    "epoca": 5,
+    "perda_treino": 0.7614,
+    "perda_val": 0.8399,
+    "acc_treino": 0.9142,
+    "acc_val": 0.9157
+   },
+   {
+    "epoca": 6,
+    "perda_treino": 0.7295,
+    "perda_val": 0.8158,
+    "acc_treino": 0.9175,
+    "acc_val": 0.9224
+   },
+   {
+    "epoca": 7,
+    "perda_treino": 0.6904,
+    "perda_val": 0.8344,
+    "acc_treino": 0.9283,
+    "acc_val": 0.8914
+   },
+   {
+    "epoca": 8,
+    "perda_treino": 0.659,
+    "perda_val": 0.7239,
+    "acc_treino": 0.9290999999999999,
+    "acc_val": 0.9312999999999999
+   },
+   {
+    "epoca": 9,
+    "perda_treino": 0.6578,
+    "perda_val": 0.8568,
+    "acc_treino": 0.9254000000000001,
+    "acc_val": 0.9201999999999999
+   },
+   {
+    "epoca": 10,
+    "perda_treino": 0.6391,
+    "perda_val": 0.8053,
+    "acc_treino": 0.9390999999999999,
+    "acc_val": 0.9157
+   },
+   {
+    "epoca": 11,
+    "perda_treino": 0.6201,
+    "perda_val": 0.796,
+    "acc_treino": 0.9403,
+    "acc_val": 0.9201999999999999
+   },
+   {
+    "epoca": 12,
+    "perda_treino": 0.5514,
+    "perda_val": 0.8265,
+    "acc_treino": 0.9506999999999999,
+    "acc_val": 0.9224
+   }
+  ],
+  "matriz": [
+   [
+    357,
+    21
+   ],
+   [
+    27,
+    299
+   ]
+  ],
+  "classes": [
+   "Massa/Nódulo",
+   "Microcalcificação"
+  ],
+  "roc": {
+   "fpr": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0026,
+    0.0026,
+    0.0053,
+    0.0079,
+    0.0079,
+    0.0106,
+    0.0132,
+    0.0132,
+    0.0159,
+    0.0185,
+    0.0185,
+    0.0238,
+    0.0291,
+    0.0291,
+    0.0317,
+    0.037,
+    0.037,
+    0.0397,
+    0.0423,
+    0.0423,
+    0.045,
+    0.0476,
+    0.0476,
+    0.0503,
+    0.0529,
+    0.0529,
+    0.0635,
+    0.0661,
+    0.0661,
+    0.0688,
+    0.0714,
+    0.0714,
+    0.0741,
+    0.0767,
+    0.0767,
+    0.0979,
+    0.1032,
+    0.1032,
+    0.1111,
+    0.1217,
+    0.1217,
+    0.127,
+    0.1323,
+    0.1323,
+    0.1614,
+    0.1772,
+    0.1772,
+    0.2143,
+    0.2196,
+    0.2196,
+    0.2381,
+    0.2831,
+    0.2831,
+    0.3757,
+    0.5476,
+    1.0
+   ],
+   "tpr": [
+    0.0,
+    0.0031,
+    0.2209,
+    0.5767,
+    0.5767,
+    0.6288,
+    0.6503,
+    0.6503,
+    0.727,
+    0.7638,
+    0.7638,
+    0.7975,
+    0.8098,
+    0.8098,
+    0.8221,
+    0.8282,
+    0.8282,
+    0.8374,
+    0.8497,
+    0.8497,
+    0.8681,
+    0.8804,
+    0.8804,
+    0.8957,
+    0.9018,
+    0.9018,
+    0.908,
+    0.9141,
+    0.9141,
+    0.9172,
+    0.9202,
+    0.9202,
+    0.9233,
+    0.9325,
+    0.9325,
+    0.9356,
+    0.9387,
+    0.9387,
+    0.9417,
+    0.9479,
+    0.9479,
+    0.9509,
+    0.9571,
+    0.9571,
+    0.9601,
+    0.9663,
+    0.9663,
+    0.9693,
+    0.9785,
+    0.9785,
+    0.9816,
+    0.9847,
+    0.9847,
+    0.9877,
+    0.9908,
+    0.9908,
+    0.9939,
+    0.9969,
+    0.9969,
+    1.0
+   ]
+  },
+  "auc": 0.9815626318693803,
+  "n": 704
+ },
+ "detector": {
+  "curvas": [
+   {
+    "epoca": 1,
+    "perda_treino": 0.2385,
+    "sens_val_0.25fp": 0.391,
+    "sens_val_0.5fp": 0.51,
+    "sens_val_1fp": 0.591,
+    "sens_val_2fp": 0.6459999999999999,
+    "sens_val_4fp": 0.736
+   },
+   {
+    "epoca": 2,
+    "perda_treino": 0.2102,
+    "sens_val_0.25fp": 0.41700000000000004,
+    "sens_val_0.5fp": 0.513,
+    "sens_val_1fp": 0.617,
+    "sens_val_2fp": 0.7040000000000001,
+    "sens_val_4fp": 0.797
+   },
+   {
+    "epoca": 3,
+    "perda_treino": 0.2056,
+    "sens_val_0.25fp": 0.409,
+    "sens_val_0.5fp": 0.507,
+    "sens_val_1fp": 0.638,
+    "sens_val_2fp": 0.728,
+    "sens_val_4fp": 0.7879999999999999
+   },
+   {
+    "epoca": 4,
+    "perda_treino": 0.199,
+    "sens_val_0.25fp": 0.455,
+    "sens_val_0.5fp": 0.522,
+    "sens_val_1fp": 0.649,
+    "sens_val_2fp": 0.7190000000000001,
+    "sens_val_4fp": 0.768
+   },
+   {
+    "epoca": 5,
+    "perda_treino": 0.1954,
+    "sens_val_0.25fp": 0.46399999999999997,
+    "sens_val_0.5fp": 0.5539999999999999,
+    "sens_val_1fp": 0.632,
+    "sens_val_2fp": 0.733,
+    "sens_val_4fp": 0.8140000000000001
+   },
+   {
+    "epoca": 6,
+    "perda_treino": 0.1886,
+    "sens_val_0.25fp": 0.493,
+    "sens_val_0.5fp": 0.6,
+    "sens_val_1fp": 0.6809999999999999,
+    "sens_val_2fp": 0.7829999999999999,
+    "sens_val_4fp": 0.841
+   },
+   {
+    "epoca": 7,
+    "perda_treino": 0.1819,
+    "sens_val_0.25fp": 0.461,
+    "sens_val_0.5fp": 0.562,
+    "sens_val_1fp": 0.67,
+    "sens_val_2fp": 0.762,
+    "sens_val_4fp": 0.841
+   },
+   {
+    "epoca": 8,
+    "perda_treino": 0.1777,
+    "sens_val_0.25fp": 0.47200000000000003,
+    "sens_val_0.5fp": 0.586,
+    "sens_val_1fp": 0.67,
+    "sens_val_2fp": 0.742,
+    "sens_val_4fp": 0.8290000000000001
+   },
+   {
+    "epoca": 9,
+    "perda_treino": 0.1719,
+    "sens_val_0.25fp": 0.499,
+    "sens_val_0.5fp": 0.6,
+    "sens_val_1fp": 0.7040000000000001,
+    "sens_val_2fp": 0.794,
+    "sens_val_4fp": 0.843
+   },
+   {
+    "epoca": 10,
+    "perda_treino": 0.1642,
+    "sens_val_0.25fp": 0.48700000000000004,
+    "sens_val_0.5fp": 0.597,
+    "sens_val_1fp": 0.696,
+    "sens_val_2fp": 0.7509999999999999,
+    "sens_val_4fp": 0.8320000000000001
+   },
+   {
+    "epoca": 11,
+    "perda_treino": 0.1592,
+    "sens_val_0.25fp": 0.528,
+    "sens_val_0.5fp": 0.638,
+    "sens_val_1fp": 0.7040000000000001,
+    "sens_val_2fp": 0.7859999999999999,
+    "sens_val_4fp": 0.846
+   },
+   {
+    "epoca": 12,
+    "perda_treino": 0.15,
+    "sens_val_0.25fp": 0.557,
+    "sens_val_0.5fp": 0.638,
+    "sens_val_1fp": 0.7190000000000001,
+    "sens_val_2fp": 0.78,
+    "sens_val_4fp": 0.858
+   },
+   {
+    "epoca": 13,
+    "perda_treino": 0.1443,
+    "sens_val_0.25fp": 0.574,
+    "sens_val_0.5fp": 0.652,
+    "sens_val_1fp": 0.6990000000000001,
+    "sens_val_2fp": 0.759,
+    "sens_val_4fp": 0.843
+   },
+   {
+    "epoca": 14,
+    "perda_treino": 0.1375,
+    "sens_val_0.25fp": 0.539,
+    "sens_val_0.5fp": 0.638,
+    "sens_val_1fp": 0.725,
+    "sens_val_2fp": 0.7859999999999999,
+    "sens_val_4fp": 0.858
+   },
+   {
+    "epoca": 15,
+    "perda_treino": 0.133,
+    "sens_val_0.25fp": 0.542,
+    "sens_val_0.5fp": 0.655,
+    "sens_val_1fp": 0.7040000000000001,
+    "sens_val_2fp": 0.768,
+    "sens_val_4fp": 0.852
+   },
+   {
+    "epoca": 16,
+    "perda_treino": 0.1329,
+    "sens_val_0.25fp": 0.551,
+    "sens_val_0.5fp": 0.655,
+    "sens_val_1fp": 0.71,
+    "sens_val_2fp": 0.7859999999999999,
+    "sens_val_4fp": 0.858
+   }
+  ],
+  "froc": {
+   "CBIS-DDSM (filme)": {
+    "0.25": 0.4714104193138501,
+    "0.5": 0.576874205844981,
+    "1": 0.6480304955527318,
+    "2": 0.7217280813214739,
+    "4": 0.7890724269377383
+   },
+   "CDD-CESM (digital)": {
+    "0.25": 0.44594594594594594,
+    "0.5": 0.5148648648648648,
+    "1": 0.5945945945945946,
+    "2": 0.6810810810810811,
+    "4": 0.7581081081081081
+   }
+  },
+  "normais": {
+   "limiar": 0.5,
+   "todos": {
+    "n": 131,
+    "fp_por_exame": 0.93,
+    "com_caixa": 0.59
+   },
+   "densa (3-4)": {
+    "n": 91,
+    "fp_por_exame": 1.11,
+    "com_caixa": 0.69
+   },
+   "não densa (1-2)": {
+    "n": 39,
+    "fp_por_exame": 0.51,
+    "com_caixa": 0.33
+   }
+  },
+  "pontos": [
+   {
+    "limiar": 0.3,
+    "filme": 0.64,
+    "digital": 0.62,
+    "fp_normal": 1.67
+   },
+   {
+    "limiar": 0.5,
+    "filme": 0.592,
+    "digital": 0.554,
+    "fp_normal": 0.93
+   },
+   {
+    "limiar": 0.7,
+    "filme": 0.5,
+    "digital": 0.49,
+    "fp_normal": 0.4
+   }
+  ]
+ },
+ "densidade": {
+  "curvas": [
+   {
+    "epoca": 1,
+    "perda_treino": 1.2433,
+    "acc_val": 0.603,
+    "kappa_val": 0.531,
+    "densa_val": 0.731,
+    "dens4_val": 0.52
+   },
+   {
+    "epoca": 2,
+    "perda_treino": 0.9239,
+    "acc_val": 0.677,
+    "kappa_val": 0.647,
+    "densa_val": 0.828,
+    "dens4_val": 0.58
+   },
+   {
+    "epoca": 3,
+    "perda_treino": 0.8521,
+    "acc_val": 0.747,
+    "kappa_val": 0.725,
+    "densa_val": 0.838,
+    "dens4_val": 0.86
+   },
+   {
+    "epoca": 4,
+    "perda_treino": 0.8145,
+    "acc_val": 0.636,
+    "kappa_val": 0.619,
+    "densa_val": 0.815,
+    "dens4_val": 0.6
+   },
+   {
+    "epoca": 5,
+    "perda_treino": 0.7679,
+    "acc_val": 0.684,
+    "kappa_val": 0.652,
+    "densa_val": 0.825,
+    "dens4_val": 0.56
+   },
+   {
+    "epoca": 6,
+    "perda_treino": 0.7221,
+    "acc_val": 0.727,
+    "kappa_val": 0.701,
+    "densa_val": 0.848,
+    "dens4_val": 0.7
+   },
+   {
+    "epoca": 7,
+    "perda_treino": 0.6902,
+    "acc_val": 0.741,
+    "kappa_val": 0.706,
+    "densa_val": 0.8420000000000001,
+    "dens4_val": 0.74
+   },
+   {
+    "epoca": 8,
+    "perda_treino": 0.6603,
+    "acc_val": 0.7440000000000001,
+    "kappa_val": 0.716,
+    "densa_val": 0.875,
+    "dens4_val": 0.62
+   },
+   {
+    "epoca": 9,
+    "perda_treino": 0.6379,
+    "acc_val": 0.758,
+    "kappa_val": 0.729,
+    "densa_val": 0.852,
+    "dens4_val": 0.78
+   },
+   {
+    "epoca": 10,
+    "perda_treino": 0.6155,
+    "acc_val": 0.7340000000000001,
+    "kappa_val": 0.705,
+    "densa_val": 0.852,
+    "dens4_val": 0.68
+   },
+   {
+    "epoca": 11,
+    "perda_treino": 0.5935,
+    "acc_val": 0.741,
+    "kappa_val": 0.708,
+    "densa_val": 0.8590000000000001,
+    "dens4_val": 0.68
+   },
+   {
+    "epoca": 12,
+    "perda_treino": 0.5986,
+    "acc_val": 0.7609999999999999,
+    "kappa_val": 0.733,
+    "densa_val": 0.855,
+    "dens4_val": 0.88
+   },
+   {
+    "epoca": 13,
+    "perda_treino": 0.5677,
+    "acc_val": 0.7509999999999999,
+    "kappa_val": 0.721,
+    "densa_val": 0.8590000000000001,
+    "dens4_val": 0.74
+   },
+   {
+    "epoca": 14,
+    "perda_treino": 0.562,
+    "acc_val": 0.7509999999999999,
+    "kappa_val": 0.722,
+    "densa_val": 0.8590000000000001,
+    "dens4_val": 0.76
+   },
+   {
+    "epoca": 15,
+    "perda_treino": 0.5501,
+    "acc_val": 0.7509999999999999,
+    "kappa_val": 0.722,
+    "densa_val": 0.8590000000000001,
+    "dens4_val": 0.76
+   }
+  ],
+  "matriz": [
+   [
+    51,
+    26,
+    0,
+    2
+   ],
+   [
+    32,
+    289,
+    66,
+    5
+   ],
+   [
+    1,
+    49,
+    327,
+    47
+   ],
+   [
+    0,
+    3,
+    36,
+    116
+   ]
+  ],
+  "classes": [
+   "1 (A)",
+   "2 (B)",
+   "3 (C)",
+   "4 (D)"
+  ]
+ },
+ "subgrupos_externos": {
+  "base": "CDD-CESM (validação externa da patologia, imagens com lesão)",
+  "geral": {
+   "n": 650,
+   "malignos": 326,
+   "auc": 0.815439672801636,
+   "sens": 0.8466257668711656,
+   "espec": 0.6574074074074074,
+   "p_cal_media_malignos": 0.6223763853925177,
+   "p_cal_media_benignos": 0.34882655704203447
+  },
+  "subgrupos": {
+   "Faixa etária": {
+    "40–49": {
+     "n": 165,
+     "malignos": 78,
+     "auc": 0.8129973474801061,
+     "sens": 0.8076923076923077,
+     "espec": 0.7126436781609196,
+     "p_cal_media_malignos": 0.5963087095738953,
+     "p_cal_media_benignos": 0.3366396969389736
+    },
+    "50–59": {
+     "n": 207,
+     "malignos": 106,
+     "auc": 0.8205679058471884,
+     "sens": 0.8679245283018868,
+     "espec": 0.6534653465346535,
+     "p_cal_media_malignos": 0.6341136866124808,
+     "p_cal_media_benignos": 0.34081897885592605
+    },
+    "60–69": {
+     "n": 127,
+     "malignos": 73,
+     "auc": 0.8579401319127347,
+     "sens": 0.9178082191780822,
+     "espec": 0.6851851851851852,
+     "p_cal_media_malignos": 0.6420398193394242,
+     "p_cal_media_benignos": 0.3257467773544739
+    },
+    "< 40": {
+     "n": 121,
+     "malignos": 49,
+     "auc": 0.7253401360544217,
+     "sens": 0.7755102040816326,
+     "espec": 0.5555555555555556,
+     "p_cal_media_malignos": 0.5769569581654668,
+     "p_cal_media_benignos": 0.40855855952691505
+    },
+    "≥ 70": {
+     "n": 30,
+     "malignos": 20,
+     "auc": 0.935,
+     "sens": 0.8,
+     "espec": 0.8,
+     "p_cal_media_malignos": 0.7013386874194083,
+     "p_cal_media_benignos": 0.23028917204004626
+    }
+   },
+   "Equipamento": {
+    "equipamento 1": {
+     "n": 615,
+     "malignos": 314,
+     "auc": 0.8163764098440444,
+     "sens": 0.8535031847133758,
+     "espec": 0.654485049833887,
+     "p_cal_media_malignos": 0.6263580534005927,
+     "p_cal_media_benignos": 0.3512731288125746
+    },
+    "equipamento 2": {
+     "n": 35,
+     "malignos": 12,
+     "auc": 0.7246376811594203,
+     "sens": 0.6666666666666666,
+     "espec": 0.6956521739130435,
+     "p_cal_media_malignos": 0.5181894058478932,
+     "p_cal_media_benignos": 0.31680837865366224
+    }
+   },
+   "Densidade": {
+    "2 (B)": {
+     "n": 197,
+     "malignos": 110,
+     "auc": 0.8242424242424242,
+     "sens": 0.9,
+     "espec": 0.6551724137931034,
+     "p_cal_media_malignos": 0.655020662503341,
+     "p_cal_media_benignos": 0.3616159542740996
+    },
+    "3 (C)": {
+     "n": 318,
+     "malignos": 161,
+     "auc": 0.8467381413933615,
+     "sens": 0.8509316770186336,
+     "espec": 0.7261146496815286,
+     "p_cal_media_malignos": 0.619436906086183,
+     "p_cal_media_benignos": 0.3062859674430136
+    },
+    "4 (D)": {
+     "n": 48,
+     "malignos": 26,
+     "auc": 0.8951048951048952,
+     "sens": 0.7692307692307693,
+     "espec": 0.9090909090909091,
+     "p_cal_media_malignos": 0.5563002989955586,
+     "p_cal_media_benignos": 0.2710057984691105
+    },
+    "sem densidade": {
+     "n": 79,
+     "malignos": 25,
+     "auc": 0.5896296296296297,
+     "sens": 0.68,
+     "espec": 0.3333333333333333,
+     "p_cal_media_malignos": 0.5694821231155688,
+     "p_cal_media_benignos": 0.5000589060305173
+    }
+   },
+   "Tipo de achado": {
+    "calcificação": {
+     "n": 234,
+     "malignos": 112,
+     "auc": 0.8493852459016392,
+     "sens": 0.8660714285714286,
+     "espec": 0.7786885245901639,
+     "p_cal_media_malignos": 0.6375176517884565,
+     "p_cal_media_benignos": 0.2725418449064457
+    },
+    "massa": {
+     "n": 201,
+     "malignos": 129,
+     "auc": 0.8794142980189491,
+     "sens": 0.813953488372093,
+     "espec": 0.7777777777777778,
+     "p_cal_media_malignos": 0.6249781296846341,
+     "p_cal_media_benignos": 0.30255445198988695
+    },
+    "outro": {
+     "n": 215,
+     "malignos": 85,
+     "auc": 0.7291402714932127,
+     "sens": 0.8705882352941177,
+     "espec": 0.47692307692307695,
+     "p_cal_media_malignos": 0.5984770106863043,
+     "p_cal_media_benignos": 0.44604445276739185
+    }
+   }
+  },
+  "calibracao": [
+   {
+    "p_media": 0.07234320442333954,
+    "maligno_observado": 0.08163265306122448,
+    "n": 49
+   },
+   {
+    "p_media": 0.1433212782328904,
+    "maligno_observado": 0.1,
+    "n": 70
+   },
+   {
+    "p_media": 0.2475196172380142,
+    "maligno_observado": 0.1746031746031746,
+    "n": 63
+   },
+   {
+    "p_media": 0.3507951681123736,
+    "maligno_observado": 0.3584905660377358,
+    "n": 53
+   },
+   {
+    "p_media": 0.4488270950435026,
+    "maligno_observado": 0.44285714285714284,
+    "n": 70
+   },
+   {
+    "p_media": 0.5508138715688551,
+    "maligno_observado": 0.5892857142857143,
+    "n": 112
+   },
+   {
+    "p_media": 0.6503730030366064,
+    "maligno_observado": 0.7840909090909091,
+    "n": 88
+   },
+   {
+    "p_media": 0.7485159907028441,
+    "maligno_observado": 0.8208955223880597,
+    "n": 67
+   },
+   {
+    "p_media": 0.8486192150061636,
+    "maligno_observado": 0.8,
+    "n": 60
+   },
+   {
+    "p_media": 0.9300956120635921,
+    "maligno_observado": 0.8888888888888888,
+    "n": 18
+   }
+  ]
+ }
+}

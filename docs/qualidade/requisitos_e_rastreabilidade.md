@@ -19,6 +19,7 @@ Cada requisito aponta para onde está implementado e como é verificado. Testes 
 | REQ_SAI_05 | Mostrar onde o modelo olhou (mapa de calor por lesão) | maria.py `mapa_calor` | verificação visual registrada |
 | REQ_SUB_01 | Registrar idade e fabricante e analisar por densidade, idade, achado, fabricante e vista | maria.py `metadados_imagem`; dashboard (subgrupos) | regressão; desempenho.json (subgrupos externos) |
 | REQ_CAL_01 | Calibrar probabilidade e limiar com casos locais confirmados, com mínimo de casos | dashboard `ajustar_platt`, `limiar_para_sensibilidade`; maria.py (calibracao_local.json) | test_REQ_CAL_01 |
+| REQ_DEN_01 | Carregar o modelo de densidade na rede indicada pelo densidade.json (ResNet-50 ou Mammo-CLIP), sem chaves sobrando ou faltando | maria.py `modelo_densidade`, `ClassificadorDensidade` | test_REQ_DEN_01 |
 | REQ_RAS_01 | Identificar a versão do modelo (hash) em cada resultado e conferir contra o manifesto | modelo/manifesto.py; maria.py | test_REQ_RAS_01 |
 | REQ_RET_01 | Retreinar só com casos válidos (caixas revisadas; achado com exame de confirmação) e só substituir se não piorar | modelo/retreinar.py | test_REQ_RET_01; relatórios de retreino |
 | REQ_LGPD_01 | Acesso só com login; senhas com hash; perfis; bloqueio após tentativas; sessão com tempo limite | modelo/acesso.py; dashboard `tela_de_acesso` | test_REQ_LGPD_01; teste do dashboard (login) |

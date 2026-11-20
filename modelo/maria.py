@@ -210,16 +210,39 @@ class DetectorLesao:
                 if s >= limiar]
 
 
+class DensidadeMammoCLIP(nn.Module):
+    """Codificador do Mammo-CLIP (EfficientNet-B2 pré-treinada em mamografias) + 4 classes de densidade."""
+
+    def __init__(self):
+        super().__init__()
+        self.encoder = EncoderMammoCLIP()
+        self.fc = nn.Linear(self.encoder.num_features, 4)
+
+    def forward(self, x):
+        return self.fc(self.encoder(x))
+
+
+def modelo_densidade(arquitetura="resnet50"):
+    """Rede de densidade (sem pesos) conforme o campo "arquitetura" do densidade.json."""
+    if arquitetura == "mammoclip_b2":
+        return DensidadeMammoCLIP()
+    if arquitetura != "resnet50":
+        raise ValueError(f"arquitetura de densidade desconhecida: {arquitetura}")
+    m = models.resnet50(weights=None)
+    m.fc = nn.Linear(m.fc.in_features, 4)
+    return m
+
+
 class ClassificadorDensidade:
-    """ResNet-50, 4 classes (BI-RADS 1-4), sobre a mamografia completa reduzida para tam x tam."""
+    """4 classes (BI-RADS 1-4) sobre a mamografia completa reduzida para tam x tam. A rede (ResNet-50 ou
+    Mammo-CLIP) vem do campo "arquitetura" do densidade.json (sem o campo = ResNet-50)."""
 
     def __init__(self, pasta, device):
         cfg = json.loads((Path(pasta) / "densidade.json").read_text())
         self.tam, self.device = cfg["tam"], device
-        m = models.resnet50(weights=None)
-        m.fc = nn.Linear(m.fc.in_features, 4)
-        self.modelo = carregar(m, Path(pasta) / "densidade.pth", device)
+        self.modelo = carregar(modelo_densidade(cfg.get("arquitetura", "resnet50")), Path(pasta) / "densidade.pth", device)
 
+    @torch.no_grad()
     def estimar(self, arr):
         """arr float (H, W) -> probabilidades das densidades 1-4 (mesmo caminho do treino: 1536 px e depois tam)."""
         H, W = arr.shape

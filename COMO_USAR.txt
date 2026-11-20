@@ -471,8 +471,8 @@
         com limiar 0,5: sensibilidade 85%, especificidade 66% — o limiar NÃO transfere: calibre
         localmente (seção 14.4).
    CALIBRAÇÃO (CBIS-DDSM, validação cruzada): erro de calibração ECE 3,9% → 1,3%.
-   DENSIDADE: acerta densa x não densa em 86% dos casos; concordância com o laudo (kappa) 0,68.
-        Reconhece 76% das mamas extremamente densas (só ~37% em mamografia digital).
+   DENSIDADE: acerta densa x não densa em 88% dos casos; concordância com o laudo (kappa) 0,70.
+        Reconhece 75% das mamas extremamente densas (50% em mamografia digital, só 38 casos no teste).
 
  LIMITAÇÕES
    - O limiar 0,5 foi calibrado no CBIS-DDSM (filme digitalizado). Em outros equipamentos o modelo

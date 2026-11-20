@@ -238,3 +238,17 @@ def test_REQ_RET_01_retreino_so_usa_casos_validos(tmp_path):
     assert "i1.dcm" not in c["detector"]                             # caixa sem revisão: imagem fora
     assert len(c["achado"]) == 1                                     # sem exame de confirmação: fora
     assert list(c["densidade"]["mama"]) == ["M1"]
+
+
+def test_REQ_DEN_01_densidade_carrega_rede_do_json():
+    """O modelo de densidade instalado carrega (sem chaves sobrando ou faltando) na rede que o densidade.json indica,
+    e devolve 4 probabilidades que somam 1."""
+    import torch
+    import maria
+    pasta = RAIZ / "modelo/modelo_densidade"
+    cfg = json.loads((pasta / "densidade.json").read_text())
+    m = maria.modelo_densidade(cfg.get("arquitetura", "resnet50"))
+    m.load_state_dict(torch.load(pasta / "densidade.pth", map_location="cpu"), strict=True)
+    c = maria.ClassificadorDensidade(pasta, torch.device("cpu"))
+    p = c.estimar(np.random.default_rng(0).uniform(0, 4000, (600, 400)).astype(np.float32))
+    assert p.shape == (4,) and abs(float(p.sum()) - 1) < 1e-4
