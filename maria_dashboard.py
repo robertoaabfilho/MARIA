@@ -1593,7 +1593,7 @@ def pagina_executar():
         SAIDAS.mkdir(exist_ok=True)
         carimbo = time.strftime("%Y%m%d_%H%M%S")
         resultado = {"pasta": str(atual), "carimbo": carimbo, "df": None, "log": {}, "limiar": limiar,
-                     "limiar_det": limiar_det}
+                     "limiar_det": limiar_det, "imagens": n_img, "inicio": time.time()}
         st.write("**MARIA** — carregando modelos e classificando…")
         area_prog = st.empty()
         area = st.empty()
@@ -1605,6 +1605,7 @@ def pagina_executar():
             extra += ["--planilha", str(csv_planilha)]
         cod, log = rodar("maria.py", pasta_modelo, atual, extra, csv_saida, area, area_prog)
         resultado["log"]["maria"] = log
+        resultado["codigo"], resultado["duracao_s"] = cod, time.time() - resultado["inicio"]
         if cod != 0 or not csv_saida.is_file():
             st.error("O MARIA terminou com erro. Veja o log acima.")
         else:
@@ -1620,6 +1621,30 @@ def pagina_executar():
             st.success("Pronto! A classificação terminou.", icon=":material/check_circle:")
             st.page_link(PAGINA_RESULTADOS, label="Ver os resultados", icon=":material/arrow_forward:")
         st.session_state.resultado = resultado
+    elif st.session_state.get("resultado"):
+        mostrar_ultima_classificacao(st.session_state.resultado)
+
+
+def mostrar_ultima_classificacao(res):
+    """Ao voltar para a página Executar: resumo e log da última classificação (o log só aparece ao vivo durante a
+    rodada; sem isto, ele sumiria ao trocar de página)."""
+    c = res["carimbo"]
+    quando = f"{c[6:8]}/{c[4:6]} às {c[9:11]}:{c[11:13]}"
+    ok = res.get("df") is not None
+    duracao = f" em {res['duracao_s'] / 60:.1f} min".replace(".", ",") if res.get("duracao_s") else ""
+    with st.container(border=True):
+        st.markdown(f"**Última classificação** — {quando}{duracao} · pasta `{res['pasta']}`"
+                    + (f" · {res['imagens']} imagem(ns)" if res.get("imagens") else ""))
+        if ok:
+            n = len(res["df"])
+            st.success(f"Terminou bem: {n} linha(s) de resultado.", icon=":material/check_circle:")
+            st.page_link(PAGINA_RESULTADOS, label="Ver os resultados", icon=":material/arrow_forward:")
+        else:
+            st.error("Terminou com erro. Veja o log abaixo.", icon=":material/error:")
+        log = res.get("log", {}).get("maria", "")
+        if log:
+            with st.expander("Log da última classificação", icon=":material/terminal:", expanded=True):
+                st.code("\n".join(log.splitlines()[-40:]), language="text")
 
 
 def pagina_anotacoes():
