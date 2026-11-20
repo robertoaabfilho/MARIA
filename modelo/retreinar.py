@@ -49,10 +49,10 @@ RAIZ = AQUI.parent
 ANOTACOES = RAIZ / "anotacoes"
 HISTORICO = AQUI / "historico"
 CAMINHOS_PADRAO = {
-    "dados_deteccao": "~/MARIA/dados_deteccao",          # mamografias reduzidas + caixas (CBIS e CDD)
+    "dados_deteccao": "~/MARIA/dados/preparados/deteccao",          # mamografias reduzidas + caixas (CBIS e CDD)
     "cbis": "~/CBIS_DDSM",                               # CBIS-DDSM organizado + planilhas
-    "cdd_xlsx": "~/MARIA/_para_apagar/cdd_cesm/Radiology-manual-annotations.xlsx",
-    "cache": "~/MARIA/dados_retreino",                   # caches criados pelo retreino
+    "cdd_xlsx": "~/MARIA/dados/cdd_cesm/Radiology-manual-annotations.xlsx",
+    "cache": "~/MARIA/dados/preparados/cache_retreino",                   # caches criados pelo retreino
 }
 ARQUIVOS_MODELO = {
     "densidade": ["modelo_densidade/densidade.pth", "modelo_densidade/densidade.json"],
