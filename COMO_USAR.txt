@@ -56,7 +56,7 @@
    COMO_USAR.txt ........ este guia
    maria_dashboard.py ... o dashboard (aberto pelos atalhos da pasta config)
    config\ .............. atalhos e lista de bibliotecas
-       preparar_ambiente.bat .... (Windows) instala tudo o que é preciso
+       preparar_ambiente.bat .... (Windows) instala tudo o que é preciso | preparar_ambiente.sh (Linux/macOS)
        iniciar_dashboard.bat .... (Windows) abre o dashboard          | iniciar_dashboard.sh (Linux/macOS)
        rodar_exemplos.bat ....... (Windows) testa com os exemplos     | rodar_exemplos.sh    (Linux/macOS)
        iniciar_no_dicom.bat ..... (Windows) liga o nó DICOM           | iniciar_no_dicom.sh  (Linux/macOS)
@@ -121,9 +121,13 @@
 
  LINUX / macOS
  -------------
+   Requisito: Python 3.10 ou mais novo com pip (Ubuntu/Debian: sudo apt install python3 python3-pip).
    No terminal, dentro da pasta do MARIA:
        ./config/iniciar_dashboard.sh          (instala o que faltar e abre o dashboard)
-   ou, manualmente:
+   (se aparecer "Permissão negada", rode:  bash config/iniciar_dashboard.sh)
+   Em distribuições que bloqueiam o pip no Python do sistema (Ubuntu 23.04+, Debian 12+), o atalho
+   avisa e instala as bibliotecas só para o seu usuário (em ~/.local), sem mexer no sistema.
+   Ou, manualmente:
        pip install -r config/requirements.txt
    Para GPU NVIDIA no Linux, instale antes o PyTorch com o comando de https://pytorch.org/get-started/locally/
    (no macOS o MARIA roda na CPU).
