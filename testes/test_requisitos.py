@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from conftest import RAIZ, funcoes_do_dashboard
+from conftest import RAIZ, funcoes_do_dashboard, precisa_da_release
 
 
 # ---------------- planilha e montagem ----------------
@@ -201,6 +201,7 @@ def test_REQ_LGPD_03_pseudonimo_estavel_e_irreversivel(isolado):
 
 def test_REQ_LGPD_04_dicom_anonimizado(isolado):
     import anonimizacao, pydicom
+    precisa_da_release(RAIZ / "exemplos/1_dicom_filme_cbis/P_00066_LEFT_CC_recorte.dcm")
     origem = next((RAIZ / "exemplos/1_dicom_filme_cbis").glob("*recorte.dcm"))
     destino = isolado / "anon.dcm"
     original = pydicom.dcmread(origem)
@@ -255,6 +256,7 @@ def test_REQ_DEN_01_densidade_carrega_rede_do_json():
     import torch
     import maria
     pasta = RAIZ / "modelo/modelo_densidade"
+    precisa_da_release(pasta / "densidade.pth")
     cfg = json.loads((pasta / "densidade.json").read_text(encoding="utf-8"))
     m = maria.modelo_densidade(cfg.get("arquitetura", "resnet50"))
     m.load_state_dict(torch.load(pasta / "densidade.pth", map_location="cpu"), strict=True)
@@ -293,6 +295,7 @@ def test_REQ_PAT_03_pesos_de_contexto_carregam():
     """Os 5 pesos de contexto instalados carregam na rede do maria.py (sem chaves sobrando ou faltando)."""
     import torch
     import maria
+    precisa_da_release(*[RAIZ / f"modelo/modelo_patologia/contexto_dobra_{k}.pth" for k in range(1, 6)])
     for k in range(1, 6):
         m = maria.ClassificadorMammoCLIP()
         m.load_state_dict(torch.load(RAIZ / f"modelo/modelo_patologia/contexto_dobra_{k}.pth", map_location="cpu"),

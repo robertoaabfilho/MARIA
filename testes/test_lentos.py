@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from conftest import RAIZ
+from conftest import RAIZ, precisa_da_release
 
 lento = pytest.mark.skipif(os.environ.get("MARIA_TESTES_LENTOS") != "1", reason="defina MARIA_TESTES_LENTOS=1")
 
@@ -17,6 +17,7 @@ lento = pytest.mark.skipif(os.environ.get("MARIA_TESTES_LENTOS") != "1", reason=
 @lento
 def test_REQ_REG_01_regressao_dos_exemplos(tmp_path):
     """As previsões nos exemplos são idênticas às de referência (detecta mudança não intencional no modelo)."""
+    precisa_da_release(RAIZ / "modelo/modelo_patologia/mammoclip512_dobra_1.pth", RAIZ / "exemplos/1_dicom_filme_cbis")
     saida = tmp_path / "r.csv"
     r = subprocess.run([sys.executable, str(RAIZ / "modelo/maria.py"), "--pasta", str(RAIZ / "exemplos"),
                         "--planilha", str(RAIZ / "exemplos/planilha_medico.csv"), "--saida_csv", str(saida),
@@ -34,6 +35,7 @@ def test_REQ_REG_01_regressao_dos_exemplos(tmp_path):
 @lento
 def test_REQ_INT_01_02_no_dicom_com_pacs_simulado(tmp_path):
     """Recebe do 'PACS', recusa AE não autorizado, devolve Secondary Capture no mesmo estudo e grava a fila."""
+    precisa_da_release(RAIZ / "modelo/modelo_patologia/mammoclip512_dobra_1.pth", RAIZ / "exemplos/1_dicom_filme_cbis")
     import json
     import pydicom
     from pynetdicom import AE, evt, AllStoragePresentationContexts, StoragePresentationContexts

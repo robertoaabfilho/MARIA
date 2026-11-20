@@ -37,3 +37,11 @@ def funcoes_do_dashboard(*nomes):
         if isinstance(no, ast.FunctionDef) and no.name in nomes:
             exec(compile(ast.Module([no], []), "dashboard", "exec"), ns)
     return ns
+
+
+def precisa_da_release(*caminhos):
+    """Pula o teste se faltar arquivo que vem no .zip da Release (pesos e exemplos DICOM; veja o README)."""
+    import pytest
+    faltando = [str(p) for p in caminhos if not Path(p).exists()]
+    if faltando:
+        pytest.skip("faltam arquivos da Release do GitHub (pesos/exemplos DICOM; veja o README): " + faltando[0])
