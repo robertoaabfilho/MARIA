@@ -1619,10 +1619,22 @@ def pagina_executar():
                                         "resultado": csv_saida.name,
                                         "sha256_resultado": auditoria.sha256_arquivo(csv_saida)})
             st.success("Pronto! A classificação terminou.", icon=":material/check_circle:")
-            st.page_link(PAGINA_RESULTADOS, label="Ver os resultados", icon=":material/arrow_forward:")
+            botao_resultados()
         st.session_state.resultado = resultado
     elif st.session_state.get("resultado"):
         mostrar_ultima_classificacao(st.session_state.resultado)
+
+
+def botao_resultados():
+    """Botão grande e centralizado (como o Classificar), verde, que abre a página Resultados."""
+    st.html("<style>.st-key-ver_resultados button{min-height:3.4rem;background:#2e7d32;border-color:#2e7d32;"
+            "color:#fff}.st-key-ver_resultados button p{font-size:1.2rem;font-weight:700}"
+            ".st-key-ver_resultados button:hover{background:#1b5e20;border-color:#1b5e20;color:#fff}"
+            ".st-key-ver_resultados button:focus:not(:active){color:#fff;border-color:#1b5e20}</style>")
+    _, c_res, _ = st.columns([1, 2, 1])
+    with c_res:
+        if st.button("Ver os resultados", icon=":material/arrow_forward:", key="ver_resultados", width="stretch"):
+            st.switch_page(PAGINA_RESULTADOS)
 
 
 def mostrar_ultima_classificacao(res):
@@ -1638,7 +1650,7 @@ def mostrar_ultima_classificacao(res):
         if ok:
             n = len(res["df"])
             st.success(f"Terminou bem: {n} linha(s) de resultado.", icon=":material/check_circle:")
-            st.page_link(PAGINA_RESULTADOS, label="Ver os resultados", icon=":material/arrow_forward:")
+            botao_resultados()
         else:
             st.error("Terminou com erro. Veja o log abaixo.", icon=":material/error:")
         log = res.get("log", {}).get("maria", "")
