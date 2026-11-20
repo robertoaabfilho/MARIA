@@ -50,7 +50,7 @@ SAÍDA (results.csv): amostra, mama, vista (CC/MLO), origem_lesao (recorte forne
     (marcação do usuário x detecção do modelo), score_deteccao, imagem, x0, y0, x1, y1.
 
 ATENÇÃO: os Mammo-CLIP finais foram treinados com o teste oficial do CBIS-DDSM (OOF limpo:
-acc 76,3%, AUC 0,840). O limiar 0,5 foi calibrado no CBIS-DDSM; em outra base a
+acc 76,0%, AUC 0,841). O limiar 0,5 foi calibrado no CBIS-DDSM; em outra base a
 sensibilidade/especificidade se desloca. Protótipo de pesquisa, não é dispositivo médico.
 ================================================================================
 """
@@ -120,8 +120,8 @@ MARGEM_RECORTE = 20                # px em volta da caixa, como nos recortes do 
 NOMES_DENSIDADE = {1: "adiposa", 2: "fibroglandular dispersa", 3: "heterogeneamente densa", 4: "extremamente densa"}
 # Desempenho do modelo de PATOLOGIA por densidade (OOF limpo do CBIS-DDSM, 2.781 lesões, limiar 0,5):
 #   densidade: (n, AUC, sensibilidade %, especificidade %)
-DESEMPENHO_DENSIDADE = {1: (446, 0.892, 72.8, 86.4), 2: (1047, 0.854, 74.9, 80.6),
-                        3: (858, 0.837, 71.0, 80.4), 4: (430, 0.747, 73.6, 62.2)}
+DESEMPENHO_DENSIDADE = {1: (446, 0.899, 75.7, 86.8), 2: (1047, 0.859, 74.7, 79.6),
+                        3: (858, 0.835, 72.4, 79.8), 4: (430, 0.740, 66.3, 62.9)}
 
 TAMANHO_ACHADO = 224               # entrada das ResNet-50 de achado
 MC_TELA, MC_ESCALA, N_DOBRAS = 512, 1.0, 5

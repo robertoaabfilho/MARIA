@@ -460,17 +460,17 @@
 ===============================================================================================
  Medido em pacientes que os modelos NÃO viram no treino (bases públicas CBIS-DDSM e CDD-CESM).
 
-   PATOLOGIA (recortes): acurácia 76,3%, AUC 0,840 (2.781 lesões). Piora em mama densa:
-        densidade 1: AUC 0,89 | 2: 0,85 | 3: 0,84 | 4: 0,75 (especificidade cai para 62%).
+   PATOLOGIA (recortes): acurácia 76,0%, AUC 0,841 (2.781 lesões). Piora em mama densa:
+        densidade 1: AUC 0,90 | 2: 0,86 | 3: 0,84 | 4: 0,74 (especificidade cai para 63%).
    DETECTOR (mamografia completa), por sensibilidade do detector:
         0,30 -> acha 64% das lesões em filme / 62% em digital, ~1,7 caixa falsa por exame normal
         0,50 -> acha 59% / 55%, ~0,9 caixa falsa por exame normal (padrão)
         0,70 -> acha 50% / 49%, ~0,4 caixa falsa por exame normal
    VALIDAÇÃO EXTERNA (CDD-CESM, mamografia digital, outro país, nunca usada no treino da patologia):
-        AUC 0,81 (0,85–0,87 em massas e calcificações; 0,71 em assimetria/distorção e em < 40 anos);
-        com limiar 0,5: sensibilidade 84%, especificidade 65% — o limiar NÃO transfere: calibre
+        AUC 0,82 (0,85–0,88 em massas e calcificações; 0,73 em assimetria/distorção e em < 40 anos);
+        com limiar 0,5: sensibilidade 85%, especificidade 66% — o limiar NÃO transfere: calibre
         localmente (seção 14.4).
-   CALIBRAÇÃO (CBIS-DDSM, validação cruzada): erro de calibração ECE 3,9% → 1,6%.
+   CALIBRAÇÃO (CBIS-DDSM, validação cruzada): erro de calibração ECE 3,9% → 1,3%.
    DENSIDADE: acerta densa x não densa em 86% dos casos; concordância com o laudo (kappa) 0,68.
         Reconhece 76% das mamas extremamente densas (só ~37% em mamografia digital).
 

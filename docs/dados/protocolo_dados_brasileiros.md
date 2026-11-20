@@ -2,8 +2,8 @@
 
 **Problema:** o MARIA foi treinado em mamografia de filme digitalizada (CBIS-DDSM, EUA, década de 1990). Os
 equipamentos do SUS são digitais e de vários fabricantes. No teste externo (CDD-CESM), o **ranqueamento se
-manteve** (AUC ≈ 0,81; 0,85–0,87 em massas e calcificações), mas o **limiar 0,5 não transfere**
-(especificidade 65%). Sem dados brasileiros não é possível afirmar o desempenho no uso real.
+manteve** (AUC ≈ 0,82; 0,85–0,88 em massas e calcificações), mas o **limiar 0,5 não transfere**
+(especificidade 66%). Sem dados brasileiros não é possível afirmar o desempenho no uso real.
 
 ## 1. Objetivos
 1. Validar o desempenho (sensibilidade, especificidade, AUC, calibração) em exames de serviços brasileiros.

@@ -1,9 +1,9 @@
 {
-  "gerado_em": "2026-11-19 13:33:43",
-  "descricao": "Versão de referência + calibração Platt (CBIS-DDSM): patologia Mammo-CLIP 512 (5 dobras), achado ResNet-50 + multivista, detector Faster R-CNN CBIS+CDD (limiar 0,50), densidade ResNet-50 768 px",
+  "gerado_em": "2026-11-19 23:11:16",
+  "descricao": "Patologia retreinada com atributos da lesão como alvos auxiliares (AUC OOF 0,841; CDD-CESM 0,815); calibração refeita",
   "modelos": {
     "calibracao.json": {
-      "sha256": "85db28d98958ef0c94f57a1f28b2b78717dcdb723867af9b86b2887d077939d6",
+      "sha256": "d47781ac22a5c74b95bc38b584153f6a3971b608cf803819af321bc056eace46",
       "bytes": 811
     },
     "modelo_achado/resnet50_multitask_mama_do_zero.pth": {
@@ -31,24 +31,24 @@
       "bytes": 173408565
     },
     "modelo_patologia/mammoclip512_dobra_1.pth": {
-      "sha256": "d9361c767b66e9ef4ad2f6ca5b708e949cfb495833e25074afc68488aa3edd41",
-      "bytes": 36923625
+      "sha256": "236ef743417b5efe3bdd8855ff3a0e46fd61e90cfbaf152edd47e14f8939327e",
+      "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_2.pth": {
-      "sha256": "d78bfe76fa632c35a26333dcc2fcf501fc1a713ac1575a46c5665f4ba3f3ce9e",
-      "bytes": 36923625
+      "sha256": "bf93a59bd4ec9bb2b162b63d0a085e9c13ad95f1d4b84ee6f66c80cb9daaab33",
+      "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_3.pth": {
-      "sha256": "af2bc21ddd739990ab4f5a4aa9d3553d7cf0ae13dcb202d7771708abfe455b09",
-      "bytes": 36923625
+      "sha256": "3ffce1c775c3b2240e6a69ec5c65d0397c504871ef99e9c5a47d6136ec10368a",
+      "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_4.pth": {
-      "sha256": "b59d39163d76070a9e6a55f0339a28a80006e4cc1c75a5969d90251da9c838d9",
-      "bytes": 36923625
+      "sha256": "c615b3bd12dd40a5a66d6eb9666d3b6ef8becab2a2ddf657ccc07443c2779f61",
+      "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_5.pth": {
-      "sha256": "fa0702e6251eda89221a23e783d22a0f2e193142a6ddef60a365812ef4094fcf",
-      "bytes": 36923625
+      "sha256": "70a166e4ff2ece6b9b144863e501bb431191a7425767927aac510772885d851a",
+      "bytes": 36905421
     }
   },
   "exemplos": {
@@ -129,13 +129,13 @@
       "bytes": 418303
     },
     "exemplos/gabarito.csv": {
-      "sha256": "c3afbd79bdf8e7acfda3612fd017fbfd0fbc82953ef751183079c63df38272e6",
-      "bytes": 1064
+      "sha256": "b2141b9f6df94181d83f4191c7e4c2f96dcf5f400767d776630b8d510f8f11fd",
+      "bytes": 1089
     },
     "exemplos/planilha_medico.csv": {
-      "sha256": "783a8a913596b9ab5ffb5b7f40f7bbc9bf551608d4c81952306d125b0a139a85",
-      "bytes": 992
+      "sha256": "1c68b37be4da8b5dd85d66f15803ed40761cc9026affd621c76275ca6041c1e6",
+      "bytes": 1055
     }
   },
-  "versao_modelo": "41c3299a3b60"
+  "versao_modelo": "53ae7d8721b2"
 }

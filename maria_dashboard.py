@@ -856,7 +856,9 @@ flowchart LR
     st.table(pd.DataFrame([
         {"Componente": "Patologia (benigno × maligno)",
          "Arquitetura": "Conjunto de 5 redes EfficientNet-B2 com o codificador de imagem do Mammo-CLIP "
-                        "(pré-treinado em mamografias), ajustadas no CBIS-DDSM",
+                        "(pré-treinado em mamografias), ajustadas no CBIS-DDSM. No treino, a rede também aprende a "
+                        "prever o tipo de achado e os atributos que o radiologista descreve (forma e margem da massa, "
+                        "tipo e distribuição da calcificação, sutileza); essas cabeças extras são descartadas no uso",
          "Entrada": "Recorte da lesão em tela de 512 × 512 px, escala preservada, contraste por percentis 1–99",
          "Detalhes": "Média das 5 redes e de 5 variações da imagem (original, espelhamentos, ±10°); "
                      "limiar padrão 0,50"},
@@ -904,14 +906,14 @@ flowchart LR
     with st.container(border=True):
         st.markdown("**Patologia** — validação cruzada sem vazamento, 2.781 lesões de 1.217 pacientes do CBIS-DDSM")
         with st.container(horizontal=True):
-            st.metric("Acurácia", "76,3%", border=True)
-            st.metric("AUC", "0,840", border=True)
-            st.metric("Sensibilidade", "73,2%", border=True)
-            st.metric("Especificidade", "78,5%", border=True)
+            st.metric("Acurácia", "76,0%", border=True)
+            st.metric("AUC", "0,841", border=True)
+            st.metric("Sensibilidade", "72,9%", border=True)
+            st.metric("Especificidade", "78,1%", border=True)
         dens_pat = pd.DataFrame({"densidade": ["1 (A)", "2 (B)", "3 (C)", "4 (D)"], "lesões": [446, 1047, 858, 430],
-                                 "AUC": [0.892, 0.854, 0.837, 0.747], "acurácia (%)": [81.2, 78.1, 76.5, 66.5],
-                                 "sensibilidade (%)": [72.8, 74.9, 71.0, 73.6],
-                                 "especificidade (%)": [86.4, 80.6, 80.4, 62.2]})
+                                 "AUC": [0.899, 0.859, 0.835, 0.740], "acurácia (%)": [82.5, 77.5, 76.7, 64.2],
+                                 "sensibilidade (%)": [75.7, 74.7, 72.4, 66.3],
+                                 "especificidade (%)": [86.8, 79.6, 79.8, 62.9]})
         c1, c2 = st.columns([3, 2])
         with c1:
             mostrar(st.dataframe, dens_pat, hide_index=True, alt="Desempenho da patologia por densidade mamária")
@@ -921,8 +923,8 @@ flowchart LR
                 y=alt.Y("AUC:Q", scale=alt.Scale(domain=[0.5, 1], clamp=True), title="AUC"),
                 y2=alt.datum(0.5),
                 tooltip=["densidade", "AUC", "lesões"]).properties(height=200, title="AUC da patologia por densidade")
-            mostrar(st.altair_chart, graf, alt="AUC da patologia cai de 0,89 na densidade 1 para 0,75 na densidade 4")
-        st.caption("A acurácia cai em mama densa (diferença de AUC densa × não densa: −0,059, IC95% −0,10 a −0,02). "
+            mostrar(st.altair_chart, graf, alt="AUC da patologia cai de 0,90 na densidade 1 para 0,74 na densidade 4")
+        st.caption("A acurácia cai em mama densa (diferença de AUC densa × não densa: −0,068, IC95% −0,11 a −0,03). "
                    "Validação externa no CDD-CESM (outro hospital, mamografia digital): AUC entre 0,83 e 0,91, conforme "
                    "o recorte da análise. Os modelos finais também foram treinados com o teste oficial do CBIS-DDSM; "
                    "por isso a estimativa acima é a da validação cruzada.")
@@ -1084,7 +1086,7 @@ flowchart LR
                                                                scale=alt.Scale(zero=False)),
                     color=alt.Color("dobra:N", title="Dobra"), tooltip=["dobra", "epoca", "auc_val", "acc_val"])
                     .properties(title="Curva de aprendizado: AUC de validação", height=260),
-                    alt="AUC de validação da patologia subindo até cerca de 0,82 a 0,84 nas 5 dobras")
+                    alt="AUC de validação da patologia subindo até cerca de 0,79 a 0,87 nas 5 dobras")
             st.caption("5 redes treinadas em dobras diferentes (validação cruzada por paciente). O codificador começa "
                        "congelado (épocas 1–2) e é liberado na época 3, quando o desempenho dá o salto.")
             c1, c2 = st.columns(2)
@@ -1191,7 +1193,7 @@ flowchart LR
             "- **Prioridade de leitura** (alta, média, baixa): o MARIA ordena a fila para o radiologista; não dá o "
             "diagnóstico. Limites sobre a P(maligno) calibrada: alta ≥ 0,50; média ≥ 0,20.\n"
             "- **P(maligno) calibrada**: calibração de Platt ajustada nas previsões fora-da-dobra do CBIS-DDSM "
-            "(erro de calibração ECE de 3,9% → 1,6% em validação cruzada). Vale para uma população de **lesões já "
+            "(erro de calibração ECE de 3,9% → 1,3% em validação cruzada). Vale para uma população de **lesões já "
             "suspeitas** (≈ 42% malignas); em outro serviço deve ser **recalibrada com casos locais** confirmados "
             "(página **Anotações e retreino**).\n"
             "- **Incerteza**: desvio-padrão entre as 5 redes; acima de 0,15, ou probabilidade entre 0,35 e 0,65, o "
@@ -1254,10 +1256,10 @@ flowchart LR
             with c2:
                 st.markdown("**O que isso mostra (dados do mundo real)**")
                 st.markdown(
-                    "- O **ranqueamento se mantém** fora da base de treino (AUC ≈ 0,81 no geral e 0,85–0,87 em massas "
-                    "e calcificações), mas cai em achados que não existem no treino (assimetria, distorção: 0,71) e em "
-                    "mulheres com menos de 40 anos (0,71).\n"
-                    "- O **limiar 0,5 não transfere**: especificidade de só 65%; a curva de calibração se afasta da "
+                    "- O **ranqueamento se mantém** fora da base de treino (AUC ≈ 0,82 no geral e 0,85–0,88 em massas "
+                    "e calcificações), mas cai em achados que não existem no treino (assimetria, distorção: 0,73) e em "
+                    "mulheres com menos de 40 anos (0,73).\n"
+                    "- O **limiar 0,5 não transfere**: especificidade de só 66%; a curva de calibração se afasta da "
                     "diagonal.\n"
                     "- Por isso o MARIA traz a **calibração local** e o **desempenho local por subgrupo e por "
                     "fabricante**, com casos do serviço confirmados por biópsia ou seguimento. Antes de uso real, é "
