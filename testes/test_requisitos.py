@@ -261,3 +261,39 @@ def test_REQ_DEN_01_densidade_carrega_rede_do_json():
     c = maria.ClassificadorDensidade(pasta, torch.device("cpu"))
     p = c.estimar(np.random.default_rng(0).uniform(0, 4000, (600, 400)).astype(np.float32))
     assert p.shape == (4,) and abs(float(p.sum()) - 1) < 1e-4
+
+
+def test_REQ_PAT_01_janela_de_contexto():
+    """Janela de contexto: tela 512 x 512, centrada na lesão; o fundo (sem tecido) fica preto."""
+    import maria
+    arr = np.zeros((3000, 2000), np.float32)
+    arr[:, :1200] = np.random.default_rng(0).uniform(500, 4000, (3000, 1200))     # tecido à esquerda, fundo à direita
+    img = maria.normalizar_mamografia(arr)
+    assert img.dtype == np.uint8 and img[:, 1500:].max() == 0
+    j = maria.janela_contexto(img, (900, 1400, 1000, 1500))
+    assert j.shape == (maria.MC_TELA, maria.MC_TELA) and j.dtype == np.uint8
+    assert j[:, :200].mean() > 0 and j[:, -100:].max() == 0      # tecido à esquerda da lesão, fundo à direita
+
+
+def test_REQ_PAT_02_calibracao_e_limiar_por_entrada():
+    """Recorte + contexto usa a calibração e o limite de prioridade próprios; com o limiar automático, 'Maligno'
+    coincide com 'prioridade alta' nas duas entradas."""
+    import maria
+    maria.CONTEXTO["cal"] = {"patologia": {"a": 1.0, "b": 0.0}, "patologia_contexto": {"a": 1.0, "b": 0.0},
+                             "prioridade": {"alta": 0.5, "media": 0.2}, "prioridade_contexto": {"alta": 0.37, "media": 0.2}}
+    ctx = maria.resultado("x", maria.ORIGEM_MODELO, "", [(0.42, 0.01)], [], None, patologia_entrada=maria.ENTRADA_CONTEXTO)
+    rec = maria.resultado("y", maria.ORIGEM_RECORTE, "", [(0.42, 0.01)], [], None, patologia_entrada=maria.ENTRADA_RECORTE)
+    assert (ctx["prioridade"], ctx["patologia"], ctx["limiar_maligno"]) == ("alta", "Maligno", "0.37")
+    assert (rec["prioridade"], rec["patologia"], rec["limiar_maligno"]) == ("média", "Benigno", "0.50")
+    manual = maria.resultado("z", maria.ORIGEM_MODELO, "", [(0.42, 0.01)], [], 0.6, patologia_entrada=maria.ENTRADA_CONTEXTO)
+    assert manual["patologia"] == "Benigno" and manual["prioridade"] == "alta"      # limiar manual só muda o rótulo
+
+
+def test_REQ_PAT_03_pesos_de_contexto_carregam():
+    """Os 5 pesos de contexto instalados carregam na rede do maria.py (sem chaves sobrando ou faltando)."""
+    import torch
+    import maria
+    for k in range(1, 6):
+        m = maria.ClassificadorMammoCLIP()
+        m.load_state_dict(torch.load(RAIZ / f"modelo/modelo_patologia/contexto_dobra_{k}.pth", map_location="cpu"),
+                          strict=True)

@@ -1,9 +1,10 @@
 # Protocolo para dados do mundo real brasileiros (proposta)
 
 **Problema:** o MARIA foi treinado em mamografia de filme digitalizada (CBIS-DDSM, EUA, década de 1990). Os
-equipamentos do SUS são digitais e de vários fabricantes. No teste externo (CDD-CESM), o **ranqueamento se
-manteve** (AUC ≈ 0,82; 0,85–0,88 em massas e calcificações), mas o **limiar 0,5 não transfere**
-(especificidade 66%). Sem dados brasileiros não é possível afirmar o desempenho no uso real.
+equipamentos do SUS são digitais e de vários fabricantes. Os testes externos em mamografia digital mostram que o
+**ranqueamento se mantém** (CDD-CESM, recortes: AUC ≈ 0,82), mas que o **caminho completo** perde bastante
+(CMMD, China: AUC 0,755 por mama, pior em calcificações e em mulheres com menos de 50 anos) e que a **probabilidade
+depende da proporção de câncer da base**. Sem dados brasileiros não é possível afirmar o desempenho no uso real.
 
 ## 1. Objetivos
 1. Validar o desempenho (sensibilidade, especificidade, AUC, calibração) em exames de serviços brasileiros.

@@ -1,25 +1,47 @@
 {
   "patologia": {
     "metodo": "platt",
-    "a": 0.9641522397424904,
-    "b": -0.2495987145900208,
+    "a": 0.9428266469395283,
+    "b": -0.24435456100503902,
     "n": 2781,
-    "origem": "OOF sem vazamento do CBIS-DDSM (lesões já suspeitas, ~42% malignas)",
+    "origem": "OOF do CBIS-DDSM, só recorte (lesões já suspeitas, ~42% malignas)",
     "avaliacao": {
       "antes": {
-        "brier": 0.1608865784280115,
-        "ece": 0.039060003595828834
+        "brier": 0.16083915566886012,
+        "ece": 0.03754813016900395
       },
       "depois_validacao_cruzada": {
-        "brier": 0.1598486858088532,
-        "ece": 0.01293784854379836
+        "brier": 0.1597018273816009,
+        "ece": 0.01353211548968012
+      }
+    }
+  },
+  "patologia_contexto": {
+    "metodo": "platt",
+    "a": 1.4044834210615538,
+    "b": 0.009179673869255101,
+    "n": 2781,
+    "origem": "OOF do CBIS-DDSM, média recorte + contexto (lesões já suspeitas)",
+    "avaliacao": {
+      "antes": {
+        "brier": 0.13964655490037758,
+        "ece": 0.05074246314275441
+      },
+      "depois_validacao_cruzada": {
+        "brier": 0.13665893887899513,
+        "ece": 0.017359121786940317
       }
     }
   },
   "prioridade": {
     "alta": 0.5,
     "media": 0.2,
-    "nota": "sobre a P(maligno) CALIBRADA: alta >= 0,50; média >= 0,20; baixa < 0,20"
+    "nota": "só recorte, sobre a P(maligno) CALIBRADA: alta >= 0,50; média >= 0,20; baixa < 0,20"
+  },
+  "prioridade_contexto": {
+    "alta": 0.37,
+    "media": 0.2,
+    "nota": "recorte + contexto: alta >= 0,37 (≈80% de sensibilidade em mamografia digital, CMMD); média >= 0,20"
   },
   "incerteza": {
     "desvio_maximo": 0.15,
@@ -27,6 +49,6 @@
       0.35,
       0.65
     ],
-    "nota": "desvio-padrão entre as 5 redes acima do máximo, ou P calibrada na faixa incerta = resultado incerto"
+    "nota": "desvio-padrão entre as redes acima do máximo, ou P calibrada na faixa incerta = resultado incerto"
   }
 }

@@ -1,10 +1,10 @@
 {
-  "gerado_em": "2026-11-20 01:12:18",
-  "descricao": "Densidade: codificador Mammo-CLIP (kappa teste 0,703; digital 0,649)",
+  "gerado_em": "2026-11-20 15:56:27",
+  "descricao": "Patologia: recorte treinado com CBIS + CDD-CESM (item 2) + média com o modelo de contexto nas mamografias completas; calibração separada e prioridade alta 0,37 no recorte + contexto (CMMD)",
   "modelos": {
     "calibracao.json": {
-      "sha256": "d47781ac22a5c74b95bc38b584153f6a3971b608cf803819af321bc056eace46",
-      "bytes": 811
+      "sha256": "9a065c54cc12f1347d4477b073e617ea42e292685c105220ae99908623ca1d6f",
+      "bytes": 1463
     },
     "modelo_achado/resnet50_multitask_mama_do_zero.pth": {
       "sha256": "39312504f0076db06c6318fdb856ead7335030eefa290bc8fa456ca75ece9e31",
@@ -30,24 +30,44 @@
       "sha256": "4e260a5ac12494182b5bca248d041dd81196709d98663b3d5404a16bc68cb864",
       "bytes": 173408565
     },
+    "modelo_patologia/contexto_dobra_1.pth": {
+      "sha256": "b5316cadec93c6d08db1ebb4173b0def73157f7766a82c64fc784f6ab122846c",
+      "bytes": 36923625
+    },
+    "modelo_patologia/contexto_dobra_2.pth": {
+      "sha256": "2938ea84b553ec571d08fc07da5273b68444acb8c11a55aedbef42fa04363625",
+      "bytes": 36923625
+    },
+    "modelo_patologia/contexto_dobra_3.pth": {
+      "sha256": "b2875ad75147ad2640df4b8690b4c137bd046b89c97d015fcb1265c6d0605b6a",
+      "bytes": 36923625
+    },
+    "modelo_patologia/contexto_dobra_4.pth": {
+      "sha256": "a7f9120195cec7f56eb3c460456e054612ebdb8a3dbb49205a3b4063d720cec5",
+      "bytes": 36923625
+    },
+    "modelo_patologia/contexto_dobra_5.pth": {
+      "sha256": "ca0c8622dfdacd3609bc93e9d41c5780af3e4b7eedb6532170520941218d359f",
+      "bytes": 36923625
+    },
     "modelo_patologia/mammoclip512_dobra_1.pth": {
-      "sha256": "236ef743417b5efe3bdd8855ff3a0e46fd61e90cfbaf152edd47e14f8939327e",
+      "sha256": "1ac863b20b494e6bdde073a22646a95205242e2c69375696bea7e2d734ef3a54",
       "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_2.pth": {
-      "sha256": "bf93a59bd4ec9bb2b162b63d0a085e9c13ad95f1d4b84ee6f66c80cb9daaab33",
+      "sha256": "340223b520679cb73d3275de3c1f4f5f9c4ddb38a21ec3ea6e13ecfcadccb119",
       "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_3.pth": {
-      "sha256": "3ffce1c775c3b2240e6a69ec5c65d0397c504871ef99e9c5a47d6136ec10368a",
+      "sha256": "1cf00a296107a8555f89e696ffa2a084d35f3ba8863fae9ae51959544ce16610",
       "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_4.pth": {
-      "sha256": "c615b3bd12dd40a5a66d6eb9666d3b6ef8becab2a2ddf657ccc07443c2779f61",
+      "sha256": "02afa5d9daefc43f19c7b1a1534505f127249b57e04021033cbc4463fc68feab",
       "bytes": 36905421
     },
     "modelo_patologia/mammoclip512_dobra_5.pth": {
-      "sha256": "70a166e4ff2ece6b9b144863e501bb431191a7425767927aac510772885d851a",
+      "sha256": "602d7873010973707341f39bf49cd29e2a72385afcb9e3dbf12b72061de7489a",
       "bytes": 36905421
     }
   },
@@ -137,5 +157,5 @@
       "bytes": 1055
     }
   },
-  "versao_modelo": "f3d309c91c2f"
+  "versao_modelo": "37abfd982a1f"
 }

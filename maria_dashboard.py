@@ -135,7 +135,8 @@ LEGENDA = {
     "p_maligno_calibrada": "Probabilidade de malignidade calibrada (0 a 1), ajustada para se comportar como "
                            "probabilidade na população do CBIS-DDSM (lesões já suspeitas). Em outro serviço, "
                            "recalibre com casos locais (página Anotações e retreino).",
-    "incerteza": "Discordância entre as 5 redes de patologia (desvio-padrão). Acima de 0,15 = resultado incerto.",
+    "incerteza": "Discordância entre as redes de patologia (desvio-padrão; 5 no recorte, 10 no recorte + contexto). "
+                 "Acima de 0,15 = resultado incerto.",
     "qualidade": "Controle de qualidade da imagem/resultado: ok, atenção (use com cautela) ou não usar.",
     "avisos_qualidade": "Motivos do controle de qualidade (modalidade, resolução, contraste, recorte pequeno, "
                         "resultado incerto etc.).",
@@ -148,7 +149,10 @@ LEGENDA = {
                     "completa; caixa detectada pelo modelo; ou nenhuma lesão encontrada na imagem.",
     "imagens_usadas": "Imagens que entraram na classificação (recorte CC/MLO, análise multivista ou a mamografia "
                       "completa de onde a lesão foi recortada).",
-    "patologia": "Benigno ou Maligno, conforme o limiar escolhido.",
+    "patologia": "Benigno ou Maligno pela P calibrada e o limiar (automático = o da prioridade alta).",
+    "patologia_entrada": "De onde veio a P(maligno): 'recorte' (só a lesão; recortes fornecidos) ou 'recorte + contexto' "
+                         "(lesão + janela da mamografia em volta; lesões da mamografia completa).",
+    "limiar_maligno": "Limiar da P calibrada usado para chamar de Maligno nesta lesão.",
     "conf_patologia": "Confiança na patologia indicada (50% = dúvida total, 100% = certeza).",
     "p_maligno": "Probabilidade de malignidade (0 a 1).",
     "achado": "Tipo de achado: massa/nódulo ou microcalcificação.",
@@ -843,7 +847,7 @@ flowchart LR
     C --> DE["Densidade BI-RADS<br/>(Mammo-CLIP)"]
     D --> RC["Recorte da caixa<br/>(+20 px)"]
     M --> RC
-    R --> P["Patologia<br/>benigno × maligno<br/>(5 × Mammo-CLIP)"]
+    R --> P["Patologia<br/>benigno × maligno<br/>(5 × Mammo-CLIP recorte<br/>+ 5 de contexto)"]
     RC --> P
     R --> A["Achado<br/>massa × microcalcificação<br/>(ResNet-50 + multivista)"]
     RC --> A
@@ -858,12 +862,14 @@ flowchart LR
     st.table(pd.DataFrame([
         {"Componente": "Patologia (benigno × maligno)",
          "Arquitetura": "Conjunto de 5 redes EfficientNet-B2 com o codificador de imagem do Mammo-CLIP "
-                        "(pré-treinado em mamografias), ajustadas no CBIS-DDSM. No treino, a rede também aprende a "
-                        "prever o tipo de achado e os atributos que o radiologista descreve (forma e margem da massa, "
-                        "tipo e distribuição da calcificação, sutileza); essas cabeças extras são descartadas no uso",
+                        "(pré-treinado em mamografias), ajustadas no CBIS-DDSM (filme) e no CDD-CESM (digital). No "
+                        "treino, a rede também aprende a prever o tipo de achado e os atributos que o radiologista "
+                        "descreve (forma e margem da massa, tipo e distribuição da calcificação, sutileza); essas "
+                        "cabeças extras são descartadas no uso. Nas lesões da MAMOGRAFIA COMPLETA, a P(maligno) é a "
+                        "média com mais 5 redes de CONTEXTO (janela da mamografia em volta da lesão)",
          "Entrada": "Recorte da lesão em tela de 512 × 512 px, escala preservada, contraste por percentis 1–99",
-         "Detalhes": "Média das 5 redes e de 5 variações da imagem (original, espelhamentos, ±10°); "
-                     "limiar padrão 0,50"},
+         "Detalhes": "Média das redes e de 5 variações da imagem (original, espelhamentos, ±10°); P calibrada; "
+                     "prioridade alta ≥ 0,50 (recorte) ou ≥ 0,37 (recorte + contexto)"},
         {"Componente": "Achado (massa × microcalcificação)",
          "Arquitetura": "ResNet-50 (pré-treino ImageNet) ajustada em recortes do CBIS-DDSM; ResNet-50 "
                         "multivista (siamesa, CC + MLO) quando há as duas vistas da mesma lesão",
@@ -909,14 +915,14 @@ flowchart LR
     with st.container(border=True):
         st.markdown("**Patologia** — validação cruzada sem vazamento, 2.781 lesões de 1.217 pacientes do CBIS-DDSM")
         with st.container(horizontal=True):
-            st.metric("Acurácia", "76,0%", border=True)
+            st.metric("Acurácia", "76,1%", border=True)
             st.metric("AUC", "0,841", border=True)
-            st.metric("Sensibilidade", "72,9%", border=True)
-            st.metric("Especificidade", "78,1%", border=True)
+            st.metric("Sensibilidade", "73,7%", border=True)
+            st.metric("Especificidade", "77,8%", border=True)
         dens_pat = pd.DataFrame({"densidade": ["1 (A)", "2 (B)", "3 (C)", "4 (D)"], "lesões": [446, 1047, 858, 430],
-                                 "AUC": [0.899, 0.859, 0.835, 0.740], "acurácia (%)": [82.5, 77.5, 76.7, 64.2],
-                                 "sensibilidade (%)": [75.7, 74.7, 72.4, 66.3],
-                                 "especificidade (%)": [86.8, 79.6, 79.8, 62.9]})
+                                 "AUC": [0.903, 0.853, 0.839, 0.739], "acurácia (%)": [81.6, 77.6, 77.0, 65.1],
+                                 "sensibilidade (%)": [75.1, 75.3, 72.4, 70.6],
+                                 "especificidade (%)": [85.7, 79.2, 80.4, 61.8]})
         c1, c2 = st.columns([3, 2])
         with c1:
             mostrar(st.dataframe, dens_pat, hide_index=True, alt="Desempenho da patologia por densidade mamária")
@@ -927,9 +933,9 @@ flowchart LR
                 y2=alt.datum(0.5),
                 tooltip=["densidade", "AUC", "lesões"]).properties(height=200, title="AUC da patologia por densidade")
             mostrar(st.altair_chart, graf, alt="AUC da patologia cai de 0,90 na densidade 1 para 0,74 na densidade 4")
-        st.caption("A acurácia cai em mama densa (diferença de AUC densa × não densa: −0,068, IC95% −0,11 a −0,03). "
-                   "Validação externa no CDD-CESM (outro hospital, mamografia digital): AUC 0,815 em 650 imagens com lesão "
-                   "(detalhe por subgrupo mais abaixo, em *Validação externa por subgrupo*). Os modelos finais também foram treinados com o teste oficial do CBIS-DDSM; "
+        st.caption("A acurácia cai em mama densa (diferença de AUC densa × não densa: −0,063, IC95% −0,11 a −0,02). "
+                   "Estes números são do RECORTE (validação cruzada no CBIS-DDSM). A validação externa, do caminho completo "
+                   "(detector + recorte + contexto), está mais abaixo: CMMD, mamografia digital da China. Os modelos finais também foram treinados com o teste oficial do CBIS-DDSM; "
                    "por isso a estimativa acima é a da validação cruzada.")
     with st.container(border=True):
         st.markdown("**Achado** — teste oficial do CBIS-DDSM, 704 lesões (378 massas, 326 calcificações)")
@@ -1197,12 +1203,15 @@ flowchart LR
     with c1:
         st.markdown(
             "- **Prioridade de leitura** (alta, média, baixa): o MARIA ordena a fila para o radiologista; não dá o "
-            "diagnóstico. Limites sobre a P(maligno) calibrada: alta ≥ 0,50; média ≥ 0,20.\n"
-            "- **P(maligno) calibrada**: calibração de Platt ajustada nas previsões fora-da-dobra do CBIS-DDSM "
-            "(erro de calibração ECE de 3,9% → 1,3% em validação cruzada). Vale para uma população de **lesões já "
+            "diagnóstico. Limites sobre a P(maligno) calibrada: alta ≥ 0,50 nos recortes fornecidos e ≥ 0,37 nas "
+            "lesões da mamografia completa (recorte + contexto; escolhido para ≈ 80% de sensibilidade em mamografia "
+            "digital, CMMD); média ≥ 0,20.\n"
+            "- **P(maligno) calibrada**: calibração de Platt ajustada nas previsões fora-da-dobra do CBIS-DDSM, uma "
+            "para o recorte e outra para o recorte + contexto (erro de calibração ECE 3,8% → 1,4% e 5,1% → 1,7% em "
+            "validação cruzada). Vale para uma população de **lesões já "
             "suspeitas** (≈ 42% malignas); em outro serviço deve ser **recalibrada com casos locais** confirmados "
             "(página **Anotações e retreino**).\n"
-            "- **Incerteza**: desvio-padrão entre as 5 redes; acima de 0,15, ou probabilidade entre 0,35 e 0,65, o "
+            "- **Incerteza**: desvio-padrão entre as redes (5 ou 10); acima de 0,15, ou probabilidade entre 0,35 e 0,65, o "
             "resultado é marcado como incerto.")
     with c2:
         st.markdown(
@@ -1218,15 +1227,19 @@ flowchart LR
     if (pasta_modelo / "desempenho.json").is_file():
         D_sub = json.loads((pasta_modelo / "desempenho.json").read_text(encoding="utf-8")).get("subgrupos_externos")
     if D_sub:
-        st.subheader("Validação externa por subgrupo (CDD-CESM)")
+        nome_ext = D_sub.get("nome", "CDD-CESM")
+        unidade = "mamas" if D_sub.get("unidade") == "mama" else "imagens"
+        st.subheader(f"Validação externa por subgrupo ({nome_ext})")
         g = D_sub["geral"]
-        st.caption(f"Patologia no CDD-CESM: mamografia digital, outro país, 2 equipamentos, base nunca usada no treino "
-                   f"da patologia. {g['n']} imagens com lesão ({g['malignos']} malignas).")
+        st.caption(f"{D_sub.get('base', nome_ext)}. {g['n']} {unidade} ({g['malignos']} malignas). "
+                   f"{D_sub.get('descricao', '')}")
+        rot_lim = ("prioridade alta, P cal. ≥ " + f"{D_sub['limiar_alta']:.2f}".replace(".", ",") if "limiar_alta" in D_sub
+                   else "limiar 0,5")
         with st.container(horizontal=True):
             st.metric("AUC geral", f"{g['auc']:.3f}".replace(".", ","), border=True)
-            st.metric("Sensibilidade (limiar 0,5)", f"{g['sens']:.0%}", border=True)
-            st.metric("Especificidade (limiar 0,5)", f"{g['espec']:.0%}", border=True)
-        linhas_sub = [{"subgrupo": k, "grupo": kk, "imagens": v["n"], "malignas": v["malignos"], "AUC": v["auc"],
+            st.metric(f"Sensibilidade ({rot_lim})", f"{g['sens']:.0%}", border=True)
+            st.metric(f"Especificidade ({rot_lim})", f"{g['espec']:.0%}", border=True)
+        linhas_sub = [{"subgrupo": k, "grupo": kk, unidade: v["n"], "malignas": v["malignos"], "AUC": v["auc"],
                        "sensibilidade": v["sens"], "especificidade": v["espec"]}
                       for k, grupos in D_sub["subgrupos"].items() for kk, v in grupos.items()]
         dsub = pd.DataFrame(linhas_sub)
@@ -1238,9 +1251,9 @@ flowchart LR
             mostrar(st.altair_chart, alt.Chart(ds).mark_bar(color="#c62828", clip=True).encode(
                 x=alt.X("grupo:N", title=None, axis=alt.Axis(labelAngle=0), sort=list(ds["grupo"])),
                 y=alt.Y("AUC:Q", scale=alt.Scale(domain=[0.5, 1], clamp=True)), y2=alt.datum(0.5),
-                tooltip=["grupo", "imagens", "malignas", alt.Tooltip("AUC:Q", format=".3f"),
+                tooltip=["grupo", unidade, "malignas", alt.Tooltip("AUC:Q", format=".3f"),
                          alt.Tooltip("sensibilidade:Q", format=".0%"), alt.Tooltip("especificidade:Q", format=".0%")])
-                .properties(title=f"AUC por {(escolha_sub or 'Faixa etária').lower()} (CDD-CESM)", height=240),
+                .properties(title=f"AUC por {(escolha_sub or 'Faixa etária').lower()} ({nome_ext})", height=240),
                 alt="AUC da patologia por subgrupo na validação externa")
         with c2:
             mostrar(st.dataframe, ds.drop(columns="subgrupo"), hide_index=True, alt="Desempenho externo por subgrupo",
@@ -1253,20 +1266,26 @@ flowchart LR
             with c1:
                 pts = alt.Chart(dcx).mark_line(point=True, color="#1565c0").encode(
                     x=alt.X("p_media:Q", title="P(maligno) calibrada (CBIS-DDSM)", scale=alt.Scale(domain=[0, 1])),
-                    y=alt.Y("maligno_observado:Q", title="Proporção maligna no CDD-CESM", scale=alt.Scale(domain=[0, 1])),
+                    y=alt.Y("maligno_observado:Q", title=f"Proporção maligna no {nome_ext}", scale=alt.Scale(domain=[0, 1])),
                     tooltip=["p_media", "maligno_observado", "n"])
                 diag = alt.Chart(pd.DataFrame({"p_media": [0, 1], "maligno_observado": [0, 1]})).mark_line(
                     strokeDash=[4, 4], color="gray").encode(x="p_media:Q", y="maligno_observado:Q")
                 mostrar(st.altair_chart, (diag + pts).properties(title="Calibração fora da base de treino", height=240),
-                        alt="Calibração no CDD-CESM: a probabilidade calibrada no CBIS-DDSM não transfere")
+                        alt=f"Calibração no {nome_ext}: a probabilidade calibrada no CBIS-DDSM fica abaixo da proporção real")
             with c2:
                 st.markdown("**O que isso mostra (dados do mundo real)**")
                 st.markdown(
-                    "- O **ranqueamento se mantém** fora da base de treino (AUC ≈ 0,82 no geral e 0,85–0,88 em massas "
-                    "e calcificações), mas cai em achados que não existem no treino (assimetria, distorção: 0,73) e em "
-                    "mulheres com menos de 40 anos (0,73).\n"
-                    "- O **limiar 0,5 não transfere**: especificidade de só 66%; a curva de calibração se afasta da "
-                    "diagonal.\n"
+                    "- No CMMD o teste é **mais duro** que nos recortes: inclui o detector (≈ 5 caixas por mama, a "
+                    "maioria falsas) e a mama recebe a maior P entre elas. AUC 0,755 por mama; pior em calcificações "
+                    "(0,70) e em mulheres com menos de 50 anos (0,66–0,70), melhor a partir dos 60 (0,86–0,92).\n"
+                    "- **Escolha do modelo** (mesmas caixas, IC 95% por paciente): o recorte treinado também com o "
+                    "CDD-CESM ganhou +0,015 do anterior; a média com o modelo de **contexto** ganhou mais +0,014. O "
+                    "contexto **sozinho** não serve: fora do CBIS quase nunca chama de maligno. No CDD-CESM a média "
+                    "também foi melhor ou igual ao recorte.\n"
+                    "- **Calibração:** a curva fica abaixo da proporção real porque o CMMD tem 70% de câncer (só casos "
+                    "biopsiados); por isso a probabilidade continua calibrada no CBIS e só o **limite da prioridade "
+                    "alta** (0,37) foi escolhido no CMMD, para ≈ 80% de sensibilidade em digital (conferido em metade "
+                    "dos pacientes que não entrou na escolha: 77% sens., 53% espec.).\n"
                     "- Por isso o MARIA traz a **calibração local** e o **desempenho local por subgrupo e por "
                     "fabricante**, com casos do serviço confirmados por biópsia ou seguimento. Antes de uso real, é "
                     "preciso validar com **dados brasileiros, de vários equipamentos, com rótulo confiável** "
@@ -1284,14 +1303,17 @@ flowchart LR
                "- Patologia e achado devem ser confirmados por biópsia, ressonância ou outro exame padrão-ouro.\n"
                "- O detector aponta regiões para revisão; não serve para triagem automática (marca caixas falsas em "
                "cerca de metade dos exames normais e não acha todas as lesões).\n"
-               "- O limiar 0,50 foi calibrado em filme digitalizado (CBIS-DDSM); em outros equipamentos o modelo "
-               "tende a chamar mais lesões de malignas.\n"
+               "- A probabilidade é calibrada no CBIS-DDSM (lesões já suspeitas). Em outro serviço, com outra "
+               "proporção de câncer, recalibre com casos locais (página Anotações e retreino).\n"
+               "- No caminho sem marcação do médico (CMMD), a AUC por mama é 0,755: o detector marca várias caixas "
+               "falsas por mama, e calcificações e mulheres jovens são os casos mais difíceis.\n"
                "- A confiabilidade cai em mama densa e em densidade 4 na mamografia digital.\n"
                "- Os exames normais usados para medir alarmes falsos são poucos (131) e de um único hospital.",
                icon=":material/info:")
 
     st.subheader("Versão dos modelos em uso")
-    arquivos_modelo = [("Patologia (5 redes)", "modelo_patologia/mammoclip512_dobra_1.pth"),
+    arquivos_modelo = [("Patologia: recorte (5 redes)", "modelo_patologia/mammoclip512_dobra_1.pth"),
+                       ("Patologia: contexto (5 redes)", "modelo_patologia/contexto_dobra_1.pth"),
                        ("Achado (recorte)", "modelo_achado/resnet50_multitask_mama_do_zero.pth"),
                        ("Achado (multivista)", "modelo_achado/resnet50_multivista.pth"),
                        ("Detector de lesões", "modelo_deteccao/detector_lesao.pth"),
@@ -1366,9 +1388,13 @@ def grafico_agrupado(les, x_campo, x_ordem, x_titulo, nome_x, campo, conf, escal
 def pagina_executar():
     # controles que só fazem sentido ao executar (aparecem na barra lateral só nesta página)
     st.sidebar.divider()
-    limiar = st.sidebar.slider("Limiar para 'Maligno'", 0.05, 0.95, 0.50, 0.05,
-                               help="0,5 foi calibrado no CBIS-DDSM. Em outras bases, o modelo tende a marcar mais casos "
-                                    "como malignos (sensibilidade alta, especificidade menor). Use limiar maior para ser menos sensível.")
+    opcoes_limiar = ["automático"] + [f"{v / 100:.2f}".replace(".", ",") for v in range(5, 100, 5)]
+    escolha_limiar = st.sidebar.select_slider(
+        "Limiar para 'Maligno'", opcoes_limiar, value="automático", key="limiar_maligno",
+        help="Sobre a P(maligno) CALIBRADA. Automático = o mesmo limite da prioridade alta (0,50 nos recortes fornecidos; "
+             "0,37 nas lesões da mamografia completa, onde a patologia usa recorte + contexto): 'Maligno' = prioridade "
+             "alta. Maior = menos casos malignos (menos alarmes falsos, mas perde mais cânceres).")
+    limiar = None if escolha_limiar == "automático" else float(escolha_limiar.replace(",", "."))
     limiar_det = st.sidebar.slider(
         "Sensibilidade do detector (score mínimo da caixa)", 0.20, 0.90, 0.50, 0.05,
         help="Só vale para mamografias completas. Menor = encontra mais lesões, mas marca mais caixas falsas. "
@@ -1572,7 +1598,7 @@ def pagina_executar():
         area_prog = st.empty()
         area = st.empty()
         csv_saida = SAIDAS / f"results_{carimbo}.csv"
-        extra = ["--limiar", f"{limiar}", "--limiar_deteccao", f"{limiar_det}"]
+        extra = (["--limiar", f"{limiar}"] if limiar is not None else []) + ["--limiar_deteccao", f"{limiar_det}"]
         if not planilha_valida.empty:
             csv_planilha = SAIDAS / f"planilha_{carimbo}.csv"
             planilha_valida.to_csv(csv_planilha, index=False, encoding="utf-8")
@@ -1923,13 +1949,13 @@ def pagina_resultados():
         for c in ("mama", "vista", "origem_lesao", "imagens_usadas", "imagem", "x0", "y0", "x1", "y1", "score_deteccao",
                   "densidade", "densidade_origem", "aviso_densidade", "concordancia", "prioridade",
                   "p_maligno_calibrada", "incerteza", "qualidade", "avisos_qualidade", "idade", "fabricante",
-                  "mapa_calor", "versao_modelo"):
+                  "mapa_calor", "versao_modelo", "patologia_entrada", "limiar_maligno"):
             if c not in tab:
                 tab[c] = np.nan
         # colunas de texto sempre como texto (uma coluna toda vazia seria lida como número)
         for c in ("amostra", "mama", "vista", "origem_lesao", "imagens_usadas", "patologia", "achado",
                   "densidade_origem", "aviso_densidade", "concordancia", "imagem", "prioridade", "qualidade",
-                  "avisos_qualidade", "fabricante", "mapa_calor", "versao_modelo"):
+                  "avisos_qualidade", "fabricante", "mapa_calor", "versao_modelo", "patologia_entrada"):
             tab[c] = tab[c].astype("object").where(tab[c].notna(), None)
         tab["densidade"] = pd.to_numeric(tab["densidade"], errors="coerce").astype("Int64")
         tab["densidade_txt"] = tab["densidade"].map(densidade_txt)
@@ -2294,15 +2320,17 @@ def pagina_resultados():
                         st.metric("Prioridade de leitura", prio.capitalize(), border=True,
                                   delta=f"P(maligno) calibrada {p_cal:.2f}" if pd.notna(p_cal) else None,
                                   delta_color="off", delta_arrow="off",
-                                  help="Pela P(maligno) calibrada: alta ≥ 0,50; média ≥ 0,20; baixa < 0,20.")
-                        st.metric("Incerteza (5 redes)", f"{linha['incerteza']:.3f}" if pd.notna(linha["incerteza"])
+                                  help="Pela P(maligno) calibrada: alta ≥ 0,50 (recorte) ou ≥ 0,37 (recorte + contexto, "
+                                       "lesões da mamografia completa); média ≥ 0,20; baixa < 0,20.")
+                        st.metric("Incerteza (entre as redes)", f"{linha['incerteza']:.3f}" if pd.notna(linha["incerteza"])
                                   else "—", border=True, delta="alta" if pd.notna(linha["incerteza"]) and
                                   linha["incerteza"] > 0.15 else "aceitável", delta_color="off", delta_arrow="off",
-                                  help="Desvio-padrão entre as 5 redes de patologia; acima de 0,15 = incerto.")
+                                  help="Desvio-padrão entre as redes de patologia (5 no recorte, 10 no recorte + "
+                                       "contexto); acima de 0,15 = incerto.")
                     with st.container(horizontal=True):
                         st.metric("Patologia", linha["patologia"], delta=f"confiança {linha['conf_patologia']}",
                                   delta_color="off", delta_arrow="off", border=True,
-                                  help="Benigno ou Maligno pelo limiar escolhido; confiança = quão longe de 50%.")
+                                  help="Benigno ou Maligno pela P calibrada e o limiar (automático = o da prioridade alta).")
                         st.metric("Achado", linha["achado"], delta=f"confiança {linha['conf_achado']}",
                                   delta_color="off", delta_arrow="off", border=True,
                                   help="Massa/nódulo ou microcalcificação.")
@@ -2313,9 +2341,15 @@ def pagina_resultados():
                         else:
                             st.metric("Densidade (BI-RADS)", "—", delta="não disponível", delta_color="off",
                                       delta_arrow="off", border=True)
-                    st.markdown(f"**P(maligno) bruta = {p:.3f}** · limiar {limiar:.2f} "
-                                f"({'acima' if p >= limiar else 'abaixo'} do limiar → {linha['patologia']})"
-                                + (f" · **calibrada = {p_cal:.3f}**" if pd.notna(p_cal) else ""))
+                    lim = pd.to_numeric(linha.get("limiar_maligno"), errors="coerce")
+                    if pd.isna(lim):                   # resultados antigos: limiar sobre a P bruta
+                        lim = limiar if limiar is not None else 0.5
+                    ref = p_cal if pd.notna(p_cal) else p
+                    br = lambda v, n=3: f"{v:.{n}f}".replace(".", ",")  # noqa: E731
+                    st.markdown((f"**P(maligno) calibrada = {br(p_cal)}**" if pd.notna(p_cal) else f"**P(maligno) = {br(p)}**")
+                                + f" · limiar {br(lim, 2)} ({'acima' if ref >= lim else 'abaixo'} do limiar → "
+                                f"{linha['patologia']}) · P bruta {br(p)} · patologia: "
+                                f"{linha.get('patologia_entrada') or 'recorte'}")
                     st.progress(min(max(p_cal if pd.notna(p_cal) else p, 0.0), 1.0))
 
                 if pd.notna(linha["densidade"]):

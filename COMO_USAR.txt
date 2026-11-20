@@ -35,8 +35,10 @@
    - QUALIDADE ......... ok, atenção ou NÃO USAR (modalidade errada, imagem colorida, sem contraste,
                          recorte minúsculo, baixa resolução, resultado incerto...).
    - ONDE O MODELO OLHOU  mapa de calor de cada lesão (regiões que mais pesaram na suspeita).
-   - INCERTEZA ......... discordância entre as 5 redes de patologia.
-   - PATOLOGIA ......... Benigno ou Maligno, com a confiança e a probabilidade de malignidade.
+   - INCERTEZA ......... discordância entre as redes de patologia.
+   - PATOLOGIA ......... Benigno ou Maligno, com a confiança e a probabilidade de malignidade. Nas
+                         lesões da mamografia completa, a patologia olha a lesão (recorte) e o tecido em
+                         volta (contexto); nos recortes fornecidos, só o recorte.
    - ACHADO ............ Massa/nódulo ou microcalcificação, com a confiança.
    - LOCALIZAÇÃO ....... Nas mamografias completas, o modelo procura as lesões e desenha uma caixa
                          em cada uma. O médico também pode marcar as lesões (planilha), e o MARIA
@@ -167,9 +169,12 @@
  BARRA LATERAL (esquerda)
    - Pasta do modelo ......... já vem preenchida; só mude se moveu a pasta "modelo".
    Na página "Executar" aparecem também:
-   - Limiar para 'Maligno' ... P(maligno) a partir da qual a lesão é chamada de Maligno (padrão 0,50).
-                               Maior = menos casos chamados de malignos (menos alarmes falsos, mas
-                               perde mais cânceres). Menor = o contrário.
+   - Limiar para 'Maligno' ... P(maligno) CALIBRADA a partir da qual a lesão é chamada de Maligno.
+                               "automático" (padrão) = o mesmo limite da prioridade alta: 0,50 nos
+                               recortes fornecidos e 0,37 nas lesões da mamografia completa; assim
+                               "Maligno" = prioridade alta. Maior = menos casos chamados de malignos
+                               (menos alarmes falsos, mas perde mais cânceres). Menor = o contrário.
+                               O limiar escolhido muda só o rótulo Benigno/Maligno, não a prioridade.
    - Sensibilidade do detector  score mínimo de uma caixa do modelo (padrão 0,50). Menor = encontra
                                mais lesões, mas marca mais caixas falsas. Veja os números na seção 12.
 
@@ -241,7 +246,8 @@
    Opções:
      --pasta CAMINHO ........... pasta com as imagens (obrigatória; inclui subpastas)
      --planilha ARQUIVO ........ planilha do médico (opcional, seção 9)
-     --limiar 0.5 .............. limiar de P(maligno) para "Maligno"
+     --limiar 0.5 .............. limiar da P(maligno) calibrada para "Maligno" (sem a opção: automático,
+                                 0,50 nos recortes e 0,37 nas lesões da mamografia completa)
      --limiar_deteccao 0.5 ..... score mínimo das caixas do detector
      --sem_deteccao ............ não procura lesões nas mamografias completas (só classifica os
                                  recortes e as lesões marcadas pelo médico; a densidade continua)
@@ -424,10 +430,13 @@
  11. RESULTADOS: O QUE SIGNIFICA CADA COLUNA (results.csv e tabela do dashboard)
 ===============================================================================================
    amostra ........... identificador da lesão classificada
-   prioridade ........ alta / média / baixa (pela P calibrada: alta ≥ 0,50; média ≥ 0,20) ou
+   prioridade ........ alta / média / baixa (pela P calibrada: alta ≥ 0,50 nos recortes e ≥ 0,37 nas
+                       lesões da mamografia completa; média ≥ 0,20) ou
                        "não avaliar (qualidade)"; "baixa (nada detectado)" para imagem sem lesão
    p_maligno_calibrada probabilidade de malignidade calibrada (0 a 1)
-   incerteza ......... desvio-padrão entre as 5 redes (acima de 0,15 = incerto)
+   incerteza ......... desvio-padrão entre as redes (5 ou 10; acima de 0,15 = incerto)
+   patologia_entrada . "recorte" (só a lesão) ou "recorte + contexto" (lesão + tecido em volta)
+   limiar_maligno .... limiar da P calibrada usado para chamar de Maligno nesta lesão
    qualidade ......... ok / atenção / não usar;  avisos_qualidade: os motivos
    idade, fabricante . da paciente e do equipamento (DICOM ou planilha)
    mapa_calor ........ arquivo(s) PNG do mapa de calor da lesão
@@ -457,29 +466,37 @@
 ===============================================================================================
  12. DESEMPENHO MEDIDO E LIMITAÇÕES
 ===============================================================================================
- Medido em pacientes que os modelos NÃO viram no treino (bases públicas CBIS-DDSM e CDD-CESM).
- MODELOS EM USO (versão f3d309c91c2f, 20/11/2026): patologia = 5 redes Mammo-CLIP treinadas também com
- os atributos da lesão (forma, margem, tipo de calcificação, sutileza) como alvos auxiliares; densidade
- = Mammo-CLIP (pré-treinado em mamografias); achado e detector = ResNet-50. A versão aparece em cada
- resultado e na página "Sobre o modelo". As versões anteriores ficam em modelo\historico\.
+ Medido em pacientes que os modelos NÃO viram no treino (bases públicas CBIS-DDSM, CDD-CESM e CMMD).
+ MODELOS EM USO (versão 37abfd982a1f, 20/11/2026):
+   patologia ... 5 redes Mammo-CLIP no RECORTE da lesão, treinadas com CBIS-DDSM (filme) e CDD-CESM
+                 (digital) e com os atributos da lesão como alvos auxiliares; nas lesões da mamografia
+                 completa, média com mais 5 redes de CONTEXTO (janela da mamografia em volta da lesão);
+   densidade ... Mammo-CLIP (pré-treinado em mamografias);   achado e detector ... ResNet-50.
+ A versão aparece em cada resultado e na página "Sobre o modelo". As anteriores ficam em modelo\historico\.
 
-   PATOLOGIA (recortes): acurácia 76,0%, AUC 0,841 (2.781 lesões). Piora em mama densa:
-        densidade 1: AUC 0,90 | 2: 0,86 | 3: 0,84 | 4: 0,74 (especificidade cai para 63%).
+   PATOLOGIA (recortes, validação cruzada no CBIS-DDSM): acurácia 76,1%, AUC 0,841 (2.781 lesões).
+        Piora em mama densa: densidade 1: AUC 0,90 | 2: 0,85 | 3: 0,84 | 4: 0,74 (especificidade 62%).
    DETECTOR (mamografia completa), por sensibilidade do detector:
         0,30 -> acha 64% das lesões em filme / 62% em digital, ~1,7 caixa falsa por exame normal
         0,50 -> acha 59% / 55%, ~0,9 caixa falsa por exame normal (padrão)
         0,70 -> acha 50% / 49%, ~0,4 caixa falsa por exame normal
-   VALIDAÇÃO EXTERNA (CDD-CESM, mamografia digital, outro país, nunca usada no treino da patologia):
-        AUC 0,82 (0,85–0,88 em massas e calcificações; 0,73 em assimetria/distorção e em < 40 anos);
-        com limiar 0,5: sensibilidade 85%, especificidade 66% — o limiar NÃO transfere: calibre
-        localmente (seção 14.4).
-   CALIBRAÇÃO (CBIS-DDSM, validação cruzada): erro de calibração ECE 3,9% → 1,3%.
+   VALIDAÇÃO EXTERNA (CMMD: mamografia digital da China, 1.872 mamas confirmadas por biópsia, nunca
+        usada no treino). Caminho completo sem marcação do médico (detector -> patologia em cada caixa
+        -> a mama recebe a maior probabilidade): AUC 0,755 por mama; prioridade alta pega 79% das
+        mamas com câncer (especificidade 53%). Mais difícil em calcificações (0,70) e em mulheres com
+        menos de 50 anos (0,66–0,70); melhor a partir dos 60 (0,86–0,92).
+        Na escolha do modelo (mesmas caixas): o recorte treinado também com o CDD-CESM ganhou +0,015 do
+        anterior, e a média com o contexto mais +0,014. (O CDD-CESM, antes usado como teste externo,
+        agora faz parte do treino da patologia.)
+   CALIBRAÇÃO (CBIS-DDSM, validação cruzada): erro de calibração ECE 3,8% → 1,4% (recorte) e
+        5,1% → 1,7% (recorte + contexto). O limite 0,37 da prioridade alta do recorte + contexto foi
+        escolhido no CMMD para ~80% de sensibilidade em mamografia digital.
    DENSIDADE: acerta densa x não densa em 88% dos casos; concordância com o laudo (kappa) 0,70.
         Reconhece 75% das mamas extremamente densas (50% em mamografia digital, só 38 casos no teste).
 
  LIMITAÇÕES
-   - O limiar 0,5 foi calibrado no CBIS-DDSM (filme digitalizado). Em outros equipamentos o modelo
-     tende a chamar mais lesões de malignas; ajuste o limiar se for o caso.
+   - A probabilidade é calibrada no CBIS-DDSM (lesões já suspeitas, ~42% malignas). Num serviço com
+     outra proporção de câncer, a probabilidade muda: recalibre com casos locais (seção 14.4).
    - O detector serve para APONTAR regiões ao radiologista, não para triagem automática: ele marca
      alguma caixa em cerca de metade dos exames normais e não encontra todas as lesões.
    - Poucos exames normais e de um único hospital foram usados para medir os alarmes falsos.
@@ -631,6 +648,8 @@
    recalibra a probabilidade e escolhe o limite de prioridade alta para a SENSIBILIDADE DESEJADA
    (controle deslizante; a prioridade média usa 98%). Passa a valer nas próximas classificações, e a
    versão do modelo no resultado indica "+cal-local". "Remover calibração local" volta à do CBIS-DDSM.
+   A calibração local vale para as duas saídas da patologia (recorte e recorte + contexto), porque é
+   ajustada nas probabilidades que o seu serviço realmente recebeu.
    Os números são calculados nos mesmos casos usados para calibrar (otimistas): reavalie com casos novos.
 
 

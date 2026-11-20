@@ -13,6 +13,8 @@ Cada requisito aponta para onde está implementado e como é verificado. Testes 
 | REQ_DET_01 | Detectar lesões em mamografia completa e comparar com as marcadas pelo médico | maria.py `DetectorLesao`, `diagnosticar_completa`, `coincide` | test_REQ_DET_01; FROC (desempenho.json) |
 | REQ_MAR_01 | Permitir que o radiologista marque a lesão na tela, em pixels da imagem original | dashboard: "Marcar lesões na imagem" | verificação visual registrada (alinhamento da caixa com a lesão) |
 | REQ_SAI_01 | Fornecer P(maligno) calibrada, monotônica e entre 0 e 1 | maria.py `calibrar`, calibracao.json | test_REQ_SAI_01; ECE em validação cruzada |
+| REQ_PAT_01 | Nas lesões da mamografia completa, combinar a patologia do recorte com a de contexto (janela da mamografia em volta da lesão, igual à do treino) | maria.py `janela_contexto`, `prob_maligno_contexto` | test_REQ_PAT_01, 03; regressão |
+| REQ_PAT_02 | Calibração e limite de prioridade próprios para cada entrada (recorte / recorte + contexto); rótulo Maligno = prioridade alta no limiar automático | maria.py `calibrar`, `prioridade_de`, `resultado` | test_REQ_PAT_02 |
 | REQ_SAI_02 | Fornecer prioridade de leitura (alta/média/baixa) e não avaliar imagens inadequadas | maria.py `prioridade_de` | test_REQ_SAI_02 |
 | REQ_SAI_03 | Indicar quando não usar (modalidade, cor, contraste, recorte pequeno) e quando ter atenção | maria.py `checar_qualidade` | test_REQ_SAI_03 |
 | REQ_SAI_04 | Sinalizar resultado incerto (discordância entre as redes ou probabilidade intermediária) | maria.py `resultado` | test_REQ_SAI_04 |
