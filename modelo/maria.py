@@ -192,7 +192,7 @@ class DetectorLesao:
     """Faster R-CNN (1 classe: lesão) sobre a mamografia reduzida para lado maior `lado` px."""
 
     def __init__(self, pasta, device):
-        cfg = json.loads((Path(pasta) / "detector_lesao.json").read_text())
+        cfg = json.loads((Path(pasta) / "detector_lesao.json").read_text(encoding="utf-8"))
         self.lado, self.limiar, self.device = cfg["lado"], cfg["limiar"], device
         m = fasterrcnn_resnet50_fpn_v2(weights=None, weights_backbone=None, min_size=self.lado, max_size=self.lado,
                                        box_detections_per_img=20, box_score_thresh=0.01)
@@ -238,7 +238,7 @@ class ClassificadorDensidade:
     Mammo-CLIP) vem do campo "arquitetura" do densidade.json (sem o campo = ResNet-50)."""
 
     def __init__(self, pasta, device):
-        cfg = json.loads((Path(pasta) / "densidade.json").read_text())
+        cfg = json.loads((Path(pasta) / "densidade.json").read_text(encoding="utf-8"))
         self.tam, self.device = cfg["tam"], device
         self.modelo = carregar(modelo_densidade(cfg.get("arquitetura", "resnet50")), Path(pasta) / "densidade.pth", device)
 
@@ -333,13 +333,17 @@ def ler_planilha(caminho):
         l["linha"] = n
         l["lado"] = _valor_padrao(l["lado"], LADOS, "lado", n)
         l["mama"] = f"{l['paciente']}_{l['lado']}" if l["lado"] else l["paciente"]
+        if l["densidade"] and l["densidade"].upper() not in ACR:
+            print(f"⚠️  planilha, linha {n}: densidade '{l['densidade']}' não reconhecida (use 1-4 ou A-D), ignorada")
         l["densidade"] = ACR.get(l["densidade"].upper())
+        if l["vista"] and l["vista"].upper() not in ("CC", "MLO"):
+            print(f"⚠️  planilha, linha {n}: vista '{l['vista']}' não reconhecida (use CC ou MLO), ignorada")
         l["vista"] = l["vista"].upper() if l["vista"].upper() in ("CC", "MLO") else ""
         try:
             cx = tuple(float(l[c].replace(",", ".")) for c in ("x0", "y0", "x1", "y1"))
             l["caixa"] = cx if cx[2] > cx[0] and cx[3] > cx[1] else None
             if l["caixa"] is None:
-                print(f"⚠️  planilha, linha {n}: caixa inválida (x1 <= x0 ou y1 <= y0), ignorada")
+                print(f"⚠️  planilha, linha {n}: caixa inválida (x_fim <= x_inicio ou y_fim <= y_inicio), ignorada")
         except ValueError:
             l["caixa"] = None
         linhas.append(l)
@@ -744,7 +748,7 @@ def checar_qualidade(arr, meta, tipo):
     avisos = []
     if meta.get("modalidade") and meta["modalidade"] != "MG":
         avisos.append(("não usar", f"modalidade DICOM '{meta['modalidade']}' (não é mamografia, MG)"))
-    if meta.get("regiao") and meta["regiao"] not in ("BREAST", "MAMA"):
+    if meta.get("regiao") and not any(t in str(meta["regiao"]).upper() for t in ("BREAST", "MAMA")):   # "RIGHT BREAST" etc.
         avisos.append(("atenção", f"região examinada '{meta['regiao']}' (esperado: BREAST)"))
     if meta.get("colorida"):
         avisos.append(("não usar", "imagem colorida (não parece mamografia)"))
@@ -806,9 +810,9 @@ def resultado(amostra_id, origem, imagens_usadas, ps_mal, fontes_ach, limiar, av
                  p_maligno=f"{p:.4f}", p_maligno_calibrada=f"{p_cal:.4f}", incerteza=f"{desvio:.3f}")
         inc = (CONTEXTO["cal"] or {}).get("incerteza", {"desvio_maximo": 0.15, "faixa_incerta": [0.35, 0.65]})
         if desvio > inc["desvio_maximo"]:
-            avisos.append(("atenção", f"resultado incerto: as 5 redes discordam (desvio {desvio:.2f})"))
+            avisos.append(("atenção", f"resultado incerto: as 5 redes discordam (desvio {desvio:.2f})".replace(".", ",")))
         elif inc["faixa_incerta"][0] <= p_cal <= inc["faixa_incerta"][1]:
-            avisos.append(("atenção", f"resultado incerto: probabilidade intermediária ({p_cal:.2f})"))
+            avisos.append(("atenção", f"resultado incerto: probabilidade intermediária ({p_cal:.2f})".replace(".", ",")))
     else:
         r.update(patologia="indisponível", conf_patologia="N/D", p_maligno="N/D", p_maligno_calibrada="N/D",
                  incerteza="N/D")

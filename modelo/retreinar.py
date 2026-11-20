@@ -240,7 +240,7 @@ def retreinar_densidade(casos, c, device, rapido, log):
     from PIL import Image
     from sklearn.metrics import cohen_kappa_score
     M = maria()
-    cfg = json.loads((AQUI / "modelo_densidade/densidade.json").read_text())
+    cfg = json.loads((AQUI / "modelo_densidade/densidade.json").read_text(encoding="utf-8"))
     tam = cfg["tam"]
 
     # rótulos de base (CBIS 1-4, CDD A-D)
@@ -355,7 +355,7 @@ def retreinar_detector(casos, c, device, rapido, log):
     from torchvision.ops import box_iou
     from PIL import Image
     M = maria()
-    cfg = json.loads((AQUI / "modelo_deteccao/detector_lesao.json").read_text())
+    cfg = json.loads((AQUI / "modelo_deteccao/detector_lesao.json").read_text(encoding="utf-8"))
     lado, limiar = cfg["lado"], cfg["limiar"]
 
     cb = pd.read_csv(c["dados_deteccao"] / "anotacoes.csv").assign(fonte="cbis")

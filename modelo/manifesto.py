@@ -79,6 +79,11 @@ def verificar():
 
 
 if __name__ == "__main__":
+    for _fluxo in (sys.stdout, sys.stderr):          # Windows: saída redirecionada usa cp1252 e quebra com ✅/❌
+        try:
+            _fluxo.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--gerar", action="store_true")
     ap.add_argument("--descricao", default="")

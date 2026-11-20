@@ -399,9 +399,8 @@
 
  MENSAGENS DE AVISO (aparecem no log; a rodada continua)
    "arquivo(s) da planilha não encontrado(s)" ... o nome está errado ou o arquivo está em outra pasta.
-   "caixa inválida (x1 <= x0 ou y1 <= y0)" ...... x_fim <= x_inicio ou y_fim <= y_inicio:
-                                                   a caixa foi ignorada; confira os números.
-   "lado ... não reconhecido" .................. o valor não está na lista; ficou em branco.
+   "caixa inválida (x_fim <= x_inicio ou y_fim <= y_inicio)" a caixa foi ignorada; confira os números.
+   "lado / vista / densidade ... não reconhecido" o valor não está na lista; ficou em branco.
    "caixa sem arquivo_completa" .................. a linha tem caixa mas não diz em qual imagem.
    Caixa que passa da borda da imagem é cortada na borda automaticamente.
 
@@ -459,6 +458,10 @@
  12. DESEMPENHO MEDIDO E LIMITAÇÕES
 ===============================================================================================
  Medido em pacientes que os modelos NÃO viram no treino (bases públicas CBIS-DDSM e CDD-CESM).
+ MODELOS EM USO (versão f3d309c91c2f, 20/11/2026): patologia = 5 redes Mammo-CLIP treinadas também com
+ os atributos da lesão (forma, margem, tipo de calcificação, sutileza) como alvos auxiliares; densidade
+ = Mammo-CLIP (pré-treinado em mamografias); achado e detector = ResNet-50. A versão aparece em cada
+ resultado e na página "Sobre o modelo". As versões anteriores ficam em modelo\historico\.
 
    PATOLOGIA (recortes): acurácia 76,0%, AUC 0,841 (2.781 lesões). Piora em mama densa:
         densidade 1: AUC 0,90 | 2: 0,86 | 3: 0,84 | 4: 0,74 (especificidade cai para 63%).
@@ -495,6 +498,9 @@
      site pypi.org e download.pytorch.org.
  O navegador não abriu
      Abra manualmente o endereço que aparece na janela preta (ex.: http://localhost:8501).
+ O endereço é :8502 (ou outro número) em vez de :8501
+     Já havia outro MARIA (ou outro programa) aberto na 8501. Feche a outra janela preta para não
+     ficar com duas cópias; ou use o endereço que a janela mostra.
  O dashboard avisa "precisa do Streamlit 1.67 ou mais novo"
      Rode config\preparar_ambiente.bat (Windows) ou  pip install -U streamlit .
  Muito lento / "Dispositivo: cpu" no log
@@ -523,10 +529,10 @@
      Confira AE title, IP e porta em integracao\config_dicom.json e o cadastro do nó "MARIA" no PACS;
      teste com  python integracao\no_dicom.py --teste-eco ; veja integracao\saida\<estudo>\log.txt.
  O botão "Retreinar o modelo" está desativado
-     Esta máquina não tem os dados completos de treino (a aba mostra o que falta; seção 14.3), ou
+     Esta máquina não tem os dados completos de treino (a página Anotações e retreino mostra o que falta; seção 14.3), ou
      nenhum modelo foi escolhido, ou a caixa de confirmação não foi marcada, ou já há um retreino em
      andamento.
- "faltam ... biblioteca Python 'scikit-learn'" (ou 'openpyxl') na aba de retreino
+ "faltam ... biblioteca Python 'scikit-learn'" (ou 'openpyxl') na página Anotações e retreino
      Na máquina de treino:  pip install scikit-learn openpyxl
  O retreino aparece como "interrompido"
      O processo parou antes de terminar (computador desligado, falta de memória). Nada foi alterado;
@@ -577,7 +583,7 @@
  14.3 RETREINAR O MODELO
    DISPONÍVEL APENAS NA MÁQUINA COM OS DADOS COMPLETOS DO MODELO. O retreino mistura as anotações com
    os dados originais de treino (CBIS-DDSM e CDD-CESM, ~160 GB) — sem eles o modelo "esqueceria" o que
-   aprendeu. Em qualquer outro computador a aba mostra "Esta máquina NÃO tem os dados completos" (com a
+   aprendeu. Em qualquer outro computador a página mostra "Esta máquina NÃO tem os dados completos" (com a
    lista do que falta) e o botão fica desativado: exporte as anotações e importe-as na máquina de treino.
 
    Requisitos da máquina de treino: os dados preparados (dados_deteccao, CBIS-DDSM e a planilha do
@@ -587,20 +593,21 @@
         "cdd_xlsx": "D:/cdd_cesm/Radiology-manual-annotations.xlsx", "cache": "D:/MARIA/dados_retreino"}
 
    O que pode ser retreinado (a PATOLOGIA benigno/maligno NÃO é retreinada):
-     Densidade .......... mamas com densidade confirmada E com a mamografia completa.
+     Densidade .......... mamas com densidade confirmada E com a mamografia completa (o ajuste usa a
+                          mesma rede do modelo em uso, indicada em modelo_densidade\densidade.json).
      Detector de lesões . mamografias completas em que todas as caixas do modelo foram revisadas
                           (lesão real sim/não), mais as lesões marcadas pelo usuário.
      Achado ............. lesões com achado confirmado E exame de confirmação informado
                           (lesões marcadas como falso positivo são ignoradas).
-   Mínimo de 10 casos utilizáveis por modelo (a aba mostra quantos há; modelos abaixo do mínimo são
+   Mínimo de 10 casos utilizáveis por modelo (a página mostra quantos há; modelos abaixo do mínimo são
    pulados). Com poucos casos o efeito tende a ser pequeno e o modelo atual costuma ser mantido; o
    ganho real aparece com dezenas a centenas de casos confirmados do seu serviço.
 
    Como usar: escolha os modelos, marque a caixa de confirmação e clique em "Retreinar o modelo".
    Tempo aproximado com GPU: densidade ~15 min, detector ~40 min, achado ~10 min (+ ~10 min na
    primeira vez, para preparar os recortes do achado). O retreino roda em segundo plano e continua
-   mesmo fechando o navegador; a aba mostra o andamento e se atualiza sozinha.
-   Se o retreino for interrompido (computador desligado, falta de memória), a aba avisa, os modelos
+   mesmo fechando o navegador; a página mostra o andamento e se atualiza sozinha.
+   Se o retreino for interrompido (computador desligado, falta de memória), a página avisa, os modelos
    em uso NÃO são alterados e o botão volta a ficar disponível.
 
    Proteções automáticas:
@@ -614,11 +621,11 @@
      - a versão anterior vai para modelo\historico\ (ficam as 3 últimas de cada modelo) e pode ser
        restaurada em "Versões anteriores dos modelos (restaurar)".
    O resultado de cada retreino (antes x depois, no teste fixo e nos casos guardados do usuário)
-   aparece na aba e fica em anotacoes\retreinos\ (relatório .json e log .txt).
+   aparece na página e fica em anotacoes\retreinos\ (relatório .json e log .txt).
 
  14.4 DESEMPENHO LOCAL E CALIBRAÇÃO DO LIMIAR (página "Anotações e retreino")
    Com casos do SEU serviço com patologia confirmada por BIÓPSIA, SEGUIMENTO (estável ≥ 2 anos) ou outro
-   exame padrão-ouro, a aba mostra: AUC local, sensibilidade e especificidade da prioridade alta, curva
+   exame padrão-ouro, a página mostra: AUC local, sensibilidade e especificidade da prioridade alta, curva
    de calibração no serviço e desempenho por densidade, faixa etária, tipo de achado e EQUIPAMENTO.
    "Aplicar calibração local" (administrador; exige 50 casos, com pelo menos 15 malignos e 15 benignos)
    recalibra a probabilidade e escolhe o limite de prioridade alta para a SENSIBILIDADE DESEJADA

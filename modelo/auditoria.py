@@ -9,6 +9,7 @@ de imagens, versão do modelo, hash do arquivo de resultado).
     python3 auditoria.py --verificar      confere a integridade da cadeia
     python3 auditoria.py --ultimos 20     mostra os últimos eventos
 """
+import sys
 import argparse
 import getpass
 import hashlib
@@ -91,6 +92,11 @@ def sha256_arquivo(caminho):
 
 
 if __name__ == "__main__":
+    for _fluxo in (sys.stdout, sys.stderr):          # Windows: saída redirecionada usa cp1252 e quebra com ✅/❌
+        try:
+            _fluxo.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--verificar", action="store_true")
     ap.add_argument("--ultimos", type=int, default=0)

@@ -141,6 +141,15 @@ def test_REQ_SAI_03_qualidade_detecta_imagem_inadequada():
     assert any("resolução baixa" in m for _, m in maria.checar_qualidade(baixa, {}, "completa"))
 
 
+def test_REQ_SAI_03b_regiao_breast_com_lado_nao_gera_aviso():
+    """BodyPartExamined 'RIGHT BREAST' / 'Left Breast' é mamografia: não pode gerar aviso de região."""
+    import maria
+    img = np.random.default_rng(0).uniform(0, 4000, (1200, 800))
+    for regiao in ("BREAST", "RIGHT BREAST", "Left Breast", "MAMA"):
+        assert not any("região" in m for _, m in maria.checar_qualidade(img, {"regiao": regiao}, "completa"))
+    assert any("região" in m for _, m in maria.checar_qualidade(img, {"regiao": "CHEST"}, "completa"))
+
+
 def test_REQ_SAI_04_resultado_incerto_sinalizado():
     import maria, torch
     maria.CONTEXTO["cal"] = None
@@ -246,7 +255,7 @@ def test_REQ_DEN_01_densidade_carrega_rede_do_json():
     import torch
     import maria
     pasta = RAIZ / "modelo/modelo_densidade"
-    cfg = json.loads((pasta / "densidade.json").read_text())
+    cfg = json.loads((pasta / "densidade.json").read_text(encoding="utf-8"))
     m = maria.modelo_densidade(cfg.get("arquitetura", "resnet50"))
     m.load_state_dict(torch.load(pasta / "densidade.pth", map_location="cpu"), strict=True)
     c = maria.ClassificadorDensidade(pasta, torch.device("cpu"))

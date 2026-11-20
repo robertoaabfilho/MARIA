@@ -10,6 +10,7 @@ importa/exporta o banco de anotações, administra usuários e vê a auditoria).
     python3 acesso.py --senha joana                                                        (troca a senha)
     python3 acesso.py --remover joana
 """
+import sys
 import argparse
 import getpass
 import hashlib
@@ -112,6 +113,11 @@ def autenticar(login, senha):
 
 
 if __name__ == "__main__":
+    for _fluxo in (sys.stdout, sys.stderr):          # Windows: saída redirecionada usa cp1252 e quebra com ✅/❌
+        try:
+            _fluxo.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--listar", action="store_true")
     ap.add_argument("--adicionar")

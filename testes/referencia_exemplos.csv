@@ -10,10 +10,10 @@ P_00066_esquerdo_mlo,baixa (nada detectado),sem lesão detectada,—,N/D,N/D,ok
 P_00118_direito_cc_modelo1,alta,Maligno,Massa/Nódulo,0.9805,0.9715,ok
 P_00118_direito_mlo_modelo1,alta,Maligno,Massa/Nódulo,0.8129,0.7626,ok
 P_00127_direito_cc_usuario1,alta,Maligno,Microcalcificação,0.6899,0.6275,atenção
-P_00127_direito_mlo_usuario1,alta,Maligno,Microcalcificação,0.7243,0.6642,atenção
+P_00127_direito_mlo_usuario1,alta,Maligno,Microcalcificação,0.7243,0.6642,ok
 P_00127_direito_mlo_modelo1,média,Maligno,Microcalcificação,0.5068,0.4444,atenção
 P_00127_direito_mlo_modelo2,alta,Maligno,Microcalcificação,0.6164,0.5517,atenção
-P_00127_direito_mlo_modelo3,alta,Maligno,Microcalcificação,0.8086,0.7576,atenção
+P_00127_direito_mlo_modelo3,alta,Maligno,Microcalcificação,0.8086,0.7576,ok
 pacienteA_esquerdo_cc_usuario1,alta,Maligno,Massa/Nódulo,0.7043,0.6427,atenção
 pacienteA_esquerdo_cc_modelo1,alta,Maligno,Massa/Nódulo,0.7925,0.7393,ok
 pacienteA_esquerdo_mlo_usuario1,alta,Maligno,Microcalcificação,0.8099,0.7591,ok

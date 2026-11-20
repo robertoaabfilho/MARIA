@@ -6,7 +6,6 @@ import os
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 import pytest
 
@@ -43,7 +42,7 @@ def test_REQ_INT_01_02_no_dicom_com_pacs_simulado(tmp_path):
            "destino": {"ae": "PACSSIM", "host": "127.0.0.1", "porta": 11123}, "espera_segundos": 4,
            "sem_mapas": True, "apagar_recebidos": True, "pasta_entrada": str(tmp_path / "entrada"),
            "pasta_saida": str(tmp_path / "saida")}
-    (tmp_path / "cfg.json").write_text(json.dumps(cfg))
+    (tmp_path / "cfg.json").write_text(json.dumps(cfg), encoding="utf-8")
     recebidos = []
 
     def guardar(e):

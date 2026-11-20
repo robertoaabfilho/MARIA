@@ -134,7 +134,7 @@ LEGENDA = {
                   "O MARIA prioriza casos; quem diagnostica é o radiologista. 'Não avaliar' = imagem fora do padrão.",
     "p_maligno_calibrada": "Probabilidade de malignidade calibrada (0 a 1), ajustada para se comportar como "
                            "probabilidade na população do CBIS-DDSM (lesões já suspeitas). Em outro serviço, "
-                           "recalibre com casos locais (aba Anotações e retreino).",
+                           "recalibre com casos locais (página Anotações e retreino).",
     "incerteza": "Discordância entre as 5 redes de patologia (desvio-padrão). Acima de 0,15 = resultado incerto.",
     "qualidade": "Controle de qualidade da imagem/resultado: ok, atenção (use com cautela) ou não usar.",
     "avisos_qualidade": "Motivos do controle de qualidade (modalidade, resolução, contraste, recorte pequeno, "
@@ -559,8 +559,10 @@ def processo_vivo(pid):
 
 def salvar_anotacoes(revisao, carimbo):
     """Grava as linhas revisadas no banco (anotacoes/anotacoes.csv) e copia as imagens para anotacoes/imagens."""
-    (ANOTACOES / "imagens").mkdir(parents=True, exist_ok=True)
     revisadas = revisao[revisao[CAMPOS_REVISAO].fillna("").astype(str).apply(lambda c: c.str.strip()).ne("").any(axis=1)]
+    if revisadas.empty:
+        return 0, 0
+    (ANOTACOES / "imagens").mkdir(parents=True, exist_ok=True)
     banco = ler_banco()
     novas, sem_imagem = [], 0
     for r in revisadas.to_dict("records"):
@@ -926,8 +928,8 @@ flowchart LR
                 tooltip=["densidade", "AUC", "lesões"]).properties(height=200, title="AUC da patologia por densidade")
             mostrar(st.altair_chart, graf, alt="AUC da patologia cai de 0,90 na densidade 1 para 0,74 na densidade 4")
         st.caption("A acurácia cai em mama densa (diferença de AUC densa × não densa: −0,068, IC95% −0,11 a −0,03). "
-                   "Validação externa no CDD-CESM (outro hospital, mamografia digital): AUC entre 0,83 e 0,91, conforme "
-                   "o recorte da análise. Os modelos finais também foram treinados com o teste oficial do CBIS-DDSM; "
+                   "Validação externa no CDD-CESM (outro hospital, mamografia digital): AUC 0,815 em 650 imagens com lesão "
+                   "(detalhe por subgrupo mais abaixo, em *Validação externa por subgrupo*). Os modelos finais também foram treinados com o teste oficial do CBIS-DDSM; "
                    "por isso a estimativa acima é a da validação cruzada.")
     with st.container(border=True):
         st.markdown("**Achado** — teste oficial do CBIS-DDSM, 704 lesões (378 massas, 326 calcificações)")
@@ -1942,7 +1944,7 @@ def pagina_resultados():
                        "Veja o log da execução abaixo.", icon=":material/warning:")
             with st.expander("Logs da execução", icon=":material/terminal:", expanded=True):
                 st.code(res["log"].get("maria", "")[-6000:], language="text")
-            st.stop()   # a aba de resultados é o último trecho da página
+            st.stop()   # a seção de resultados é o último trecho da página
 
         # ---- resumo ----
         versoes = sorted(tab["versao_modelo"].dropna().unique())
