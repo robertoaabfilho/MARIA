@@ -9,7 +9,10 @@ o modelo novo é ajustado com os casos do usuário MISTURADOS aos dados originai
 Regras de segurança:
   - parte do treino: ajuste fino a partir do modelo ATUAL (não do zero);
   - 20% das mamas anotadas pelo usuário ficam de fora do treino, para conferir o resultado;
-  - o modelo novo SÓ SUBSTITUI o atual se não piorar no teste fixo (e nos casos do usuário guardados);
+  - o modelo novo só vira CANDIDATO se não piorar no teste fixo (e nos casos do usuário guardados);
+  - MODO SOMBRA: o candidato fica em modelo/candidato/ e roda em paralelo nas classificações seguintes, SEM mudar
+    o resultado; o administrador compara os dois nos casos confirmados e aprova (--promover) ou descarta
+    (--descartar). Só então o modelo em uso muda;
   - a versão anterior vai para modelo/historico/<data>/ e pode ser restaurada (--restaurar).
   - PATOLOGIA (benigno/maligno) NÃO é retreinada. ACHADO só usa casos com exame de confirmação
     (biópsia, ressonância ou outro padrão-ouro) informado.
@@ -26,6 +29,9 @@ Uso:
     python3 retreinar.py --modelos densidade detector achado [--rapido]
     python3 retreinar.py --versoes                         (lista versões guardadas)
     python3 retreinar.py --restaurar 20261119_101500       (volta àquela versão)
+    python3 retreinar.py --candidatos                      (JSON: candidatos em modo sombra)
+    python3 retreinar.py --promover densidade              (candidato aprovado -> modelo em uso)
+    python3 retreinar.py --descartar densidade             (apaga o candidato)
 Caminhos dos dados: modelo/retreino_config.json (opcional) ou os padrões em CAMINHOS_PADRAO.
 ================================================================================
 """
@@ -48,6 +54,7 @@ AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 ANOTACOES = RAIZ / "anotacoes"
 HISTORICO = AQUI / "historico"
+CANDIDATO = AQUI / "candidato"
 CAMINHOS_PADRAO = {
     "dados_deteccao": "~/MARIA/dados/preparados/deteccao",          # mamografias reduzidas + caixas (CBIS e CDD)
     "cbis": "~/CBIS_DDSM",                               # CBIS-DDSM organizado + planilhas
@@ -225,6 +232,61 @@ def restaurar(versao):
                 shutil.copy2(origem / rel, AQUI / rel)
     print(f"✅ restaurado(s) {', '.join(ms)} da versão {versao} (o estado anterior ficou em {carimbo})")
     auditar("modelo restaurado", {"versao": versao, "modelos": ms, "estado_anterior": carimbo})
+
+
+def candidatos():
+    arq = CANDIDATO / "candidato.json"
+    info = json.loads(arq.read_text(encoding="utf-8")) if arq.is_file() else {}
+    return {m: i for m, i in info.items() if (CANDIDATO / ARQUIVOS_MODELO[m][0]).is_file()}
+
+
+def salvar_candidato(m, estado, info_pth, carimbo, antes, depois, n_casos):
+    """Modelo retreinado aprovado nos critérios -> modelo/candidato/ (modo sombra). Os .json de configuração vêm
+    do modelo em uso (a arquitetura e o limiar não mudam no retreino)."""
+    import torch
+    for rel in ARQUIVOS_MODELO[m]:
+        (CANDIDATO / rel).parent.mkdir(parents=True, exist_ok=True)
+        if rel != info_pth:
+            shutil.copy2(AQUI / rel, CANDIDATO / rel)
+    torch.save(estado, CANDIDATO / info_pth)
+    info = candidatos()
+    info[m] = {"carimbo": carimbo, "criado_em": time.strftime("%Y-%m-%d %H:%M"), "casos_usuario": n_casos,
+               "antes": antes, "depois": depois}
+    (CANDIDATO / "candidato.json").write_text(json.dumps(info, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def promover(m):
+    info = candidatos()
+    if m not in info:
+        raise SystemExit(f"❌ não há candidato de {m}")
+    carimbo = time.strftime("%Y%m%d_%H%M%S") + "_antes_de_promover"
+    guardar_versao([m], carimbo)
+    for rel in ARQUIVOS_MODELO[m]:
+        shutil.copy2(CANDIDATO / rel, AQUI / rel)
+    descartar(m, silencioso=True)
+    try:
+        sys.path.insert(0, str(AQUI))
+        import manifesto  # noqa: E402
+        manifesto.gerar(f"candidato de {m} ({info[m]['carimbo']}) aprovado após o modo sombra")
+    except Exception as e:
+        print(f"⚠️  não consegui atualizar o manifesto: {e}")
+    print(f"✅ {m}: candidato {info[m]['carimbo']} em uso (o anterior ficou em historico/{carimbo})")
+    auditar("candidato aprovado (modelo trocado)", {"modelo": m, "candidato": info[m]["carimbo"],
+                                                     "estado_anterior": carimbo})
+
+
+def descartar(m, silencioso=False):
+    info = candidatos()
+    for rel in ARQUIVOS_MODELO[m]:
+        (CANDIDATO / rel).unlink(missing_ok=True)
+    c = info.pop(m, {})
+    if info:
+        (CANDIDATO / "candidato.json").write_text(json.dumps(info, indent=2, ensure_ascii=False), encoding="utf-8")
+    else:
+        shutil.rmtree(CANDIDATO, ignore_errors=True)
+    if not silencioso:
+        print(f"🗑️ candidato de {m} descartado")
+        auditar("candidato descartado", {"modelo": m, "candidato": c.get("carimbo", "")})
 
 
 # =============================================================================
@@ -610,6 +672,9 @@ def main():
     ap.add_argument("--rapido", action="store_true", help="teste do processo: poucas imagens e 1 época (não use de verdade)")
     ap.add_argument("--versoes", action="store_true")
     ap.add_argument("--restaurar", default=None)
+    ap.add_argument("--candidatos", action="store_true", help="lista os candidatos em modo sombra (JSON)")
+    ap.add_argument("--promover", choices=list(ARQUIVOS_MODELO), help="candidato aprovado passa a ser o modelo em uso")
+    ap.add_argument("--descartar", choices=list(ARQUIVOS_MODELO), help="apaga o candidato")
     args = ap.parse_args()
 
     if args.verificar:
@@ -620,6 +685,15 @@ def main():
         return
     if args.restaurar:
         restaurar(args.restaurar)
+        return
+    if args.candidatos:
+        print(json.dumps(candidatos(), ensure_ascii=False))
+        return
+    if args.promover:
+        promover(args.promover)
+        return
+    if args.descartar:
+        descartar(args.descartar)
         return
 
     v = verificar()
@@ -654,15 +728,11 @@ def main():
             relatorio["modelos"][m] = {"situacao": "erro", "motivo": str(e)}
             continue
         if aceita and not args.rapido:
-            guardar_versao([m], carimbo)
-            torch.save(estado, AQUI / info["pth"])
-            situacao = "substituído"
-            try:
-                import manifesto  # noqa: E402
-                manifesto.gerar(f"retreino {carimbo}: {m} substituído com anotações do usuário")
-            except Exception as e:
-                log(f"⚠️  não consegui atualizar o manifesto: {e}")
-            log(f"✅ {m}: modelo novo NÃO piorou no teste fixo — substituiu o atual (anterior guardado em historico/{carimbo})")
+            salvar_candidato(m, estado, info["pth"], carimbo, antes, depois, n)
+            situacao = "candidato (modo sombra)"
+            log(f"✅ {m}: modelo novo NÃO piorou no teste fixo — virou CANDIDATO em modo sombra (modelo/candidato/). "
+                "Ele roda em paralelo nas próximas classificações sem mudar o resultado; aprove ou descarte na página "
+                "Anotações e retreino.")
         else:
             situacao = "mantido"
             log(f"↩️ {m}: modelo atual mantido ("

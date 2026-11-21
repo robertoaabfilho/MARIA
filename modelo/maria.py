@@ -122,6 +122,7 @@ PASTA_ACHADO = PASTA_SCRIPT / "modelo_achado"
 PASTA_PATOLOGIA = PASTA_SCRIPT / "modelo_patologia"
 PASTA_DETECCAO = PASTA_SCRIPT / "modelo_deteccao"
 PASTA_DENSIDADE = PASTA_SCRIPT / "modelo_densidade"
+PASTA_CANDIDATO = PASTA_SCRIPT / "candidato"      # modelos retreinados em MODO SOMBRA (aguardando aprovação)
 MARGEM_RECORTE = 20                # px em volta da caixa, como nos recortes do CBIS-DDSM
 
 NOMES_DENSIDADE = {1: "adiposa", 2: "fibroglandular dispersa", 3: "heterogeneamente densa", 4: "extremamente densa"}
@@ -675,6 +676,19 @@ ORIGEM_RECORTE, ORIGEM_USUARIO, ORIGEM_MODELO, ORIGEM_NENHUMA = (
 
 # contexto da execução (preenchido no main): calibração, pasta dos mapas de calor, versão do modelo
 CONTEXTO = {"cal": None, "pasta_mapas": None, "mapas": True, "modelos_ctx": None}
+# MODO SOMBRA: modelos candidatos (retreinados) rodam em paralelo, SEM mudar o resultado; as saídas *_sombra servem
+# para comparar com o modelo em uso nos casos confirmados antes de o administrador aprovar a troca.
+SOMBRA = {"densidade": None, "detector": None, "achado": None, "versao": ""}
+
+
+def achado_sombra(imgs_pil, device, outras_fontes=()):
+    """Achado pelo modelo candidato (modo sombra) nos mesmos recortes, combinado como no resultado em uso (média com
+    o multivista, que não é retreinado, quando houver); "" se não houver candidato."""
+    m = SOMBRA["achado"]
+    if m is None or not imgs_pil:
+        return ""
+    fontes = [torch.stack([prob_achado_recorte(m, im, device) for im in imgs_pil]).mean(0), *outras_fontes]
+    return NOMES_ACHADO[int(torch.stack(fontes).mean(0).argmax())]
 ENTRADA_RECORTE, ENTRADA_CONTEXTO = "recorte", "recorte + contexto"
 CTX_ESCALA = 0.30          # janela de contexto: pixel original -> pixel da tela (mesma do treino do modelo de contexto)
 
@@ -912,6 +926,21 @@ def prob_achado_multivista(modelo, img_a, img_b, device):
     return F.softmax(modelo(a, b), 1)[0]
 
 
+def aplicar_calibracao_local(cal, local):
+    """calibracao.json + calibracao_local.json (criada no dashboard com casos confirmados do serviço). Cada parte é
+    opcional: "patologia" (Platt da P da lesão; vale para recorte e recorte + contexto, porque é ajustada nas P que o
+    serviço realmente produziu), "prioridade" (limites da prioridade da lesão) e "hibrido_gmic" (limites da
+    prioridade da MAMA; a escala do escore continua a do CMMD)."""
+    cal = {k: (dict(v) if isinstance(v, dict) else v) for k, v in cal.items()}
+    if "patologia" in local:
+        cal["patologia"] = cal["patologia_contexto"] = local["patologia"]
+    if "prioridade" in local:
+        cal["prioridade"] = cal["prioridade_contexto"] = local["prioridade"]
+    if "hibrido_gmic" in local and "hibrido_gmic" in cal:
+        cal["hibrido_gmic"].update({k: local["hibrido_gmic"][k] for k in ("alta", "media")})
+    return cal
+
+
 def prioridade_de(p_cal, desvio, nivel_qualidade, chave="prioridade"):
     """Prioridade de leitura para o radiologista (o MARIA prioriza; quem diagnostica é o radiologista).
     chave "prioridade_contexto" (limites próprios do recorte + contexto) cai em "prioridade" se não existir."""
@@ -992,6 +1021,7 @@ def diagnosticar(amostra_id, vistas, m_recorte, m_multivista, modelos_mc, device
             print(f"   ⚠️  {amostra_id}: falha no multivista ({e})")
     return resultado(amostra_id, ORIGEM_RECORTE, " + ".join(sorted(usadas)) or "nenhuma", ps_mal, fontes_ach, limiar,
                      avisos=avisos, mapas=mapas, meta=meta, patologia_entrada=ENTRADA_RECORTE,
+                     achado_sombra=achado_sombra(list(imgs.values()), device, fontes_ach[1:]),
                      imagem=vistas[next(iter(vistas))]["caminho"], concordancia="",
                      vista=" + ".join(sorted(v for v in vistas if v != "SEM_VISTA")))
 
@@ -1043,9 +1073,11 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
         recorte = arr[cy0:cy1, cx0:cx1]
         p_mal = (prob_maligno_contexto(modelos_mc, modelos_ctx, recorte, img_u8, (x0, y0, x1, y1)) if modelos_ctx
                  else prob_maligno(modelos_mc, recorte, device))
+        img_ach = entrada_achado(recorte, eh_dicom)
         return ([p_mal],
-                [prob_achado_recorte(m_recorte, entrada_achado(recorte, eh_dicom), device)],
-                avisos_img + checar_qualidade(recorte, {}, "recorte"), [mapa_calor(modelos_mc, recorte, device, nome)])
+                [prob_achado_recorte(m_recorte, img_ach, device)],
+                avisos_img + checar_qualidade(recorte, {}, "recorte"), [mapa_calor(modelos_mc, recorte, device, nome)],
+                achado_sombra([img_ach], device))
 
     linhas = []
     for n, (cx, lesao) in enumerate(do_usuario, 1):
@@ -1055,9 +1087,10 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
             conc = ("o modelo também detectou" if any(coincide(m[:4], cx) for m in do_modelo)
                     else "o modelo NÃO detectou")
         amostra = id_usuario(imagem_id, lesao or n)
-        p, a, av, mp = classificar(*cx, amostra)
+        p, a, av, mp, ach_s = classificar(*cx, amostra)
         linhas.append(resultado(amostra, ORIGEM_USUARIO, f"mamografia completa ({nome_img})",
-                                p, a, limiar, avisos=av, mapas=mp, meta=meta, imagem=caminho, x0=round(cx[0]),
+                                p, a, limiar, avisos=av, mapas=mp, meta=meta, imagem=caminho, achado_sombra=ach_s,
+                                x0=round(cx[0]),
                                 y0=round(cx[1]), x1=round(cx[2]), y1=round(cx[3]), score_deteccao="",
                                 concordancia=conc, _imagem=imagem_id, vista=vista,
                                 patologia_entrada=entrada))
@@ -1068,9 +1101,10 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
         else:
             conc = ""
         amostra = f"{imagem_id}_modelo{n}"
-        p, a, av, mp = classificar(*m[:4], amostra)
+        p, a, av, mp, ach_s = classificar(*m[:4], amostra)
         linhas.append(resultado(amostra, ORIGEM_MODELO, f"mamografia completa ({nome_img})",
-                                p, a, limiar, avisos=av, mapas=mp, meta=meta, imagem=caminho, x0=round(m[0]),
+                                p, a, limiar, avisos=av, mapas=mp, meta=meta, imagem=caminho, achado_sombra=ach_s,
+                                x0=round(m[0]),
                                 y0=round(m[1]), x1=round(m[2]), y1=round(m[3]), score_deteccao=f"{m[4]:.3f}",
                                 concordancia=conc, _imagem=imagem_id, vista=vista,
                                 patologia_entrada=entrada))
@@ -1095,7 +1129,8 @@ CAMPOS_SAIDA = ["amostra", "mama", "vista", "prioridade", "prioridade_origem", "
                 "prioridade_lesao", "p_maligno_calibrada", "incerteza", "qualidade",
                 "avisos_qualidade", "origem_lesao", "imagens_usadas", "patologia", "conf_patologia", "p_maligno",
                 "achado", "conf_achado", "densidade", "densidade_origem", "aviso_densidade", "concordancia",
-                "score_deteccao", "patologia_entrada", "limiar_maligno", "idade", "fabricante", "mapa_calor", "mapa_gmic", "versao_modelo", "calibracao", "imagem", "x0", "y0", "x1", "y1"]
+                "score_deteccao", "patologia_entrada", "limiar_maligno", "idade", "fabricante", "mapa_calor", "mapa_gmic", "versao_modelo", "versao_sombra", "achado_sombra",
+                "densidade_sombra", "sombra_detectou", "caixas_sombra", "calibracao", "imagem", "x0", "y0", "x1", "y1"]
 
 
 def main():
@@ -1119,6 +1154,8 @@ def main():
     ap.add_argument("--modelo_multivista", default=str(PASTA_ACHADO / "resnet50_multivista.pth"))
     ap.add_argument("--sem_gmic", action="store_true",
                     help="não usa o GMIC (prioridade da mama só pelo MARIA, como antes do híbrido)")
+    ap.add_argument("--sem_sombra", action="store_true",
+                    help="não roda os modelos candidatos (retreinados, aguardando aprovação) em modo sombra")
     ap.add_argument("--sem_mapas", action="store_true", help="não gera os mapas de calor (mais rápido, sobretudo na CPU)")
     args = ap.parse_args()
 
@@ -1150,12 +1187,12 @@ def main():
         local = json.loads(arq_local.read_text(encoding="utf-8"))
         # a calibração local é ajustada nas P que o serviço realmente produziu (recorte e recorte + contexto):
         # vale para as duas saídas da patologia
-        CONTEXTO["cal"]["patologia"] = CONTEXTO["cal"]["patologia_contexto"] = local["patologia"]
-        if "prioridade" in local:
-            CONTEXTO["cal"]["prioridade"] = CONTEXTO["cal"]["prioridade_contexto"] = local["prioridade"]
+        CONTEXTO["cal"] = aplicar_calibracao_local(CONTEXTO["cal"], local)
         assinatura = manifesto.sha256(arq_local)[:8]
         versao_modelo = f"{versao_modelo}+cal-local-{assinatura}"
-        calibracao_usada = f"local ({local['patologia'].get('n', '?')} casos, {local.get('criada_em', '')})"
+        partes = [f"lesão: {local['patologia'].get('n', '?')} casos" if "patologia" in local else "",
+                  f"mama: {local['hibrido_gmic'].get('n', '?')} mamas" if "hibrido_gmic" in local else ""]
+        calibracao_usada = f"local ({'; '.join(x for x in partes if x)}; {local.get('criada_em', '')})"
         print(f"🎯 Calibração local em uso: {calibracao_usada}")
     CONTEXTO["mapas"] = not args.sem_mapas
     CONTEXTO["pasta_mapas"] = saida.parent / f"{saida.stem}_mapas"
@@ -1209,6 +1246,26 @@ def main():
             print("⚠️  GMIC com problema (" + "; ".join(problemas[:3]) + "): prioridade só pelo MARIA. "
                   "Baixe de novo: python config/baixar_gmic.py")
     m_dens = ClassificadorDensidade(args.pasta_densidade, device) if completas and tem_densidade else None
+    if not args.sem_sombra and PASTA_CANDIDATO.is_dir():
+        try:
+            info_c = json.loads((PASTA_CANDIDATO / "candidato.json").read_text(encoding="utf-8"))
+        except Exception:
+            info_c = {}
+        cd = PASTA_CANDIDATO
+        try:
+            if completas and all((cd / "modelo_densidade" / f).is_file() for f in ("densidade.pth", "densidade.json")):
+                SOMBRA["densidade"] = ClassificadorDensidade(cd / "modelo_densidade", device)
+            if detectar and all((cd / "modelo_deteccao" / f).is_file() for f in ("detector_lesao.pth", "detector_lesao.json")):
+                SOMBRA["detector"] = DetectorLesao(cd / "modelo_deteccao", device)
+            if (cd / "modelo_achado" / "resnet50_multitask_mama_do_zero.pth").is_file():
+                SOMBRA["achado"] = carregar(MultiTaskResNet50(), cd / "modelo_achado" / "resnet50_multitask_mama_do_zero.pth",
+                                            device)
+        except Exception as e:
+            print(f"⚠️  não consegui carregar os modelos candidatos (modo sombra): {e}")
+        ativos = [m for m in ("densidade", "detector", "achado") if SOMBRA[m] is not None]
+        if ativos:
+            SOMBRA["versao"] = ";".join(f"{m}:{info_c.get(m, {}).get('carimbo', '?')}" for m in ativos)
+            print(f"   modo sombra (não muda o resultado): candidato(s) {', '.join(ativos)}")
     if completas and not tem_densidade:
         print(f"⚠️  classificador de densidade não encontrado em {args.pasta_densidade}: densidade não estimada.")
 
@@ -1222,6 +1279,7 @@ def main():
 
     print("\n🔎 Diagnosticando...")
     resultados, probs_mama, gmic_img = [], {}, {}
+    probs_sombra, caixas_sombra = {}, {}
     with torch.no_grad():
         for a, v in progresso(sorted(recortes.items()), "Recortes"):
             r = dict(diagnosticar(a, v, m_recorte, m_multivista, modelos_mc, device, args.limiar), _mama=mama_de[a])
@@ -1232,7 +1290,8 @@ def main():
             resultados.append(r)
         for a, info in progresso(sorted(completas.items()), "Mamografias completas"):
             arr_c = None
-            if (m_dens and mama_de[a] not in dens_informada) or gmic is not None:
+            if (m_dens and mama_de[a] not in dens_informada) or gmic is not None or SOMBRA["densidade"] \
+                    or SOMBRA["detector"]:
                 try:
                     arr_c = ler_imagem(info["caminho"])[0]
                 except Exception as e:
@@ -1242,6 +1301,16 @@ def main():
                     probs_mama.setdefault(mama_de[a], []).append(m_dens.estimar(arr_c))
                 except Exception as e:
                     print(f"   ⚠️  {a}: falha ao estimar a densidade ({e})")
+            if arr_c is not None and SOMBRA["densidade"] is not None:
+                try:
+                    probs_sombra.setdefault(mama_de[a], []).append(SOMBRA["densidade"].estimar(arr_c))
+                except Exception as e:
+                    print(f"   ⚠️  {a}: falha na densidade (sombra) ({e})")
+            if arr_c is not None and SOMBRA["detector"] is not None:
+                try:
+                    caixas_sombra[a] = SOMBRA["detector"].detectar(arr_c, SOMBRA["detector"].limiar)
+                except Exception as e:
+                    print(f"   ⚠️  {a}: falha no detector (sombra) ({e})")
             if arr_c is not None and gmic is not None and (detectar or caixas_usuario.get(a)):
                 qual = checar_qualidade(arr_c, metadados_imagem(info["caminho"]), "completa")
                 if not any(n == "não usar" for n, _ in qual):
@@ -1261,6 +1330,19 @@ def main():
     else:
         for r in resultados:
             r.update(prioridade_lesao=r.get("prioridade", ""), prioridade_origem="lesão (MARIA)")
+
+    if SOMBRA["versao"]:
+        dens_sombra = {m: int(np.mean(ps, axis=0).argmax()) + 1 for m, ps in probs_sombra.items()}
+        for r in resultados:
+            r["versao_sombra"] = SOMBRA["versao"]
+            if r["_mama"] in dens_sombra:
+                r["densidade_sombra"] = dens_sombra[r["_mama"]]
+            cs = caixas_sombra.get(r.get("_imagem"))
+            if cs is not None:
+                r["caixas_sombra"] = len(cs)
+                if r.get("x0") not in (None, ""):
+                    caixa = (r["x0"], r["y0"], r["x1"], r["y1"])
+                    r["sombra_detectou"] = "sim" if any(coincide(c[:4], caixa) for c in cs) else "não"
 
     # densidade por mama: a informada pelo usuário (prioridade) ou a inferida (média das vistas)
     dens_modelo = {m: int(np.mean(ps, axis=0).argmax()) + 1 for m, ps in probs_mama.items()}

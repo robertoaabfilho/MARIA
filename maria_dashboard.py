@@ -537,9 +537,15 @@ COLUNAS_ANOTACAO = ["id", "rodada", "data", "amostra", "mama", "vista", "origem_
                     "x0", "y0", "x1", "y1", "patologia_modelo", "achado_modelo", "densidade_modelo",
                     "densidade_origem", "lesao_real", "patologia_confirmada", "achado_confirmado",
                     "exame_confirmacao", "densidade_confirmada", "observacao", "p_maligno", "p_maligno_calibrada",
-                    "prioridade", "idade", "fabricante", "versao_modelo"]
-CAMPOS_REVISAO = ["lesao_real", "patologia_confirmada", "achado_confirmado", "exame_confirmacao",
+                    "prioridade", "idade", "fabricante", "versao_modelo", "mama_confirmada", "concordancia",
+                    "escore_mama", "p_gmic_mama", "prioridade_mama", "prioridade_lesao", "versao_sombra",
+                    "achado_sombra", "densidade_sombra", "sombra_detectou", "caixas_sombra"]
+CAMPOS_REVISAO = ["lesao_real", "patologia_confirmada", "achado_confirmado", "mama_confirmada", "exame_confirmacao",
                   "densidade_confirmada", "observacao"]
+# copiados do resultado para o banco (desempenho local por mama e comparação do modo sombra)
+CAMPOS_COPIADOS = ("p_maligno", "p_maligno_calibrada", "prioridade", "idade", "fabricante", "versao_modelo",
+                   "concordancia", "escore_mama", "p_gmic_mama", "prioridade_mama", "prioridade_lesao", "versao_sombra",
+                   "achado_sombra", "densidade_sombra", "sombra_detectou", "caixas_sombra")
 FAIXAS_ETARIAS = ["< 40", "40–49", "50–59", "60–69", "≥ 70"]
 EXAMES_CONFIRMACAO = ["Biópsia (anatomopatológico)", "Seguimento (estável por ≥ 2 anos)", "Ressonância magnética",
                       "Ultrassonografia",
@@ -606,7 +612,7 @@ def salvar_anotacoes(revisao, carimbo):
             "densidade_modelo": "" if pd.isna(r.get("densidade")) else str(r.get("densidade")),
             "densidade_origem": r.get("densidade_origem") or "",
             **{c: "" if r.get(c) is None or (isinstance(r.get(c), float) and np.isnan(r.get(c))) else str(r.get(c))
-               for c in ("p_maligno", "p_maligno_calibrada", "prioridade", "idade", "fabricante", "versao_modelo")},
+               for c in CAMPOS_COPIADOS},
         })
         for c in ("x0", "y0", "x1", "y1"):
             linha[c] = "" if pd.isna(r.get(c)) else str(int(r[c]))
@@ -716,6 +722,7 @@ def sens_espec(p, y, limiar):
 sys.path.insert(0, str(AQUI / "modelo"))
 import acesso  # noqa: E402
 import anonimizacao  # noqa: E402
+import desempenho_local as DL  # noqa: E402
 import auditoria  # noqa: E402
 
 TEMPO_SESSAO_MIN = 30          # sem uso por este tempo, pede o login de novo
@@ -1769,21 +1776,174 @@ def mostrar_ultima_classificacao(res):
                 st.code("\n".join(log.splitlines()[-40:]), language="text")
 
 
-def pagina_anotacoes():
-    st.subheader("Banco de anotações")
-    banco = ler_banco()
-    arq_banco = ANOTACOES / "anotacoes.csv"
-    versao_banco = arq_banco.stat().st_mtime if arq_banco.is_file() else 0.0
+def _ic_txt(v, fmt=".0%"):
+    """'IC 95% a–b' (ou '' se não houver)."""
+    if v is None or len(v) < 3 or any(x is None or (isinstance(x, float) and np.isnan(x)) for x in v[1:]):
+        return ""
+    return f"IC 95% {format(v[1], fmt)}–{format(v[2], fmt)}".replace(".", ",")
+
+
+def metrica_ic(rotulo, v, fmt=".0%", ajuda=None):
+    """st.metric com o intervalo de confiança embaixo (v = (valor, inf, sup))."""
+    valor = "—" if v is None or v[0] is None or (isinstance(v[0], float) and np.isnan(v[0])) else \
+        format(v[0], fmt).replace(".", ",")
+    st.metric(rotulo, valor, delta=_ic_txt(v, fmt) or None, delta_color="off", delta_arrow="off", border=True, help=ajuda)
+
+
+SELO_ESTABILIDADE = {"ok": ("números estáveis", "green"), "instável": ("poucos casos: números instáveis", "orange"),
+                     "insuficiente": ("casos insuficientes", "gray")}
+
+
+def selo_estabilidade(y):
+    txt, cor = SELO_ESTABILIDADE[DL.estabilidade(y)]
+    st.badge(txt, color=cor, icon=":material/info:")
+
+
+def ler_calibracoes():
+    cal = json.loads((pasta_modelo / "calibracao.json").read_text(encoding="utf-8")) \
+        if (pasta_modelo / "calibracao.json").is_file() else {}
+    arq = pasta_modelo / "calibracao_local.json"
+    local = json.loads(arq.read_text(encoding="utf-8")) if arq.is_file() else None
+    return cal, local, arq
+
+
+def limites_mama(cal, local):
+    """Limites (alta, média) da prioridade da MAMA em uso: os locais, se houver; senão os do CMMD."""
+    h = dict(cal.get("hibrido_gmic") or {})
+    if local and "hibrido_gmic" in local:
+        h.update({k: local["hibrido_gmic"][k] for k in ("alta", "media")})
+    return h
+
+
+def referencias_externas():
+    """Sensibilidade da prioridade alta medida fora (CMMD, metade B): referência para o monitoramento."""
+    try:
+        B = json.loads((pasta_modelo / "desempenho.json").read_text(encoding="utf-8"))["hibrido_gmic"]["cmmd_metade_B"]
+        return B["alta_B"]["híbrido"]["sens"], B["alta_B"]["MARIA (em uso)"]["sens"]
+    except Exception:
+        return 0.80, 0.78
+
+
+def candidatos_sombra():
+    try:
+        r = subprocess.run([sys.executable, "retreinar.py", "--candidatos"], cwd=str(pasta_modelo), capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", timeout=60,
+                           env=dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8"))
+        return json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception:
+        return {}
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def resultados_recentes(dias=90, maximo=40):
+    """Linhas dos results_*.csv das rodadas recentes (pasta resultados/), com a coluna 'rodada'."""
+    if not SAIDAS.is_dir():
+        return pd.DataFrame()
+    limite = time.time() - dias * 86400
+    arqs = sorted((f for f in SAIDAS.glob("results_*.csv") if f.stat().st_mtime >= limite), reverse=True)[:maximo]
+    partes = []
+    for f in arqs:
+        try:
+            d = pd.read_csv(f, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+            partes.append(d.assign(rodada=f.stem.replace("results_", ""), _arquivo=str(f)))
+        except Exception:
+            continue
+    return pd.concat(partes, ignore_index=True) if partes else pd.DataFrame()
+
+
+def abrir_rodada_para_revisar(arquivo, rodada, amostra):
+    """Carrega uma rodada antiga na página Resultados, já com a lesão escolhida."""
+    df = pd.read_csv(arquivo)
+    df["p_maligno"] = pd.to_numeric(df["p_maligno"], errors="coerce")
+    img = next((Path(x) for x in df.get("imagem", pd.Series(dtype=str)).dropna().astype(str) if x), None)
+    st.session_state.resultado = {"pasta": str(img.parent) if img else str(SAIDAS), "carimbo": rodada, "df": df,
+                                  "log": {"maria": f"(rodada {rodada} reaberta para revisão a partir de {arquivo})"},
+                                  "limiar": None, "limiar_det": 0.5}
+    st.session_state.lesao_sel = amostra
+    registrar("rodada reaberta para revisão", {"rodada": rodada})
+    st.switch_page(PAGINA_RESULTADOS)
+
+
+def painel_pendencias(les, mamas, sit, cands):
+    """O que falta em cada etapa (Anotar -> Medir -> Calibrar -> Retreinar)."""
+    y_m = mamas["y"].to_numpy() if len(mamas) else np.array([])
+    def falta(y, total, classe):
+        return max(0, total - len(y)), max(0, classe - int(y.sum())), max(0, classe - int((y == 0).sum()))
+
+    def txt(y, total, classe):
+        t, m, b = falta(y, total, classe)
+        if not (t or m or b):
+            return None
+        return ", ".join(x for x in (f"{t} casos" if t else "", f"{m} malignos" if m else "",
+                                     f"{b} não malignos" if b else "") if x)
+    cols = st.columns(4)
+    etapas = [
+        ("1. Anotar", f"{len(mamas)} mama(s) e {len(les)} lesão(ões) confirmadas no banco",
+         None if len(mamas) or len(les) else "confirme casos na página Resultados ou pela fila de casos (aba Anotar)"),
+        ("2. Medir", "desempenho local com IC 95%",
+         (f"faltam {txt(y_m, DL.MINIMO['estavel_total'], DL.MINIMO['estavel_por_classe'])} (mamas) para números "
+          "estáveis") if txt(y_m, DL.MINIMO['estavel_total'], DL.MINIMO['estavel_por_classe']) else None),
+        ("3. Calibrar", "probabilidade da lesão e limites da prioridade da mama",
+         (f"faltam {txt(y_m, DL.MINIMO['calibrar_total'], DL.MINIMO['calibrar_por_classe'])} (mamas)")
+         if txt(y_m, DL.MINIMO['calibrar_total'], DL.MINIMO['calibrar_por_classe']) else None),
+        ("4. Retreinar", (f"{len(cands)} candidato(s) em modo sombra" if cands else "densidade, detector e achado"),
+         None if sit.get("disponivel") else "só na máquina com os dados completos de treino"),
+    ]
+    for c, (titulo, texto, pend) in zip(cols, etapas):
+        with c.container(border=True):
+            st.markdown(f"**{titulo}**")
+            st.caption(texto)
+            if pend:
+                st.badge(pend, color="orange", icon=":material/pending:")
+            else:
+                st.badge("pronto", color="green", icon=":material/check:")
+
+
+def aba_anotar(banco, arq_banco):
+    n_mamas_conf = len(DL.mamas_confirmadas(banco))
     with st.container(horizontal=True):
         st.metric("Lesões anotadas", len(banco), border=True)
-        st.metric("Mamas", int(banco["mama"].nunique()) if len(banco) else 0, border=True)
+        st.metric("Mamas com confirmação", n_mamas_conf, border=True,
+                  help="Mamas com rótulo confirmado (maligna, benigna ou normal) por exame válido.")
         st.metric("Com exame de confirmação", int((banco["exame_confirmacao"] != "").sum()) if len(banco) else 0,
                   border=True)
         st.metric("Caixas revisadas (lesão real?)", int(banco["lesao_real"].isin(["sim", "não"]).sum()) if len(banco)
                   else 0, border=True)
     st.caption("As anotações são feitas na página **Resultados** (seção *Revisar e confirmar resultados*) e ficam na "
-               "pasta **anotacoes/** do MARIA, junto com cópias das imagens. São dados de pacientes: trate como "
-               "informação sensível (LGPD) e não compartilhe a pasta sem autorização.")
+               "pasta **anotacoes/** do MARIA, junto com cópias anonimizadas das imagens. Para a **prioridade da "
+               "mama**, preencha a coluna **mama confirmada** (maligna, benigna ou normal) com o exame que confirmou: "
+               "biópsia ou seguimento estável por ≥ 2 anos (normal).")
+
+    # ---- fila de casos para anotar (os mais úteis primeiro) ----
+    st.markdown("**Casos mais úteis para revisar agora**")
+    rec = resultados_recentes()
+    if rec.empty:
+        st.caption("Nenhuma rodada recente na pasta resultados/ (últimos 90 dias).")
+    else:
+        ja = set(banco["amostra"])
+        rec = rec[[anonimizacao.pseudonimizar(a, "LES") not in ja for a in rec["amostra"]]]
+        fab_banco = DL.mamas_confirmadas(banco)["fabricante"].value_counts().to_dict() if len(banco) else {}
+        cal_h = (ler_calibracoes()[0] or {}).get("hibrido_gmic")
+        fila = DL.fila_para_anotar(rec, set(), fab_banco, limite=40, cfg_hibrido=cal_h)
+        if fila.empty:
+            st.caption("Nada pendente: as rodadas recentes já foram revisadas ou não têm casos que chamem atenção.")
+        else:
+            st.caption("Ordem: GMIC e MARIA discordam > mama em prioridade alta/média sem lesão detectada > resultado "
+                       "incerto > equipamento com poucos casos > prioridade alta sem confirmação. Confirmar esses casos "
+                       "ensina mais ao MARIA (e à calibração local) com menos trabalho.")
+            vis = fila[["rodada", "amostra", "mama", "prioridade", "motivos", "pontos"]]
+            mostrar(st.dataframe, vis, hide_index=True, alt="Fila de casos sugeridos para revisão",
+                    column_config={"motivos": st.column_config.TextColumn("por que revisar", width="large"),
+                                   "pontos": st.column_config.NumberColumn("pontos", format="%d")})
+            with st.container(horizontal=True, vertical_alignment="bottom"):
+                rotulos = {i: f"{r.amostra} · rodada {r.rodada}" for i, r in zip(fila.index, fila.itertuples())}
+                escolha = st.selectbox("Abrir para revisar", list(rotulos), format_func=rotulos.get, key="fila_escolha")
+                if st.button("Abrir na página Resultados", icon=":material/open_in_new:", key="abrir_fila"):
+                    r = fila.loc[escolha]
+                    abrir_rodada_para_revisar(r["_arquivo"], r["rodada"], r["amostra"])
+
+    # ---- exportar / importar ----
+    st.markdown("**Exportar e importar o banco**")
     with st.container(horizontal=True, vertical_alignment="bottom"):
         if len(banco) and eh_admin():
             import zipfile
@@ -1828,52 +1988,85 @@ def pagina_anotacoes():
             st.success(f"{len(novo)} anotação(ões) importadas." +
                        (f" {ignorados} arquivo(s) estranho(s) no zip foram ignorados." if ignorados else ""),
                        icon=":material/check:")
-            versao_banco = arq_banco.stat().st_mtime
         except (zipfile.BadZipFile, ValueError, KeyError, pd.errors.ParserError) as e:
             st.error(f"Não consegui importar: {e}", icon=":material/error:")
     if len(banco):
         with st.expander("Ver o banco de anotações", icon=":material/table:"):
             mostrar(st.dataframe, banco, hide_index=True, alt="Banco de anotações do usuário")
 
-    # ---- desempenho local e calibração do limiar (itens: dados do mundo real e subgrupos) ----
-    st.subheader("Desempenho local e calibração do limiar")
-    st.caption("Usa os casos do SEU serviço anotados com **patologia confirmada por biópsia, seguimento (estável "
-               "por ≥ 2 anos) ou outro exame padrão-ouro**. Mostra se o modelo funciona nos seus equipamentos e "
-               "pacientes, e permite recalibrar a probabilidade e os limites de prioridade para o serviço.")
-    conf = banco[banco["patologia_confirmada"].isin(["Benigno", "Maligno"])
-                 & banco["exame_confirmacao"].isin(EXAMES_VALIDOS_PATOLOGIA) & (banco["lesao_real"] != "não")].copy()
-    conf["p"] = pd.to_numeric(conf["p_maligno"], errors="coerce")
-    conf = conf.dropna(subset=["p"])
-    n_mal, n_ben = int((conf["patologia_confirmada"] == "Maligno").sum()), int((conf["patologia_confirmada"] == "Benigno").sum())
-    if len(conf) < 10:
-        st.info(f"Há {len(conf)} caso(s) confirmado(s) com probabilidade registrada ({n_mal} malignos, {n_ben} "
-                "benignos). A análise local aparece a partir de 10 casos; a calibração local exige "
-                f"{MINIMO_CALIBRACAO['total']} casos, com pelo menos {MINIMO_CALIBRACAO['por_classe']} de cada classe.",
-                icon=":material/info:")
+
+def aba_medir(les, mamas, cal, local):
+    st.caption("Casos do SEU serviço confirmados por **biópsia, seguimento (estável por ≥ 2 anos) ou outro exame "
+               "padrão-ouro**. Todos os números vêm com o **intervalo de confiança de 95%** (bootstrap por mama): com "
+               "poucos casos ele é largo e a decisão deve esperar mais casos.")
+    lim_m = limites_mama(cal, local)
+    ref_hib, ref_maria = referencias_externas()
+
+    # ---- prioridade da MAMA ----
+    st.markdown("**Prioridade da mama** (é ela que ordena a fila)")
+    usa_escore = len(mamas) and mamas["escore"].notna().any()
+    if len(mamas):
+        if usa_escore:
+            d = mamas.dropna(subset=["escore"])
+            score, lim_alta, origem = d["escore"].to_numpy(), lim_m.get("alta", 0.36), "escore da mama (GMIC + MARIA)"
+        else:
+            d = mamas.dropna(subset=["p_maria"])
+            pc = cal.get("patologia_contexto") or cal.get("patologia") or {"a": 1, "b": 0}
+            if local and "patologia" in local:
+                pc = local["patologia"]
+            score = aplicar_platt(d["p_maria"], pc["a"], pc["b"]) if len(d) else np.array([])
+            lim_alta = ((local or {}).get("prioridade") or cal.get("prioridade_contexto") or {"alta": 0.37})["alta"]
+            origem = "maior P calibrada das lesões da mama (sem o GMIC)"
+        y, gr = d["y"].to_numpy(), d["grupo"].to_numpy()
     else:
-        y_loc = (conf["patologia_confirmada"] == "Maligno").astype(int).to_numpy()
-        p_loc = conf["p"].to_numpy()
-        cal_atual = json.loads((pasta_modelo / "calibracao.json").read_text(encoding="utf-8")) \
-            if (pasta_modelo / "calibracao.json").is_file() else None
-        arq_local = pasta_modelo / "calibracao_local.json"
-        local_atual = json.loads(arq_local.read_text(encoding="utf-8")) if arq_local.is_file() else None
-        ref = (local_atual or cal_atual or {}).get("patologia")
-        p_cal_loc = aplicar_platt(p_loc, ref["a"], ref["b"]) if ref else p_loc
-        prio = (local_atual or cal_atual or {}).get("prioridade", {"alta": 0.5, "media": 0.2})
-        s_alta, e_alta = sens_espec(p_cal_loc, y_loc, prio["alta"])
+        y = np.array([])
+    if len(y) < DL.MINIMO["analise"] or y.min(initial=0) == y.max(initial=0):
+        st.info(f"Há {len(y)} mama(s) com rótulo confirmado ({int(y.sum()) if len(y) else 0} malignas). A análise por "
+                f"mama aparece a partir de {DL.MINIMO['analise']} mamas, com malignas e não malignas. Preencha a "
+                "coluna **mama confirmada** na revisão (página Resultados).", icon=":material/info:")
+    else:
+        normais = d["normal"].to_numpy()
+        with st.container(horizontal=True, vertical_alignment="center"):
+            st.caption(f"{len(y)} mamas ({int(y.sum())} malignas, {int(normais.sum())} normais) · por {origem} · "
+                       f"prioridade alta a partir de {lim_alta:.2f}".replace(".", ","))
+            selo_estabilidade(y)
         with st.container(horizontal=True):
-            st.metric("Casos confirmados", len(conf), border=True, delta=f"{n_mal} malignos · {n_ben} benignos",
-                      delta_color="off", delta_arrow="off")
-            st.metric("AUC local", f"{auc_numpy(y_loc, p_loc):.3f}", border=True,
-                      help="Capacidade de ordenar malignos acima de benignos no seu serviço (0,5 = acaso).")
-            st.metric("Prioridade alta: sensibilidade", f"{s_alta:.0%}", border=True,
-                      help=f"Malignos confirmados que receberam prioridade alta (P calibrada ≥ {prio['alta']:.2f}).")
-            st.metric("Prioridade alta: especificidade", f"{e_alta:.0%}", border=True)
+            metrica_ic("AUC por mama", DL.ic_bootstrap(DL.auc, y, score, gr), ".3f",
+                       "Capacidade de ordenar mamas malignas acima das não malignas (0,5 = acaso).")
+            metrica_ic("Prioridade alta: sensibilidade", DL.ic_bootstrap(lambda a, b: DL.sens(a, b, lim_alta), y, score, gr),
+                       ajuda=f"Referência externa (CMMD): {ref_hib if usa_escore else ref_maria:.0%}.")
+            metrica_ic("Prioridade alta: especificidade",
+                       DL.ic_bootstrap(lambda a, b: DL.espec(a, b, lim_alta), y, score, gr))
+            if normais.any():
+                metrica_ic("Exames normais fora da prioridade alta",
+                           DL.ic_bootstrap(lambda a, b: DL.espec(a, b, lim_alta), y[normais | (y == 1)],
+                                           score[normais | (y == 1)], gr[normais | (y == 1)]),
+                           ajuda="Especificidade só nas mamas NORMAIS confirmadas (seguimento): é o que importa no "
+                                 "rastreamento. Nunca foi medida fora do serviço.")
+
+    # ---- LESÃO ----
+    st.markdown("**Probabilidade da lesão**")
+    if len(les) < DL.MINIMO["analise"] or les["y"].nunique() < 2:
+        st.info(f"Há {len(les)} lesão(ões) confirmada(s) com probabilidade registrada. A análise por lesão aparece a "
+                f"partir de {DL.MINIMO['analise']}, com benignas e malignas.", icon=":material/info:")
+    else:
+        y_l, p_l, g_l = les["y"].to_numpy(), les["p"].to_numpy(), les["grupo"].to_numpy()
+        ref = (local or {}).get("patologia") or cal.get("patologia")
+        p_cal = aplicar_platt(p_l, ref["a"], ref["b"]) if ref else p_l
+        prio = (local or {}).get("prioridade") or cal.get("prioridade", {"alta": 0.5, "media": 0.2})
+        with st.container(horizontal=True, vertical_alignment="center"):
+            st.caption(f"{len(les)} lesões ({int(y_l.sum())} malignas) · prioridade da lesão alta a partir de P "
+                       f"calibrada {prio['alta']:.2f}".replace(".", ","))
+            selo_estabilidade(y_l)
+        with st.container(horizontal=True):
+            metrica_ic("AUC por lesão", DL.ic_bootstrap(DL.auc, y_l, p_l, g_l), ".3f")
+            metrica_ic("Sensibilidade (lesão)", DL.ic_bootstrap(lambda a, b: DL.sens(a, b, prio["alta"]), y_l, p_cal, g_l))
+            metrica_ic("Especificidade (lesão)", DL.ic_bootstrap(lambda a, b: DL.espec(a, b, prio["alta"]), y_l, p_cal, g_l))
         c1, c2 = st.columns(2)
         with c1:
-            faixas_c = np.clip((p_cal_loc * 5).astype(int), 0, 4)
-            dcal_loc = pd.DataFrame([{"P prevista": float(p_cal_loc[faixas_c == k].mean()),
-                                      "maligno observado": float(y_loc[faixas_c == k].mean()), "casos": int((faixas_c == k).sum())}
+            faixas_c = np.clip((p_cal * 5).astype(int), 0, 4)
+            dcal_loc = pd.DataFrame([{"P prevista": float(p_cal[faixas_c == k].mean()),
+                                      "maligno observado": float(y_l[faixas_c == k].mean()), "casos": int((faixas_c == k).sum())}
                                      for k in range(5) if (faixas_c == k).any()])
             pts = alt.Chart(dcal_loc).mark_line(point=True, color="#c62828").encode(
                 x=alt.X("P prevista:Q", scale=alt.Scale(domain=[0, 1]), title="P(maligno) calibrada (média da faixa)"),
@@ -1881,97 +2074,220 @@ def pagina_anotacoes():
                 size=alt.Size("casos:Q", legend=None), tooltip=list(dcal_loc.columns))
             diag = alt.Chart(pd.DataFrame({"P prevista": [0, 1], "maligno observado": [0, 1]})).mark_line(
                 strokeDash=[4, 4], color="gray").encode(x="P prevista:Q", y="maligno observado:Q")
-            mostrar(st.altair_chart, (diag + pts).properties(title="Calibração no seu serviço", height=260),
+            mostrar(st.altair_chart, (diag + pts).properties(title="Calibração da lesão no seu serviço", height=260),
                     alt="Calibração local: probabilidade prevista contra a proporção maligna confirmada")
             st.caption("Pontos longe da diagonal = a probabilidade não vale como probabilidade aqui: recalibre.")
         with c2:
             grupo = st.segmented_control("Desempenho local por", ["Densidade", "Faixa etária", "Tipo de achado",
                                                                   "Equipamento"], default="Equipamento",
                                          key="subgrupo_local")
-            conf["Densidade"] = pd.to_numeric(conf["densidade_confirmada"].replace(
-                {"A": "1", "B": "2", "C": "3", "D": "4"}).where(conf["densidade_confirmada"] != "",
-                                                                conf["densidade_modelo"]), errors="coerce").map(densidade_txt)
-            conf["Faixa etária"] = pd.cut(pd.to_numeric(conf["idade"], errors="coerce"), [0, 39, 49, 59, 69, 200],
-                                          labels=FAIXAS_ETARIAS).astype(str).replace("nan", "não informada")
-            conf["Tipo de achado"] = conf["achado_confirmado"].where(conf["achado_confirmado"] != "",
-                                                                     conf["achado_modelo"])
-            conf["Equipamento"] = conf["fabricante"].replace("", "não informado")
-            conf["p_cal"] = p_cal_loc; conf["y"] = y_loc
+            c = les.copy()
+            c["Densidade"] = pd.to_numeric(c["densidade_confirmada"].replace(
+                {"A": "1", "B": "2", "C": "3", "D": "4"}).where(c["densidade_confirmada"] != "",
+                                                                c["densidade_modelo"]), errors="coerce").map(densidade_txt)
+            c["Faixa etária"] = pd.cut(pd.to_numeric(c["idade"], errors="coerce"), [0, 39, 49, 59, 69, 200],
+                                       labels=FAIXAS_ETARIAS).astype(str).replace("nan", "não informada")
+            c["Tipo de achado"] = c["achado_confirmado"].where(c["achado_confirmado"] != "", c["achado_modelo"])
+            c["Equipamento"] = c["fabricante"].replace("", "não informado")
+            c["p_cal"] = p_cal
             linhas_sub = []
-            for g, d in conf.groupby(grupo or "Equipamento"):
-                s_g, e_g = sens_espec(d["p_cal"], d["y"], prio["alta"])
-                linhas_sub.append({grupo or "Equipamento": g, "casos": len(d), "malignos": int(d["y"].sum()),
-                                   "AUC": auc_numpy(d["y"], d["p"]) if d["y"].nunique() == 2 else np.nan,
-                                   "sensibilidade": s_g if d["y"].sum() else np.nan,
-                                   "especificidade": e_g if (d["y"] == 0).any() else np.nan})
+            for g, dd in c.groupby(grupo or "Equipamento"):
+                yy, gg = dd["y"].to_numpy(), dd["grupo"].to_numpy()
+                a = DL.ic_bootstrap(DL.auc, yy, dd["p"].to_numpy(), gg, n=300)
+                linhas_sub.append({grupo or "Equipamento": g, "casos": len(dd), "malignos": int(yy.sum()),
+                                   "AUC": a[0], "IC 95% da AUC": _ic_txt(a, ".2f").replace("IC 95% ", ""),
+                                   "sensibilidade": DL.sens(yy, dd["p_cal"], prio["alta"]),
+                                   "especificidade": DL.espec(yy, dd["p_cal"], prio["alta"]),
+                                   "estabilidade": SELO_ESTABILIDADE[DL.estabilidade(yy)][0]})
             mostrar(st.dataframe, pd.DataFrame(linhas_sub), hide_index=True, alt="Desempenho local por subgrupo",
                     column_config={"AUC": st.column_config.NumberColumn(format="%.3f"),
                                    "sensibilidade": st.column_config.NumberColumn(format="percent"),
                                    "especificidade": st.column_config.NumberColumn(format="percent")})
-            st.caption("Subgrupos com poucos casos têm números instáveis; interprete com cuidado.")
 
-        st.markdown("**Calibração local** (probabilidade e limites de prioridade para o seu serviço)")
-        alvo = st.slider("Sensibilidade desejada para a prioridade alta", 0.70, 0.99, 0.90, 0.01,
-                         key="alvo_sensibilidade",
-                         help="O limite de 'prioridade alta' é escolhido para que esta fração dos malignos "
-                              "confirmados caia em prioridade alta. 'Média' usa sensibilidade de 98%.")
-        a_l, b_l = ajustar_platt(p_loc, y_loc)
-        p_novo = aplicar_platt(p_loc, a_l, b_l)
-        lim_alta = limiar_para_sensibilidade(p_novo, y_loc, alvo)
-        lim_media = min(lim_alta, limiar_para_sensibilidade(p_novo, y_loc, 0.98))
-        s_n, e_n = sens_espec(p_novo, y_loc, lim_alta)
-        st.caption(f"Com a calibração local: prioridade alta a partir de P = {lim_alta:.2f} → sensibilidade "
-                   f"{s_n:.0%}, especificidade {e_n:.0%} (nos mesmos casos usados para calibrar: tende a ser "
-                   "otimista; reavalie com casos novos). Média a partir de P = "
-                   f"{lim_media:.2f}.")
-        pode = len(conf) >= MINIMO_CALIBRACAO["total"] and min(n_mal, n_ben) >= MINIMO_CALIBRACAO["por_classe"]
-        if not pode:
-            st.info(f"A calibração local exige {MINIMO_CALIBRACAO['total']} casos confirmados, com pelo menos "
-                    f"{MINIMO_CALIBRACAO['por_classe']} malignos e {MINIMO_CALIBRACAO['por_classe']} benignos "
-                    f"(há {len(conf)}: {n_mal} malignos, {n_ben} benignos).", icon=":material/info:")
-        with st.container(horizontal=True):
-            if st.button("Aplicar calibração local", icon=":material/tune:", key="aplicar_cal_local",
-                         disabled=not (pode and eh_admin())):
-                novo = {"criada_em": time.strftime("%Y-%m-%d %H:%M"), "criada_por": usuario_atual(),
-                        "patologia": {"metodo": "platt", "a": a_l, "b": b_l, "n": int(len(conf)),
-                                      "malignos": n_mal, "auc_local": auc_numpy(y_loc, p_loc),
-                                      "exames": sorted(conf["exame_confirmacao"].unique().tolist()),
-                                      "equipamentos": sorted(conf["fabricante"].replace("", "não informado")
-                                                             .unique().tolist())},
-                        "prioridade": {"alta": lim_alta, "media": lim_media, "sensibilidade_alvo": alvo}}
-                arq_local.write_text(json.dumps(novo, indent=2, ensure_ascii=False), encoding="utf-8")
-                registrar("calibração local aplicada", {"casos": len(conf), "alta": round(lim_alta, 3),
-                                                        "media": round(lim_media, 3)})
-                st.success("Calibração local aplicada: vale para as próximas classificações (a versão do modelo "
-                           "no resultado passa a indicar '+cal-local').", icon=":material/check:")
-            if local_atual and st.button("Remover calibração local", icon=":material/undo:",
-                                         key="remover_cal_local", disabled=not eh_admin()):
-                arq_local.unlink()
-                registrar("calibração local removida", {})
-                st.success("Calibração local removida: volta a valer a do CBIS-DDSM.", icon=":material/check:")
-        if local_atual:
-            st.caption(f"Calibração local em uso desde {local_atual.get('criada_em')} "
-                       f"({local_atual['patologia'].get('n')} casos, por {local_atual.get('criada_por', '?')}).")
-        if not eh_admin():
-            st.caption("Aplicar ou remover a calibração local é restrito a administradores.")
+    # ---- ao longo do tempo (monitoramento) ----
+    st.markdown("**Ao longo do tempo** (monitoramento)")
+    nivel = st.segmented_control("Nível", ["Mama", "Lesão"], default="Mama" if len(mamas) else "Lesão",
+                                 key="monitor_nivel")
+    if nivel == "Mama" and len(mamas):
+        base = mamas.assign(score=mamas["escore"] if usa_escore else mamas["p_maria"])
+        lim_mon, ref_mon = (lim_m.get("alta", 0.36), ref_hib) if usa_escore else (None, ref_maria)
+        if lim_mon is None:
+            pc = (local or {}).get("patologia") or cal.get("patologia_contexto") or {"a": 1, "b": 0}
+            base["score"] = aplicar_platt(base["score"].fillna(0.5), pc["a"], pc["b"])
+            lim_mon = ((local or {}).get("prioridade") or cal.get("prioridade_contexto") or {"alta": 0.37})["alta"]
+    elif len(les):
+        ref = (local or {}).get("patologia") or cal.get("patologia") or {"a": 1, "b": 0}
+        base = les.assign(score=aplicar_platt(les["p"], ref["a"], ref["b"]))
+        lim_mon = ((local or {}).get("prioridade") or cal.get("prioridade", {"alta": 0.5}))["alta"]
+        ref_mon = ref_maria
+    else:
+        base = pd.DataFrame()
+    tab_t = DL.por_periodo(base, "score", lim_mon) if len(base) else pd.DataFrame()
+    if tab_t.empty or len(tab_t) < 2:
+        st.caption("O acompanhamento mês a mês aparece quando houver casos confirmados em pelo menos dois meses.")
+    else:
+        for a_txt in DL.alertas(tab_t, ref_mon):
+            st.warning("Possível queda de desempenho — " + a_txt + ". Confira mudanças de equipamento, protocolo ou "
+                       "população e considere recalibrar.", icon=":material/trending_down:")
+        faixa = alt.Chart(tab_t).mark_area(opacity=0.2, color="#c62828").encode(
+            x=alt.X("periodo:N", title="Mês"), y=alt.Y("sens_inf:Q", title="Sensibilidade da prioridade alta",
+                                                     scale=alt.Scale(domain=[0, 1])), y2="sens_sup:Q")
+        linha = alt.Chart(tab_t).mark_line(point=True, color="#c62828").encode(
+            x="periodo:N", y="sensibilidade:Q", tooltip=["periodo", "casos", "malignos",
+                                                         alt.Tooltip("sensibilidade:Q", format=".0%"),
+                                                         alt.Tooltip("AUC:Q", format=".3f")])
+        refl = alt.Chart(pd.DataFrame({"r": [ref_mon]})).mark_rule(strokeDash=[4, 4], color="gray").encode(y="r:Q")
+        mostrar(st.altair_chart, (faixa + linha + refl).properties(height=240,
+                title="Sensibilidade por mês (faixa = IC 95%; tracejado = referência externa)"),
+                alt="Sensibilidade da prioridade alta por mês com intervalo de confiança")
+        mostrar(st.dataframe, tab_t[["periodo", "casos", "malignos", "AUC", "sensibilidade", "especificidade"]],
+                hide_index=True, alt="Desempenho por mês",
+                column_config={"AUC": st.column_config.NumberColumn(format="%.3f"),
+                               "sensibilidade": st.column_config.NumberColumn(format="percent"),
+                               "especificidade": st.column_config.NumberColumn(format="percent")})
 
-    st.subheader("Retreinar o modelo")
-    st.warning("O retreino mistura as anotações com os **dados originais de treino** (CBIS-DDSM e CDD-CESM, ~160 GB), "
-               "que só existem na máquina onde o MARIA foi treinado. Em qualquer outro computador o botão fica "
-               "desativado: exporte as anotações (acima) e importe-as na máquina de treino.",
-               title="Disponível apenas na máquina com os dados completos do modelo", icon=":material/dns:")
-    sit = situacao_retreino(str(pasta_modelo), versao_banco)
+
+def aba_calibrar(les, mamas, cal, local, arq_local):
+    st.caption("A calibração local ajusta o MARIA ao SEU serviço (outra proporção de câncer, outros equipamentos). "
+               "Os números abaixo são medidos nos mesmos casos usados para calibrar (otimistas): reavalie com casos "
+               "novos na aba Medir.")
+    novo_local = dict(local or {})
+    mudou = []
+
+    # ---- prioridade da mama ----
+    st.markdown("**Limites da prioridade da mama** (híbrido GMIC + MARIA)")
+    dm = mamas.dropna(subset=["escore"]) if len(mamas) else pd.DataFrame()
+    if dm.empty:
+        st.info("Sem mamas confirmadas com escore da mama (o GMIC precisa estar instalado e a coluna **mama "
+                "confirmada** preenchida na revisão).", icon=":material/info:")
+    else:
+        y, e, gr = dm["y"].to_numpy(), dm["escore"].to_numpy(), dm["grupo"].to_numpy()
+        alvo_m = st.slider("Sensibilidade desejada para a prioridade alta da mama", 0.70, 0.99, 0.85, 0.01,
+                           key="alvo_mama", help="'Média' usa sensibilidade de 98%.")
+        lim_a = limiar_para_sensibilidade(e, y, alvo_m)
+        lim_md = min(lim_a, limiar_para_sensibilidade(e, y, 0.98))
+        s = DL.ic_bootstrap(lambda a, b: DL.sens(a, b, lim_a), y, e, gr)
+        sp = DL.ic_bootstrap(lambda a, b: DL.espec(a, b, lim_a), y, e, gr)
+        v3 = lambda x: f"{x:.3f}".replace(".", ",")
+        st.caption(f"Prioridade alta a partir de escore {v3(lim_a)}; média a partir de {v3(lim_md)} → sensibilidade "
+                   f"{s[0]:.0%} ({_ic_txt(s)}), especificidade {sp[0]:.0%} ({_ic_txt(sp)}). Em uso hoje: alta "
+                   f"{v3(limites_mama(cal, local).get('alta', float('nan')))}.")
+        if DL.pode_calibrar(y):
+            if st.checkbox("Incluir os limites da prioridade da mama na calibração local", key="incluir_mama"):
+                novo_local["hibrido_gmic"] = {"alta": lim_a, "media": lim_md, "sensibilidade_alvo": alvo_m,
+                                              "n": int(len(y)), "malignas": int(y.sum()),
+                                              "normais": int(dm["normal"].sum())}
+                mudou.append("prioridade da mama")
+        else:
+            st.info(f"Para calibrar: {DL.MINIMO['calibrar_total']} mamas, com pelo menos "
+                    f"{DL.MINIMO['calibrar_por_classe']} malignas e {DL.MINIMO['calibrar_por_classe']} não malignas "
+                    f"(há {len(y)}: {int(y.sum())} malignas).", icon=":material/info:")
+
+    # ---- probabilidade da lesão ----
+    st.markdown("**Probabilidade da lesão e prioridade da lesão**")
+    if len(les) < DL.MINIMO["analise"] or les["y"].nunique() < 2:
+        st.info("Poucas lesões confirmadas para calibrar.", icon=":material/info:")
+    else:
+        y_l, p_l, g_l = les["y"].to_numpy(), les["p"].to_numpy(), les["grupo"].to_numpy()
+        alvo = st.slider("Sensibilidade desejada para a prioridade alta da lesão", 0.70, 0.99, 0.90, 0.01,
+                         key="alvo_sensibilidade", help="'Média' usa sensibilidade de 98%.")
+        a_l, b_l = ajustar_platt(p_l, y_l)
+        p_novo = aplicar_platt(p_l, a_l, b_l)
+        lim_alta = limiar_para_sensibilidade(p_novo, y_l, alvo)
+        lim_media = min(lim_alta, limiar_para_sensibilidade(p_novo, y_l, 0.98))
+        s = DL.ic_bootstrap(lambda a, b: DL.sens(a, b, lim_alta), y_l, p_novo, g_l)
+        sp = DL.ic_bootstrap(lambda a, b: DL.espec(a, b, lim_alta), y_l, p_novo, g_l)
+        st.caption(f"Prioridade alta a partir de P = {lim_alta:.2f} → sensibilidade {s[0]:.0%} ({_ic_txt(s)}), ".replace(".", ",")
+                   + f"especificidade {sp[0]:.0%} ({_ic_txt(sp)}). Média a partir de P = {lim_media:.2f}".replace(".", ",")
+                   + ".")
+        if DL.pode_calibrar(y_l):
+            if st.checkbox("Incluir a probabilidade e a prioridade da lesão na calibração local", key="incluir_lesao"):
+                novo_local["patologia"] = {"metodo": "platt", "a": a_l, "b": b_l, "n": int(len(les)),
+                                           "malignos": int(y_l.sum()), "auc_local": DL.auc(y_l, p_l),
+                                           "exames": sorted(les["exame_confirmacao"].unique().tolist()),
+                                           "equipamentos": sorted(les["fabricante"].replace("", "não informado")
+                                                                  .unique().tolist())}
+                novo_local["prioridade"] = {"alta": lim_alta, "media": lim_media, "sensibilidade_alvo": alvo}
+                mudou.append("lesão")
+        else:
+            st.info(f"Para calibrar: {DL.MINIMO['calibrar_total']} lesões, com pelo menos "
+                    f"{DL.MINIMO['calibrar_por_classe']} malignas e {DL.MINIMO['calibrar_por_classe']} benignas.",
+                    icon=":material/info:")
+
+    with st.container(horizontal=True):
+        if st.button("Aplicar calibração local", icon=":material/tune:", key="aplicar_cal_local",
+                     disabled=not (mudou and eh_admin())):
+            novo_local.update(criada_em=time.strftime("%Y-%m-%d %H:%M"), criada_por=usuario_atual())
+            arq_local.write_text(json.dumps(novo_local, indent=2, ensure_ascii=False), encoding="utf-8")
+            registrar("calibração local aplicada", {"partes": mudou})
+            st.success("Calibração local aplicada: vale para as próximas classificações (a versão do modelo no "
+                       "resultado passa a indicar '+cal-local').", icon=":material/check:")
+        if local and st.button("Remover calibração local", icon=":material/undo:", key="remover_cal_local",
+                               disabled=not eh_admin()):
+            arq_local.unlink()
+            registrar("calibração local removida", {})
+            st.success("Calibração local removida: voltam a valer a do CBIS-DDSM (lesão) e os limites do CMMD (mama).",
+                       icon=":material/check:")
+    if local:
+        partes = [f"lesão ({local['patologia'].get('n')} casos)" if "patologia" in local else "",
+                  f"mama ({local['hibrido_gmic'].get('n')} mamas)" if "hibrido_gmic" in local else ""]
+        st.caption(f"Calibração local em uso desde {local.get('criada_em')}: {', '.join(p for p in partes if p)} "
+                   f"(por {local.get('criada_por', '?')}).")
+    if not eh_admin():
+        st.caption("Aplicar ou remover a calibração local é restrito a administradores.")
+
+
+def aba_retreinar(banco, sit, cands):
+    nomes_modelo = {"densidade": "Densidade", "detector": "Detector de lesões", "achado": "Achado"}
+    # ---- candidatos em modo sombra ----
+    st.markdown("**Candidatos em modo sombra**")
+    st.caption("Um modelo retreinado que não piorou no teste fixo vira **candidato**: ele roda em paralelo nas "
+               "classificações seguintes, **sem mudar o resultado**, e a comparação abaixo usa os casos que você "
+               "confirmar desde então. Só o administrador troca o modelo em uso, depois de ver os números.")
+    if not cands:
+        st.caption("Nenhum candidato no momento.")
+    for m, info in cands.items():
+        with st.container(border=True):
+            with st.container(horizontal=True, vertical_alignment="center"):
+                st.markdown(f"**{nomes_modelo.get(m, m)}**")
+                st.badge(f"candidato de {info.get('criado_em', '?')}", color="violet", icon=":material/visibility:")
+            comp = DL.comparar_sombra(banco, m, info.get("carimbo", ""))
+            if comp.empty:
+                st.caption("Ainda não há casos confirmados classificados com este candidato em sombra.")
+            else:
+                mostrar(st.dataframe, comp, hide_index=True, alt=f"Modelo em uso × candidato ({m})",
+                        column_config={"em uso": st.column_config.NumberColumn(format="%.3f"),
+                                       "candidato": st.column_config.NumberColumn(format="%.3f")})
+            ok = st.checkbox("Vi a comparação e aprovo a troca (a versão atual fica guardada para restaurar).",
+                             key=f"aprova_{m}")
+            with st.container(horizontal=True):
+                if st.button("Aprovar e trocar o modelo", type="primary", icon=":material/published_with_changes:",
+                             key=f"promover_{m}", disabled=not (ok and eh_admin())):
+                    r = subprocess.run([sys.executable, "retreinar.py", "--promover", m], cwd=str(pasta_modelo),
+                                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                       env=dict(os.environ, MARIA_USUARIO=usuario_atual() or "", PYTHONUTF8="1"))
+                    (st.success if r.returncode == 0 else st.error)((r.stdout + r.stderr)[-500:])
+                if st.button("Descartar candidato", icon=":material/delete:", key=f"descartar_{m}",
+                             disabled=not eh_admin()):
+                    r = subprocess.run([sys.executable, "retreinar.py", "--descartar", m], cwd=str(pasta_modelo),
+                                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                       env=dict(os.environ, MARIA_USUARIO=usuario_atual() or "", PYTHONUTF8="1"))
+                    (st.success if r.returncode == 0 else st.error)((r.stdout + r.stderr)[-500:])
+
+    # ---- retreinar ----
+    st.markdown("**Retreinar**")
     if sit["disponivel"]:
         st.success("Esta máquina tem os dados completos de treino." +
                    (" GPU disponível." if sit.get("gpu") else " Sem GPU: o retreino será muito lento."),
                    icon=":material/check_circle:")
     else:
-        st.error("Esta máquina NÃO tem os dados completos de treino: o retreino está desativado aqui.",
-                 icon=":material/block:")
+        st.warning("O retreino mistura as anotações com os **dados originais de treino** (CBIS-DDSM e CDD-CESM), que "
+                   "só existem na máquina onde o MARIA foi treinado. Aqui o botão fica desativado: exporte as "
+                   "anotações (aba Anotar) e importe-as na máquina de treino.",
+                   title="Disponível apenas na máquina com os dados completos do modelo", icon=":material/dns:")
         with st.expander("O que falta nesta máquina"):
             st.code("\n".join(sit.get("faltando", [])), language="text")
 
-    nomes_modelo = {"densidade": "Densidade", "detector": "Detector de lesões", "achado": "Achado"}
     casos, minimo = sit.get("casos", {}), sit.get("minimo", {})
     with st.container(horizontal=True):
         for m, nome in nomes_modelo.items():
@@ -1987,15 +2303,15 @@ def pagina_anotacoes():
     if poucos:
         st.info(f"Poucos casos para: {', '.join(poucos)} (abaixo do mínimo). Esses modelos serão pulados.",
                 icon=":material/info:")
-    st.caption("A **patologia** (benigno/maligno) não é retreinada. Tempo aproximado com GPU: densidade ~15 min, "
-               "detector ~40 min, achado ~10 min (+ ~10 min na primeira vez, para preparar os dados). O retreino "
-               "continua mesmo se você fechar o navegador.")
+    st.caption("A **patologia** (benigno/maligno) e o **GMIC** não são retreinados: para eles, use a calibração local. "
+               "Tempo aproximado com GPU: densidade ~15 min, detector ~40 min, achado ~10 min (+ ~10 min na primeira "
+               "vez, para preparar os dados). O retreino continua mesmo se você fechar o navegador.")
     est = estado_retreino()
     rodando = bool(est and not est["terminou"])
-    confirma = st.checkbox("Entendo que o modelo novo só substitui o atual se não piorar no teste fixo, e que a "
-                           "versão anterior fica guardada para restaurar.", key="confirma_retreino")
+    confirma = st.checkbox("Entendo que o modelo novo vira candidato em modo sombra (não muda nada até eu aprovar), e "
+                           "que só vira candidato se não piorar no teste fixo.", key="confirma_retreino")
     if not eh_admin():
-        st.caption("Retreinar e restaurar versões do modelo é restrito a administradores.")
+        st.caption("Retreinar, aprovar candidatos e restaurar versões é restrito a administradores.")
     if st.button("Retreinar o modelo", type="primary", icon=":material/model_training:", key="retreinar",
                  disabled=not (sit["disponivel"] and escolha and confirma and not rodando and eh_admin())):
         registrar("retreino iniciado", {"modelos": list(escolha)})
@@ -2043,7 +2359,8 @@ def pagina_anotacoes():
         st.markdown(f"**Último relatório** ({rel['carimbo']}, {rel['dispositivo']}"
                     + (", modo de teste rápido" if rel.get("rapido") else "") + ")")
         for m, info in rel["modelos"].items():
-            cor = {"substituído": "green", "mantido": "blue", "pulado": "gray", "erro": "red"}.get(info["situacao"], "gray")
+            cor = {"candidato (modo sombra)": "violet", "substituído": "green", "mantido": "blue", "pulado": "gray",
+                   "erro": "red"}.get(info["situacao"], "gray")
             with st.container(border=True):
                 with st.container(horizontal=True, vertical_alignment="center"):
                     st.markdown(f"**{nomes_modelo.get(m, m)}**")
@@ -2081,6 +2398,27 @@ def pagina_anotacoes():
                                    capture_output=True, text=True, encoding="utf-8", errors="replace",
                                    env=dict(os.environ, MARIA_USUARIO=usuario_atual() or ""))
                 (st.success if r.returncode == 0 else st.error)(r.stdout[-500:] or r.stderr[-500:])
+
+
+def pagina_anotacoes():
+    banco = ler_banco()
+    arq_banco = ANOTACOES / "anotacoes.csv"
+    versao_banco = arq_banco.stat().st_mtime if arq_banco.is_file() else 0.0
+    cal, local, arq_local = ler_calibracoes()
+    les, mamas = DL.lesoes_confirmadas(banco), DL.mamas_confirmadas(banco)
+    sit = situacao_retreino(str(pasta_modelo), versao_banco)
+    cands = candidatos_sombra()
+    st.caption("Do caso confirmado ao modelo ajustado ao seu serviço, em quatro etapas. O que falta em cada uma:")
+    painel_pendencias(les, mamas, sit, cands)
+    a1, a2, a3, a4 = st.tabs(["1. Anotar", "2. Medir", "3. Calibrar", "4. Retreinar"])
+    with a1:
+        aba_anotar(banco, arq_banco)
+    with a2:
+        aba_medir(les, mamas, cal, local)
+    with a3:
+        aba_calibrar(les, mamas, cal, local, arq_local)
+    with a4:
+        aba_retreinar(banco, sit, cands)
 
 
 def pagina_resultados():
@@ -2196,13 +2534,13 @@ def pagina_resultados():
         st.warning(AVISO_CONFIRMACAO, icon=":material/medical_information:")
         st.caption("Preencha só o que foi confirmado. **Lesão real?**: para caixas marcadas ou detectadas, informe se é "
                    "uma lesão de verdade ou um falso positivo (para o detector, revise TODAS as caixas do modelo na "
-                   "imagem). **Densidade confirmada** vale para a mama toda. Clique em **Salvar anotações** ao terminar; "
+                   "imagem). **Mama confirmada** (maligna, benigna ou normal) e **densidade confirmada** valem para a "
+                   "mama toda; basta preencher numa linha da mama. Clique em **Salvar anotações** ao terminar; "
                    "as anotações ficam na pasta anotacoes/ e podem ser usadas no retreino (página Anotações e retreino).")
         banco = ler_banco()
         anteriores = banco[banco["rodada"] == res["carimbo"]].set_index("amostra")   # índice = pseudônimo
-        rev = tab[["amostra", "mama", "vista", "origem_lesao", "patologia", "achado", "densidade", "densidade_origem",
-                   "imagem", "x0", "y0", "x1", "y1", "p_maligno", "p_maligno_calibrada", "prioridade", "idade",
-                   "fabricante", "versao_modelo"]].copy()
+        rev = tab.reindex(columns=["amostra", "mama", "vista", "origem_lesao", "patologia", "achado", "densidade",
+                                   "densidade_origem", "imagem", "x0", "y0", "x1", "y1", *CAMPOS_COPIADOS]).copy()
         for c in CAMPOS_REVISAO:
             rev[c] = [anteriores.at[ps, c] if (ps := anonimizacao.pseudonimizar(a, "LES")) in anteriores.index
                       and anteriores.at[ps, c] else None for a in rev["amostra"]]
@@ -2224,6 +2562,11 @@ def pagina_resultados():
                 "achado_confirmado": st.column_config.SelectboxColumn(
                     "achado confirmado", options=["Massa/Nódulo", "Microcalcificação"],
                     help="Tipo de achado confirmado por exame adicional."),
+                "mama_confirmada": st.column_config.SelectboxColumn(
+                    "mama confirmada", options=["Maligna", "Benigna", "Normal"],
+                    help="Resultado confirmado da MAMA inteira (vale para todas as linhas da mama): maligna (biópsia), "
+                         "benigna (biópsia) ou normal (seguimento estável por ≥ 2 anos). Mede e calibra a prioridade "
+                         "da mama."),
                 "exame_confirmacao": st.column_config.SelectboxColumn(
                     "exame de confirmação", options=EXAMES_CONFIRMACAO, width="medium",
                     help="Exame que confirmou a patologia/achado. Sem ele, a confirmação não entra no retreino."),

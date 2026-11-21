@@ -2,6 +2,7 @@
 Testes de verificação do MARIA. Cada teste tem o ID do requisito que verifica (docs/qualidade/03_requisitos_e_rastreabilidade.md).
 """
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -368,3 +369,147 @@ def test_REQ_ENT_07_vista_pelo_patient_orientation():
     assert maria.vista_dicom(N(ViewPosition="", PatientOrientation=["A", "FR"])) == "MLO"
     assert maria.vista_dicom(N(ViewPosition="", PatientOrientation=["A", "R"])) == "CC"
     assert maria.vista_dicom(N()) == "SEM_VISTA"
+
+
+# ---------------------------------------------------------------- desempenho local, calibração e modo sombra
+def _banco_df(linhas):
+    import pandas as pd
+    ns = funcoes_do_dashboard()
+    cols = ns["COLUNAS_ANOTACAO"]
+    return pd.DataFrame([{c: "" for c in cols} | l for l in linhas]).reindex(columns=cols, fill_value="").astype(str)
+
+
+BIOPSIA, SEGUIMENTO = "Biópsia (anatomopatológico)", "Seguimento (estável por ≥ 2 anos)"
+
+
+def test_REQ_LOC_01_rotulo_por_mama():
+    """Mama maligna = lesão maligna confirmada ou 'mama confirmada' maligna; não maligna só com confirmação explícita
+    (benigna/normal) e exame válido; sem exame válido, a mama não entra."""
+    import desempenho_local as DL
+    b = _banco_df([
+        {"rodada": "r1", "mama": "M1", "origem_lesao": "detectada pelo modelo", "p_maligno": "0.8", "escore_mama": "0.7",
+         "patologia_confirmada": "Maligno", "exame_confirmacao": BIOPSIA, "lesao_real": "sim"},
+        {"rodada": "r1", "mama": "M2", "origem_lesao": "nenhuma lesão encontrada", "escore_mama": "0.1",
+         "mama_confirmada": "Normal", "exame_confirmacao": SEGUIMENTO},
+        {"rodada": "r1", "mama": "M3", "origem_lesao": "detectada pelo modelo", "p_maligno": "0.3",
+         "mama_confirmada": "Benigna", "exame_confirmacao": "Ultrassonografia"},           # exame não vale
+        {"rodada": "r1", "mama": "M4", "origem_lesao": "detectada pelo modelo", "p_maligno": "0.4",
+         "patologia_confirmada": "Benigno", "exame_confirmacao": BIOPSIA, "lesao_real": "sim"},  # sem 'mama confirmada'
+    ])
+    m = DL.mamas_confirmadas(b).set_index("grupo")
+    assert set(m.index) == {"r1|M1", "r1|M2"}
+    assert m.loc["r1|M1", "y"] == 1 and m.loc["r1|M1", "p_maria"] == 0.8 and m.loc["r1|M1", "escore"] == 0.7
+    assert m.loc["r1|M2", "y"] == 0 and bool(m.loc["r1|M2", "normal"]) and np.isnan(m.loc["r1|M2", "p_maria"])
+    assert len(DL.lesoes_confirmadas(b)) == 2
+
+
+def test_REQ_LOC_02_intervalo_de_confianca_e_estabilidade():
+    import desempenho_local as DL
+    rng = np.random.default_rng(1)
+    y = rng.integers(0, 2, 400); p = y * 0.3 + rng.random(400) * 0.7
+    v, inf, sup = DL.ic_bootstrap(DL.auc, y, p)
+    assert inf < v < sup and sup - inf < 0.15
+    v2, inf2, sup2 = DL.ic_bootstrap(DL.auc, y[:40], p[:40])
+    assert sup2 - inf2 > sup - inf                     # menos casos -> intervalo mais largo
+    assert abs(DL.auc(y, p) - ns_auc(y, p)) < 1e-9     # mesma AUC do dashboard
+    assert DL.estabilidade(y[:8]) == "insuficiente" and DL.estabilidade(y[:25]) == "instável"
+    assert DL.estabilidade(y) == "ok" and DL.pode_calibrar(y) and not DL.pode_calibrar(y[:40])
+
+
+def ns_auc(y, p):
+    return funcoes_do_dashboard("auc_numpy")["auc_numpy"](y, p)
+
+
+def test_REQ_LOC_03_fila_de_casos_para_anotar():
+    """Discordância GMIC × MARIA e mama em prioridade alta sem lesão vêm primeiro; casos já anotados saem."""
+    import pandas as pd
+    import desempenho_local as DL
+    r = pd.DataFrame([
+        {"amostra": "a", "mama": "m1", "origem_lesao": "detectada pelo modelo", "prioridade": "baixa", "p_gmic_mama": "0.9",
+         "p_maligno": "0.05", "p_maligno_calibrada": "0.05", "incerteza": "0.01", "fabricante": "X", "escore_mama": "0.3"},
+        {"amostra": "b", "mama": "m2", "origem_lesao": "nenhuma lesão encontrada", "prioridade": "alta",
+         "p_gmic_mama": "0.5", "p_maligno": "", "p_maligno_calibrada": "", "incerteza": "", "fabricante": "X",
+         "escore_mama": "0.5"},
+        {"amostra": "c", "mama": "m3", "origem_lesao": "detectada pelo modelo", "prioridade": "baixa", "p_gmic_mama": "0.1",
+         "p_maligno": "0.45", "p_maligno_calibrada": "0.2", "incerteza": "0.01", "fabricante": "X", "escore_mama": "0.1"},
+        {"amostra": "d", "mama": "m4", "origem_lesao": "detectada pelo modelo", "prioridade": "alta", "p_gmic_mama": "0.8",
+         "p_maligno": "0.9", "p_maligno_calibrada": "0.9", "incerteza": "0.01", "fabricante": "X", "escore_mama": "0.9"},
+    ])
+    cfg = json.loads((RAIZ / "modelo/calibracao.json").read_text(encoding="utf-8"))["hibrido_gmic"]
+    f = DL.fila_para_anotar(r, {"d"}, {"X": 50}, cfg_hibrido=cfg)
+    assert set(list(f["amostra"])[:2]) == {"a", "b"}
+    assert "d" not in set(f["amostra"]) and "c" not in set(f["amostra"])
+    assert DL.MOTIVOS["discordancia"] in f.set_index("amostra").at["a", "motivos"]
+    assert DL.MOTIVOS["alta_sem_lesao"] in f.set_index("amostra").at["b", "motivos"]
+
+
+def test_REQ_LOC_04_monitoramento_alerta_queda():
+    import pandas as pd
+    import desempenho_local as DL
+    linhas = []
+    for mes, acerto in (("2026-01-15", 0.95), ("2026-02-15", 0.30)):
+        for i in range(60):
+            y = int(i < 30)
+            linhas.append({"grupo": f"{mes}{i}", "y": y, "data": mes,
+                           "score": (0.9 if (y and i < 30 * acerto) else 0.1) if y else 0.1})
+    t = DL.por_periodo(pd.DataFrame(linhas), "score", 0.5)
+    assert list(t["periodo"]) == ["2026-01", "2026-02"]
+    al = DL.alertas(t, 0.80)
+    assert len(al) == 1 and al[0].startswith("2026-02")
+
+
+def test_REQ_LOC_05_comparacao_do_modo_sombra():
+    import desempenho_local as DL
+    b = _banco_df([
+        {"rodada": "r1", "mama": "M1", "imagem": "i1", "versao_sombra": "detector:20260101;achado:20260101",
+         "origem_lesao": "detectada pelo modelo", "lesao_real": "sim", "sombra_detectou": "sim", "caixas_sombra": "1",
+         "achado_modelo": "Massa/Nódulo", "achado_sombra": "Microcalcificação", "achado_confirmado": "Microcalcificação",
+         "exame_confirmacao": BIOPSIA},
+        {"rodada": "r1", "mama": "M1", "imagem": "i1", "versao_sombra": "detector:20260101;achado:20260101",
+         "origem_lesao": "detectada pelo modelo", "lesao_real": "não", "sombra_detectou": "não", "caixas_sombra": "1"},
+    ])
+    det = DL.comparar_sombra(b, "detector", "20260101").set_index("medida")
+    assert det.at["lesões reais encontradas", "em uso"] == 1.0 and det.at["lesões reais encontradas", "candidato"] == 1.0
+    assert det.at["caixas falsas por imagem", "em uso"] == 1.0 and det.at["caixas falsas por imagem", "candidato"] == 0.0
+    ach = DL.comparar_sombra(b, "achado", "20260101").set_index("medida")
+    assert ach.at["achado (acerto)", "em uso"] == 0.0 and ach.at["achado (acerto)", "candidato"] == 1.0
+    assert DL.comparar_sombra(b, "densidade", "20260101").empty
+
+
+def test_REQ_CAL_02_calibracao_local_por_partes():
+    """A calibração local pode ter só a lesão, só a mama ou as duas; a escala do escore da mama não muda."""
+    import maria
+    cal = json.loads((RAIZ / "modelo/calibracao.json").read_text(encoding="utf-8"))
+    so_mama = maria.aplicar_calibracao_local(cal, {"hibrido_gmic": {"alta": 0.5, "media": 0.2, "n": 60}})
+    assert so_mama["hibrido_gmic"]["alta"] == 0.5 and so_mama["hibrido_gmic"]["a"] == cal["hibrido_gmic"]["a"]
+    assert so_mama["patologia"] == cal["patologia"] and cal["hibrido_gmic"]["alta"] != 0.5   # original intacto
+    so_lesao = maria.aplicar_calibracao_local(cal, {"patologia": {"a": 2.0, "b": 0.1}, "prioridade": {"alta": 0.4, "media": 0.1}})
+    assert so_lesao["patologia_contexto"]["a"] == 2.0 and so_lesao["prioridade_contexto"]["alta"] == 0.4
+    assert so_lesao["hibrido_gmic"]["alta"] == cal["hibrido_gmic"]["alta"]
+
+
+def test_REQ_RET_02_candidato_em_modo_sombra(tmp_path, monkeypatch):
+    """O retreino aprovado vira candidato (não troca o modelo); promover troca e guarda o anterior; descartar apaga."""
+    import torch
+    import retreinar as R
+    for rel in ("modelo_achado/resnet50_multitask_mama_do_zero.pth",):
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        torch.save({"w": torch.zeros(1)}, tmp_path / rel)
+    monkeypatch.setattr(R, "AQUI", tmp_path)
+    monkeypatch.setattr(R, "CANDIDATO", tmp_path / "candidato")
+    monkeypatch.setattr(R, "HISTORICO", tmp_path / "historico")
+    monkeypatch.setattr(R, "auditar", lambda *a, **k: None)
+    import types
+    gerados = []                                     # não toca no MANIFESTO.json real
+    monkeypatch.setitem(sys.modules, "manifesto", types.SimpleNamespace(gerar=gerados.append))
+    rel = "modelo_achado/resnet50_multitask_mama_do_zero.pth"
+    R.salvar_candidato("achado", {"w": torch.ones(1)}, rel, "20260101_000000", {}, {}, 12)
+    assert torch.load(tmp_path / rel)["w"].item() == 0                    # o modelo em uso NÃO mudou
+    assert "achado" in R.candidatos() and R.candidatos()["achado"]["casos_usuario"] == 12
+    R.promover("achado")
+    assert torch.load(tmp_path / rel)["w"].item() == 1                    # trocou só depois de aprovar
+    assert any((p / rel).is_file() for p in (tmp_path / "historico").glob("*"))   # anterior guardado
+    assert not R.candidatos() and len(gerados) == 1      # o manifesto é regerado ao trocar o modelo
+    R.salvar_candidato("achado", {"w": torch.full((1,), 2.0)}, rel, "20260102_000000", {}, {}, 5)
+    R.descartar("achado")
+    assert not R.candidatos() and torch.load(tmp_path / rel)["w"].item() == 1

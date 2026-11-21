@@ -25,3 +25,6 @@ integracao/saida/
 
 # ---- GMIC (AGPLv3): baixado à parte por config/baixar_gmic.py, não faz parte do repositório ----
 modelo/modulo_gmic/
+
+# ---- modelos candidatos do retreino (modo sombra): pesos locais, não versionar ----
+modelo/candidato/

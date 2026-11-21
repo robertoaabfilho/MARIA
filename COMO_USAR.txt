@@ -281,6 +281,7 @@
      --sem_mapas ............... não gera os mapas de calor (mais rápido, sobretudo sem GPU). Os mapas
                                  ficam na pasta <nome do resultado>_mapas, ao lado do CSV.
      --sem_gmic ................ não usa o GMIC: prioridade só pela lesão (como antes do híbrido)
+     --sem_sombra .............. não roda os modelos candidatos (modo sombra, seção 14.5)
 
    Retreino pela linha de comando (só na máquina com os dados completos; seção 14):
        python retreinar.py --verificar                        mostra se a máquina pode retreinar e
@@ -475,6 +476,9 @@
    idade, fabricante . da paciente e do equipamento (DICOM ou planilha)
    mapa_calor ........ arquivo(s) PNG do mapa de calor da lesão
    mapa_gmic ......... PNG do mapa do GMIC na mamografia inteira
+   *_sombra .......... só quando há um modelo CANDIDATO em modo sombra (seção 14.5): versao_sombra,
+                       achado_sombra, densidade_sombra, sombra_detectou (o candidato achou esta caixa?) e
+                       caixas_sombra (caixas do candidato na imagem). NÃO mudam o resultado.
    versao_modelo ..... versão do modelo que gerou o resultado (hash; "+cal-local-..." = calibração local;
                        "+gmic-594029e" = com o GMIC)
    calibracao ........ qual calibração foi usada (CBIS-DDSM padrão ou local)
@@ -557,7 +561,7 @@
    - Poucos exames normais e de um único hospital foram usados para medir os alarmes falsos.
    - O híbrido com o GMIC foi escolhido e medido no CMMD (só casos biopsiados, 70% de câncer); falta
      medir em rastreamento, com exames normais. O GMIC entra como foi publicado: o retreino do MARIA não
-     o ajusta, e a calibração local (seção 14.4) muda a prioridade da lesão, não a da mama.
+     o ajusta; a calibração local (seção 14.4) pode ajustar os limites da prioridade da mama e da lesão.
    - Protótipo de pesquisa: não substitui a avaliação do radiologista.
 
 
@@ -634,6 +638,9 @@
                               imagem inteira ficar fora do retreino do detector).
      patologia confirmada ... Benigno ou Maligno (fica registrada; NÃO é usada no retreino).
      achado confirmado ...... Massa/Nódulo ou Microcalcificação.
+     mama confirmada ........ resultado da MAMA inteira: Maligna (biópsia), Benigna (biópsia) ou Normal
+                              (seguimento estável por ≥ 2 anos). Basta preencher numa linha da mama, com o
+                              exame na mesma linha. É o que mede e calibra a PRIORIDADE DA MAMA (14.4).
      exame de confirmação ... Biópsia (anatomopatológico), Seguimento (estável por ≥ 2 anos),
                               Ressonância magnética, Ultrassonografia ou Outro exame padrão-ouro. SEM o exame, a confirmação é guardada mas não
                               entra no retreino (a tela avisa quantas linhas estão nessa situação).
@@ -645,21 +652,56 @@
    são PSEUDONIMIZADOS (viram códigos) e as imagens DICOM são ANONIMIZADAS (seção 16).
    "Baixar resultados revisados (CSV para Excel)" salva a tabela revisada para abrir no Excel.
 
- 14.2 BANCO DE ANOTAÇÕES (página "Anotações e retreino")
-   Mostra quantas lesões foram anotadas, quantas têm exame de confirmação e quantas caixas foram
-   revisadas; "Ver o banco de anotações" mostra a planilha inteira.
-   - "Exportar anotações (.zip)": empacota o banco (planilha + imagens) para levar a outro computador.
-   - "Importar anotações (.zip)": junta ao banco local um .zip exportado pelo MARIA. Anotações com o
-     mesmo id são atualizadas. Por segurança, só são aceitos a planilha e as imagens da pasta
-     "imagens" do .zip; qualquer outro arquivo é ignorado (e a tela avisa).
-   Use exportar/importar para juntar, na máquina de treino, as revisões feitas em vários computadores.
+ A página "Anotações e retreino" segue o caminho do caso confirmado até o modelo ajustado ao serviço, em
+ quatro abas: 1. ANOTAR -> 2. MEDIR -> 3. CALIBRAR -> 4. RETREINAR. No topo, um painel mostra o que falta
+ em cada etapa (por exemplo: "faltam 12 malignos (mamas) para calibrar").
+
+ 14.2 ABA "1. ANOTAR"
+   - Números do banco: lesões anotadas, mamas com confirmação, lesões com exame e caixas revisadas.
+   - CASOS MAIS ÚTEIS PARA REVISAR AGORA: lista, das rodadas dos últimos 90 dias ainda não anotadas, os
+     casos que mais ensinam ao MARIA, nesta ordem: GMIC e MARIA discordam (na escala do híbrido) > mama em
+     prioridade alta/média sem lesão detectada > resultado incerto > equipamento com poucos casos
+     confirmados > prioridade alta sem confirmação. "Abrir na página Resultados" reabre aquela rodada já
+     com a lesão escolhida, para revisar e salvar.
+   - "Exportar anotações (.zip)" / "Importar anotações (.zip)": leva o banco (planilha + imagens
+     anonimizadas) para outro computador, por exemplo a máquina de treino. Anotações com o mesmo id são
+     atualizadas; só a planilha e as imagens da pasta "imagens" do .zip são aceitas.
    O banco contém dados e imagens de pacientes: trate como informação sensível (LGPD).
 
- 14.3 RETREINAR O MODELO
+ 14.3 ABA "2. MEDIR" (desempenho local, com intervalo de confiança)
+   Usa só casos confirmados por BIÓPSIA, SEGUIMENTO (estável ≥ 2 anos) ou outro exame padrão-ouro.
+   Todos os números vêm com o INTERVALO DE CONFIANÇA DE 95% (bootstrap por mama) e um selo:
+   "casos insuficientes" (menos de 10, ou sem uma das classes), "poucos casos: números instáveis" (menos
+   de 30, ou menos de 10 de cada classe) ou "números estáveis". Com poucos casos o intervalo é largo:
+   espere mais casos antes de decidir.
+   - PRIORIDADE DA MAMA (a que ordena a fila): AUC por mama, sensibilidade e especificidade da prioridade
+     alta e, separadamente, a especificidade nos EXAMES NORMAIS confirmados por seguimento, que é o que
+     importa no rastreamento. Com o GMIC, usa o escore da mama; sem ele, a maior P calibrada da mama.
+   - PROBABILIDADE DA LESÃO: AUC, sensibilidade e especificidade por lesão, curva de calibração no serviço
+     e desempenho por densidade, faixa etária, tipo de achado e EQUIPAMENTO.
+   - AO LONGO DO TEMPO (monitoramento): sensibilidade e AUC mês a mês, com o intervalo de confiança e a
+     referência externa (CMMD). Um aviso aparece quando, num mês com pelo menos 20 casos, o intervalo da
+     sensibilidade fica todo abaixo da referência — sinal de mudança de equipamento, protocolo ou
+     população: investigue e considere recalibrar.
+
+ 14.4 ABA "3. CALIBRAR" (calibração local)
+   Ajusta o MARIA ao seu serviço (outra proporção de câncer, outros equipamentos). Duas partes,
+   independentes (marque o que quer incluir e clique em "Aplicar calibração local"; administrador):
+   - LIMITES DA PRIORIDADE DA MAMA (com o GMIC): escolhe os limites do escore da mama para a SENSIBILIDADE
+     DESEJADA (controle deslizante; a média usa 98%). A escala do escore continua a do CMMD.
+   - PROBABILIDADE E PRIORIDADE DA LESÃO: recalibra a probabilidade (Platt) e escolhe o limite da
+     prioridade alta da lesão. Vale para recorte e recorte + contexto.
+   Cada parte exige 50 casos confirmados (mamas ou lesões), com pelo menos 15 malignos e 15 não malignos.
+   Passa a valer nas próximas classificações; a versão do modelo no resultado indica "+cal-local".
+   "Remover calibração local" volta à do CBIS-DDSM (lesão) e aos limites do CMMD (mama). Os números
+   mostrados são calculados nos mesmos casos usados para calibrar (otimistas): confira com casos novos
+   na aba Medir.
+
+ 14.5 ABA "4. RETREINAR" (com MODO SOMBRA)
    DISPONÍVEL APENAS NA MÁQUINA COM OS DADOS COMPLETOS DO MODELO. O retreino mistura as anotações com
    os dados originais de treino (CBIS-DDSM e CDD-CESM, ~160 GB) — sem eles o modelo "esqueceria" o que
-   aprendeu. Em qualquer outro computador a página mostra "Esta máquina NÃO tem os dados completos" (com a
-   lista do que falta) e o botão fica desativado: exporte as anotações e importe-as na máquina de treino.
+   aprendeu. Em qualquer outro computador a aba mostra o que falta e o botão fica desativado: exporte as
+   anotações e importe-as na máquina de treino.
 
    Requisitos da máquina de treino: os dados preparados (dados_deteccao, CBIS-DDSM e a planilha do
    CDD-CESM), placa NVIDIA e as bibliotecas scikit-learn e openpyxl. Os caminhos padrão estão no início
@@ -667,50 +709,32 @@
        {"dados_deteccao": "D:/MARIA/dados_deteccao", "cbis": "D:/CBIS_DDSM",
         "cdd_xlsx": "D:/cdd_cesm/Radiology-manual-annotations.xlsx", "cache": "D:/MARIA/dados_retreino"}
 
-   O que pode ser retreinado (a PATOLOGIA benigno/maligno NÃO é retreinada):
-     Densidade .......... mamas com densidade confirmada E com a mamografia completa (o ajuste usa a
-                          mesma rede do modelo em uso, indicada em modelo_densidade\densidade.json).
+   O que pode ser retreinado (a PATOLOGIA e o GMIC NÃO são retreinados; para eles, use a calibração):
+     Densidade .......... mamas com densidade confirmada E com a mamografia completa.
      Detector de lesões . mamografias completas em que todas as caixas do modelo foram revisadas
                           (lesão real sim/não), mais as lesões marcadas pelo usuário.
-     Achado ............. lesões com achado confirmado E exame de confirmação informado
-                          (lesões marcadas como falso positivo são ignoradas).
-   Mínimo de 10 casos utilizáveis por modelo (a página mostra quantos há; modelos abaixo do mínimo são
-   pulados). Com poucos casos o efeito tende a ser pequeno e o modelo atual costuma ser mantido; o
-   ganho real aparece com dezenas a centenas de casos confirmados do seu serviço.
+     Achado ............. lesões com achado confirmado E exame de confirmação informado.
+   Mínimo de 10 casos utilizáveis por modelo; o ganho real aparece com dezenas a centenas de casos.
 
-   Como usar: escolha os modelos, marque a caixa de confirmação e clique em "Retreinar o modelo".
-   Tempo aproximado com GPU: densidade ~15 min, detector ~40 min, achado ~10 min (+ ~10 min na
-   primeira vez, para preparar os recortes do achado). O retreino roda em segundo plano e continua
-   mesmo fechando o navegador; a página mostra o andamento e se atualiza sozinha.
-   Se o retreino for interrompido (computador desligado, falta de memória), a página avisa, os modelos
-   em uso NÃO são alterados e o botão volta a ficar disponível.
+   Como usar: escolha os modelos, marque a confirmação e clique em "Retreinar o modelo". Tempo com GPU:
+   densidade ~15 min, detector ~40 min, achado ~10 min (+ ~10 min na primeira vez). Roda em segundo
+   plano e continua mesmo fechando o navegador; se for interrompido, nada muda e o botão volta.
 
-   Proteções automáticas:
+   Proteções:
      - ajuste fino a partir do modelo ATUAL, com os casos do usuário misturados aos dados originais;
      - 20% das mamas anotadas ficam de fora do treino, para conferir o resultado;
-     - o modelo novo SÓ SUBSTITUI o atual se não piorar no teste fixo (pacientes que nunca entram no
-       treino) nem nos casos guardados do usuário. Regras: densidade — concordância (kappa) não pode
-       cair mais de 0,01; detector — sensibilidade não pode cair mais de 1 ponto e as caixas falsas em
-       exames normais não podem subir mais de 10%; achado — AUC não pode cair mais de 0,005.
-       Caso contrário, o modelo atual é mantido;
-     - a versão anterior vai para modelo\historico\ (ficam as 3 últimas de cada modelo) e pode ser
-       restaurada em "Versões anteriores dos modelos (restaurar)".
-   O resultado de cada retreino (antes x depois, no teste fixo e nos casos guardados do usuário)
-   aparece na página e fica em anotacoes\retreinos\ (relatório .json e log .txt).
-
- 14.4 DESEMPENHO LOCAL E CALIBRAÇÃO DO LIMIAR (página "Anotações e retreino")
-   Com casos do SEU serviço com patologia confirmada por BIÓPSIA, SEGUIMENTO (estável ≥ 2 anos) ou outro
-   exame padrão-ouro, a página mostra: AUC local, sensibilidade e especificidade da prioridade alta, curva
-   de calibração no serviço e desempenho por densidade, faixa etária, tipo de achado e EQUIPAMENTO.
-   "Aplicar calibração local" (administrador; exige 50 casos, com pelo menos 15 malignos e 15 benignos)
-   recalibra a probabilidade e escolhe o limite de prioridade alta para a SENSIBILIDADE DESEJADA
-   (controle deslizante; a prioridade média usa 98%). Passa a valer nas próximas classificações, e a
-   versão do modelo no resultado indica "+cal-local". "Remover calibração local" volta à do CBIS-DDSM.
-   A calibração local vale para as duas saídas da patologia (recorte e recorte + contexto), porque é
-   ajustada nas probabilidades que o seu serviço realmente recebeu.
-   Os números são calculados nos mesmos casos usados para calibrar (otimistas): reavalie com casos novos.
-   Com o GMIC, a calibração local vale para a prioridade da LESÃO; a prioridade da mama (híbrido) continua
-   com os limites escolhidos no CMMD.
+     - o modelo novo só passa se não piorar no teste fixo nem nos casos guardados do usuário (densidade:
+       kappa não cai mais de 0,01; detector: sensibilidade não cai mais de 1 ponto e caixas falsas em
+       exames normais não sobem mais de 10%; achado: AUC não cai mais de 0,005);
+     - MODO SOMBRA: o modelo que passou NÃO substitui o atual. Ele vira CANDIDATO (pasta
+       modelo\candidato\) e roda EM PARALELO nas classificações seguintes, sem mudar nenhum resultado
+       (colunas *_sombra do resultado). A aba mostra o modelo em uso × o candidato nos casos que você
+       confirmar desde então (acerto da densidade, do achado, lesões reais encontradas e caixas falsas
+       por imagem). Só o administrador troca o modelo: "Aprovar e trocar o modelo" (a versão anterior vai
+       para modelo\historico\) ou "Descartar candidato". Tudo fica na auditoria;
+     - "Versões anteriores dos modelos (restaurar)": volta a qualquer uma das 3 últimas versões.
+   O relatório de cada retreino (antes x depois) fica em anotacoes\retreinos\ (.json e log .txt).
+   Pela linha de comando: python retreinar.py --candidatos | --promover achado | --descartar achado.
 
 
 ===============================================================================================
