@@ -13,3 +13,5 @@ streamlit==1.67.0
 plotly==7.1.0
 altair==6.3.0
 tqdm==4.70.1
+scipy==1.18.1
+opencv-python-headless==5.1.0.95

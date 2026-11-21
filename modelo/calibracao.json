@@ -50,5 +50,71 @@
       0.65
     ],
     "nota": "desvio-padrão entre as redes acima do máximo, ou P calibrada na faixa incerta = resultado incerto"
+  },
+  "hibrido_gmic": {
+    "gmic_media": -1.4876978008666404,
+    "gmic_desvio": 1.8171904582044107,
+    "maria_media": 0.19692063263027823,
+    "maria_desvio": 0.986791072284308,
+    "eps": 0.001,
+    "maria_sem_lesao": 0.19636055170000002,
+    "a": 1.9589243709328512,
+    "b": 0.4799175028621501,
+    "alta": 0.359,
+    "media": 0.1676,
+    "origem": "CMMD (metade A: 940 mamas, separada por paciente); conferido na metade B (932 mamas)",
+    "nota": "escore da mama = logística (pesos equilibrados) da média dos logits padronizados de GMIC (média das imagens) e MARIA (máxima das lesões, recorte + contexto, P bruta); NÃO é a probabilidade de câncer. Limites com a sensibilidade da prioridade em uso: alta 80%, média 96%.",
+    "conferencia_metade_B": {
+      "metade_A": {
+        "mamas": 940,
+        "malignas": 645
+      },
+      "metade_B": {
+        "mamas": 932,
+        "malignas": 671
+      },
+      "auc_B": {
+        "MARIA (em uso)": 0.758,
+        "GMIC": 0.789,
+        "híbrido": 0.814
+      },
+      "alta_B": {
+        "MARIA (em uso)": {
+          "sens": 0.778,
+          "esp": 0.552
+        },
+        "híbrido": {
+          "sens": 0.814,
+          "esp": 0.625
+        }
+      },
+      "media_B": {
+        "MARIA (em uso)": {
+          "sens": 0.954,
+          "esp": 0.172
+        },
+        "híbrido": {
+          "sens": 0.958,
+          "esp": 0.184
+        }
+      },
+      "por_achado_B": {
+        "both": {
+          "MARIA": 0.814,
+          "GMIC": 0.869,
+          "híbrido": 0.874
+        },
+        "calcification": {
+          "MARIA": 0.697,
+          "GMIC": 0.879,
+          "híbrido": 0.859
+        },
+        "mass": {
+          "MARIA": 0.756,
+          "GMIC": 0.715,
+          "híbrido": 0.759
+        }
+      }
+    }
   }
 }

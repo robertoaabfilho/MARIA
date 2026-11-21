@@ -7,7 +7,7 @@ if ! command -v python3 >/dev/null; then
 fi
 python3 -c "import sys; sys.exit(0 if sys.version_info[:2] >= (3, 10) else 1)" || {
   echo "Este MARIA precisa do Python 3.10 ou mais novo (encontrado: $(python3 --version))."; exit 1; }
-python3 -c "import streamlit, torch, torchvision, efficientnet_pytorch, pydicom, pynetdicom, pandas, altair, plotly, sys; sys.exit(0 if tuple(int(x) for x in streamlit.__version__.split('.')[:2]) >= (1, 67) else 1)" 2>/dev/null && exit 0
+python3 -c "import streamlit, torch, torchvision, efficientnet_pytorch, pydicom, pynetdicom, pandas, altair, plotly, scipy, cv2, sys; sys.exit(0 if tuple(int(x) for x in streamlit.__version__.split('.')[:2]) >= (1, 67) else 1)" 2>/dev/null && exit 0
 python3 -m pip --version >/dev/null 2>&1 || {
   echo "O pip não está instalado. Instale com:  sudo apt install python3-pip   (ou o equivalente da sua distribuição)"; exit 1; }
 echo "Instalando ou atualizando as bibliotecas do MARIA (pode demorar alguns minutos; ~3 GB com GPU NVIDIA)..."

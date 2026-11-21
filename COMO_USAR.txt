@@ -30,11 +30,16 @@
  O MARIA PRIORIZA casos para a leitura do radiologista; ele NÃO dá o diagnóstico. Recebe mamografias
  (DICOM, PNG ou JPG) e, para cada lesão, informa:
 
-   - PRIORIDADE ........ alta, média ou baixa (pela probabilidade de malignidade CALIBRADA), para
-                         ordenar a fila de leitura. Imagens inadequadas recebem "não avaliar".
+   - PRIORIDADE ........ alta, média ou baixa, para ordenar a fila de leitura. Nas mamografias
+                         completas, com o GMIC instalado (opcional, seção 4), é a PRIORIDADE DA MAMA:
+                         junta o GMIC (NYU, olha a mamografia inteira) com a maior probabilidade de
+                         malignidade do MARIA entre as lesões da mama. Sem o GMIC, e nos recortes
+                         fornecidos, é a da lesão (probabilidade CALIBRADA). Imagens inadequadas
+                         recebem "não avaliar".
    - QUALIDADE ......... ok, atenção ou NÃO USAR (modalidade errada, imagem colorida, sem contraste,
                          recorte minúsculo, baixa resolução, resultado incerto...).
-   - ONDE O MODELO OLHOU  mapa de calor de cada lesão (regiões que mais pesaram na suspeita).
+   - ONDE O MODELO OLHOU  mapa de calor de cada lesão (regiões que mais pesaram na suspeita) e, com o
+                         GMIC, o mapa da mamografia inteira.
    - INCERTEZA ......... discordância entre as redes de patologia.
    - PATOLOGIA ......... Benigno ou Maligno, com a confiança e a probabilidade de malignidade. Nas
                          lesões da mamografia completa, a patologia olha a lesão (recorte) e o tecido em
@@ -60,6 +65,7 @@
        iniciar_dashboard.bat .... (Windows) abre o dashboard          | iniciar_dashboard.sh (Linux/macOS)
        rodar_exemplos.bat ....... (Windows) testa com os exemplos     | rodar_exemplos.sh    (Linux/macOS)
        iniciar_no_dicom.bat ..... (Windows) liga o nó DICOM           | iniciar_no_dicom.sh  (Linux/macOS)
+       baixar_gmic.bat .......... (Windows) baixa o GMIC (opcional)   | baixar_gmic.sh       (Linux/macOS)
        requirements.txt ......... lista de bibliotecas Python (versões mínimas)
        requirements-validado.txt  versões EXATAS validadas
        usuarios.json ............ usuários e hashes das senhas (criado no primeiro acesso; NÃO compartilhe)
@@ -73,6 +79,7 @@
    resultados\ .......... resultados das rodadas do dashboard (criada sozinha)
    anotacoes\ ........... banco de anotações do usuário (criada ao salvar a primeira revisão; seção 14)
    modelo\historico\ .... versões anteriores dos modelos, guardadas pelo retreino (seção 14)
+   modelo\modulo_gmic\ .. o GMIC (NYU), se você o baixou (seção 4); licença própria (GNU AGPLv3)
 
  Para levar o MARIA para outro computador, copie a pasta inteira. ATENÇÃO: as pastas "resultados",
  "anotacoes", "auditoria" e "integracao\saida" e os arquivos config\usuarios.json e
@@ -131,6 +138,19 @@
        pip install -r config/requirements.txt
    Para GPU NVIDIA no Linux, instale antes o PyTorch com o comando de https://pytorch.org/get-started/locally/
    (no macOS o MARIA roda na CPU).
+
+ GMIC (OPCIONAL, RECOMENDADO): MELHORA A PRIORIDADE DA MAMA
+ ----------------------------------------------------------
+   O GMIC (NYU; Shen et al., Medical Image Analysis 2021) olha a mamografia inteira. Junto com o MARIA,
+   ele reduziu os alarmes falsos da prioridade alta no teste externo (seção 12), sobretudo nas
+   calcificações. Ele é de terceiros e licenciado sob a GNU AGPLv3, por isso NÃO vem com o MARIA:
+   baixe uma vez (~410 MB; versão fixa, pesos conferidos por SHA-256). Ao baixar, você aceita a licença.
+       Windows: duplo clique em  config\baixar_gmic.bat
+       Linux:   ./config/baixar_gmic.sh
+       ou, no dashboard: página Administração -> "Baixar e instalar o GMIC"
+   Depois disso, o MARIA usa o GMIC sozinho (chave "Prioridade da mama com o GMIC" na barra lateral da
+   página Executar; na linha de comando, --sem_gmic desliga). Sem placa NVIDIA, o GMIC acrescenta alguns
+   segundos por mamografia completa.
 
 
 ===============================================================================================
@@ -204,10 +224,12 @@
       A planilha editada continua lá quando você volta para a página Executar.
 
  PÁGINA "Resultados"
-   - Resumo: lesões por prioridade (alta, média, baixa, não avaliar) e a versão do modelo. Um aviso
-     vermelho lista as imagens com qualidade NÃO USAR.
+   - Resumo: lesões por prioridade (alta, média, baixa, não avaliar), mamas em prioridade alta (com o
+     GMIC) e a versão do modelo. Um aviso vermelho lista as imagens com qualidade NÃO USAR.
    - Fila de leitura (priorizada): uma linha por lesão, ordenada da prioridade alta para a baixa e,
-     dentro dela, pela probabilidade calibrada. Passe o mouse no título de uma coluna para ver o que
+     dentro dela, pelo escore da mama (com o GMIC) e pela probabilidade calibrada. Com o GMIC, todas as
+     lesões da mesma mama têm a mesma prioridade (a da mama); a coluna "prioridade da lesão" mostra a
+     que a lesão teria sozinha. Passe o mouse no título de uma coluna para ver o que
      ela significa. Filtre por prioridade, origem da lesão ou pelo nome. "Baixar tabela (CSV para
      Excel)" salva a tabela filtrada.
    - Gráficos: cada análise fica num bloco que abre e recolhe com um clique:
@@ -225,8 +247,8 @@
      motivo, se for "atenção" ou "não usar"). À esquerda: a imagem com as caixas e a LEGENDA (vermelho =
      esta lesão, verde = marcada pelo usuário, amarelo = detectada pelo modelo, com a confiança do
      detector), o recorte classificado e o MAPA DE CALOR ("onde o modelo olhou" — confira se ele olhou para a lesão, e não para bordas ou
-     marcações). À direita: Identificação (mama, vista, idade, equipamento, versão do modelo),
-     Localização e detecção, Prioridade, P calibrada e incerteza, Patologia, Achado e Densidade, com o
+     marcações) e, com o GMIC, "Onde o GMIC olhou" na mamografia inteira. À direita: Identificação (mama, vista, idade, equipamento, versão do modelo),
+     Localização e detecção, Prioridade da mama (com o escore) e da lesão, P calibrada e incerteza, Patologia, Achado e Densidade, com o
      aviso de confiabilidade.
      ZOOM: role a roda do mouse sobre a imagem para aproximar e arraste para mover; duplo clique volta.
      Para TELA CHEIA, use o botão no canto superior direito da imagem (o zoom continua funcionando).
@@ -258,6 +280,7 @@
      --saida_csv ARQUIVO ....... onde gravar o resultado (padrão: modelo\results.csv)
      --sem_mapas ............... não gera os mapas de calor (mais rápido, sobretudo sem GPU). Os mapas
                                  ficam na pasta <nome do resultado>_mapas, ao lado do CSV.
+     --sem_gmic ................ não usa o GMIC: prioridade só pela lesão (como antes do híbrido)
 
    Retreino pela linha de comando (só na máquina com os dados completos; seção 14):
        python retreinar.py --verificar                        mostra se a máquina pode retreinar e
@@ -434,9 +457,16 @@
  11. RESULTADOS: O QUE SIGNIFICA CADA COLUNA (results.csv e tabela do dashboard)
 ===============================================================================================
    amostra ........... identificador da lesão classificada
-   prioridade ........ alta / média / baixa (pela P calibrada: alta ≥ 0,50 nos recortes e ≥ 0,37 nas
-                       lesões da mamografia completa; média ≥ 0,20) ou
-                       "não avaliar (qualidade)"; "baixa (nada detectado)" para imagem sem lesão
+   prioridade ........ alta / média / baixa ou "não avaliar (qualidade)". Com o GMIC, nas mamografias
+                       completas = a prioridade da MAMA (híbrido; igual em todas as linhas da mama).
+                       Senão = a da lesão (prioridade_lesao). "baixa (nada detectado)" = imagem sem
+                       lesão e sem GMIC
+   prioridade_origem . "mama (GMIC + MARIA)" ou "lesão (MARIA)"
+   escore_mama ....... escore da mama do híbrido, de 0 a 1 (alta ≥ 0,36; média ≥ 0,17). NÃO é a
+                       probabilidade de câncer: serve para ordenar e definir a prioridade
+   p_gmic_mama ....... P(maligno) do GMIC na mama (média das imagens da mama)
+   prioridade_lesao .. prioridade só da lesão, pela P calibrada (alta ≥ 0,50 nos recortes e ≥ 0,37 nas
+                       lesões da mamografia completa; média ≥ 0,20)
    p_maligno_calibrada probabilidade de malignidade calibrada (0 a 1)
    incerteza ......... desvio-padrão entre as redes (5 ou 10; acima de 0,15 = incerto)
    patologia_entrada . "recorte" (só a lesão) ou "recorte + contexto" (lesão + tecido em volta)
@@ -444,7 +474,9 @@
    qualidade ......... ok / atenção / não usar;  avisos_qualidade: os motivos
    idade, fabricante . da paciente e do equipamento (DICOM ou planilha)
    mapa_calor ........ arquivo(s) PNG do mapa de calor da lesão
-   versao_modelo ..... versão do modelo que gerou o resultado (hash; "+cal-local-..." = calibração local)
+   mapa_gmic ......... PNG do mapa do GMIC na mamografia inteira
+   versao_modelo ..... versão do modelo que gerou o resultado (hash; "+cal-local-..." = calibração local;
+                       "+gmic-594029e" = com o GMIC)
    calibracao ........ qual calibração foi usada (CBIS-DDSM padrão ou local)
    mama .............. mama a que a lesão pertence
    vista ............. CC, MLO ou "CC + MLO" (recortes das duas vistas)
@@ -471,7 +503,8 @@
  12. DESEMPENHO MEDIDO E LIMITAÇÕES
 ===============================================================================================
  Medido em pacientes que os modelos NÃO viram no treino (bases públicas CBIS-DDSM, CDD-CESM e CMMD).
- MODELOS EM USO (versão 37abfd982a1f, 20/11/2026):
+ MODELOS EM USO (versão 51eb6d1301dd, 20/11/2026; com o GMIC, "+gmic-594029e"; mesmos pesos da
+ 37abfd982a1f, só entrou a calibração do híbrido):
    patologia ... 5 redes Mammo-CLIP no RECORTE da lesão, treinadas com CBIS-DDSM (filme) e CDD-CESM
                  (digital) e com os atributos da lesão como alvos auxiliares; nas lesões da mamografia
                  completa, média com mais 5 redes de CONTEXTO (janela da mamografia em volta da lesão);
@@ -485,16 +518,34 @@
         0,50 -> acha 59% / 55%, ~0,9 caixa falsa por exame normal (padrão)
         0,70 -> acha 50% / 49%, ~0,4 caixa falsa por exame normal
    VALIDAÇÃO EXTERNA (CMMD: mamografia digital da China, 1.872 mamas confirmadas por biópsia, nunca
-        usada no treino). Caminho completo sem marcação do médico (detector -> patologia em cada caixa
-        -> a mama recebe a maior probabilidade): AUC 0,755 por mama; prioridade alta pega 79% das
+        usada no treino). MARIA SEM o GMIC, caminho completo sem marcação do médico (detector ->
+        patologia em cada caixa -> a mama recebe a maior probabilidade): AUC 0,755 por mama; prioridade alta pega 79% das
         mamas com câncer (especificidade 53%). Mais difícil em calcificações (0,70) e em mulheres com
         menos de 50 anos (0,66–0,70); melhor a partir dos 60 (0,86–0,92).
+        COM o GMIC (em uso, se instalado): veja "PRIORIDADE DA MAMA COM O GMIC" abaixo (AUC 0,814).
         Na escolha do modelo (mesmas caixas): o recorte treinado também com o CDD-CESM ganhou +0,015 do
         anterior, e a média com o contexto mais +0,014. (O CDD-CESM, antes usado como teste externo,
         agora faz parte do treino da patologia.)
    CALIBRAÇÃO (CBIS-DDSM, validação cruzada): erro de calibração ECE 3,8% → 1,4% (recorte) e
         5,1% → 1,7% (recorte + contexto). O limite 0,37 da prioridade alta do recorte + contexto foi
         escolhido no CMMD para ~80% de sensibilidade em mamografia digital.
+   PRIORIDADE DA MAMA COM O GMIC (híbrido GMIC + MARIA), CMMD: os limites e o escore foram escolhidos
+        numa metade dos pacientes e conferidos na outra (932 mamas, 671 malignas), que não entrou em
+        nenhuma escolha:
+                              AUC por mama   prioridade alta: sensibilidade / especificidade
+          MARIA sozinho          0,758                78% / 55%
+          híbrido GMIC + MARIA   0,814                81% / 62,5%
+        Ou seja, com a mesma sensibilidade, a prioridade alta tem menos alarmes falsos. Cada modelo acerta
+        um tipo de achado: nas calcificações o GMIC tem AUC 0,88 contra 0,70 do MARIA; nas massas, o MARIA
+        0,76 contra 0,72 do GMIC. Em todas as 1.872 mamas, o GMIC sozinho (0,778) não foi claramente
+        melhor que o MARIA (0,755); a combinação foi melhor que o GMIC (+0,025, IC 95% +0,014 a +0,036).
+        Contando também as mamas SEM achado dos mesmos exames (como no meta-repositório da NYU): AUC
+        MARIA 0,761, GMIC 0,842, híbrido 0,842; prioridade alta indevida em mama sem achado cai de 48%
+        (MARIA sozinho) para 27% (híbrido).
+        Conferência no CDD-CESM (Egito; nada ajustado; 248 mamas com lesão; MARIA nas caixas marcadas pelo
+        radiologista): híbrido 0,868 × MARIA 0,879 (empate); prioridade alta: sensibilidade 87%,
+        especificidade 69%. Quando a lesão já está bem localizada, o GMIC não acrescenta: o ganho vem das
+        lesões que o detector não acha, sobretudo calcificações.
    DENSIDADE: acerta densa x não densa em 88% dos casos; concordância com o laudo (kappa) 0,70.
         Reconhece 75% das mamas extremamente densas (50% em mamografia digital, só 38 casos no teste).
 
@@ -504,6 +555,9 @@
    - O detector serve para APONTAR regiões ao radiologista, não para triagem automática: ele marca
      alguma caixa em cerca de metade dos exames normais e não encontra todas as lesões.
    - Poucos exames normais e de um único hospital foram usados para medir os alarmes falsos.
+   - O híbrido com o GMIC foi escolhido e medido no CMMD (só casos biopsiados, 70% de câncer); falta
+     medir em rastreamento, com exames normais. O GMIC entra como foi publicado: o retreino do MARIA não
+     o ajusta, e a calibração local (seção 14.4) muda a prioridade da lesão, não a da mama.
    - Protótipo de pesquisa: não substitui a avaliação do radiologista.
 
 
@@ -655,6 +709,8 @@
    A calibração local vale para as duas saídas da patologia (recorte e recorte + contexto), porque é
    ajustada nas probabilidades que o seu serviço realmente recebeu.
    Os números são calculados nos mesmos casos usados para calibrar (otimistas): reavalie com casos novos.
+   Com o GMIC, a calibração local vale para a prioridade da LESÃO; a prioridade da mama (híbrido) continua
+   com os limites escolhidos no CMMD.
 
 
 ===============================================================================================
@@ -671,6 +727,8 @@
  Como ligar:
    - Copie integracao\config_dicom.exemplo.json para integracao\config_dicom.json e ajuste: AE title e
      porta do MARIA, PACS de destino (AE, IP, porta) e a lista ae_permitidos.
+     Opções: "limiar" (null = automático, o padrão; ou um número), "sem_mapas" (true = mais rápido) e
+     "sem_gmic" (true = prioridade só pelo MARIA, sem o GMIC; o GMIC é usado se estiver instalado).
    - Cadastre o nó "MARIA" no PACS (AE title, IP desta máquina e porta).
    - Teste a conexão: python integracao\no_dicom.py --teste-eco
    - Ligue: config\iniciar_no_dicom.bat (Windows) ou ./config/iniciar_no_dicom.sh (Linux).

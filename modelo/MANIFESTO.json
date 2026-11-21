@@ -1,10 +1,10 @@
 {
-  "gerado_em": "2026-11-20 15:56:27",
-  "descricao": "Patologia: recorte treinado com CBIS + CDD-CESM (item 2) + média com o modelo de contexto nas mamografias completas; calibração separada e prioridade alta 0,37 no recorte + contexto (CMMD)",
+  "gerado_em": "2026-11-20 20:33:28",
+  "descricao": "Prioridade da mama: híbrido GMIC (NYU, opcional, baixado à parte) + MARIA; escala e limites escolhidos na metade A do CMMD e conferidos na metade B (calibracao.json -> hibrido_gmic). Pesos do MARIA inalterados desde 37abfd982a1f.",
   "modelos": {
     "calibracao.json": {
-      "sha256": "9a065c54cc12f1347d4477b073e617ea42e292685c105220ae99908623ca1d6f",
-      "bytes": 1463
+      "sha256": "d682d04ea60201eced69af3862862f4bd83bc58b65e37e5f02efeb38ae165996",
+      "bytes": 3249
     },
     "modelo_achado/resnet50_multitask_mama_do_zero.pth": {
       "sha256": "39312504f0076db06c6318fdb856ead7335030eefa290bc8fa456ca75ece9e31",
@@ -157,5 +157,5 @@
       "bytes": 1055
     }
   },
-  "versao_modelo": "37abfd982a1f"
+  "versao_modelo": "51eb6d1301dd"
 }

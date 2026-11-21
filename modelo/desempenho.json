@@ -1496,142 +1496,142 @@
  },
  "subgrupos_externos": {
   "nome": "CMMD",
-  "base": "CMMD (TCIA, CC BY 4.0): mamografia digital da China, 1.775 pacientes, rótulo por mama confirmado por biópsia; nenhuma imagem usada no treino",
+  "base": "CMMD (TCIA, CC BY 4.0): mamografia digital da China, rótulo por mama confirmado por biópsia; nenhuma imagem usada no treino",
   "unidade": "mama",
-  "limiar_alta": 0.37,
-  "descricao": "Caminho completo do MARIA sem marcação do médico: detector -> patologia (recorte + contexto) em cada caixa -> a mama recebe a maior probabilidade, Sensibilidade e especificidade da PRIORIDADE ALTA (P calibrada >= 0.37).",
+  "limiar_alta": 0.359,
+  "rotulo_limiar": "prioridade alta da mama, híbrido GMIC + MARIA",
+  "descricao": "MARIA em uso, sem marcação do médico: detector -> patologia (recorte + contexto) em cada caixa; a mama recebe a maior P, combinada com o GMIC (mamografia inteira) no escore da mama. Metade B dos pacientes, que não entrou em nenhuma escolha. Entre parênteses nas tabelas: o MARIA sozinho (sem o GMIC).",
   "geral": {
-   "n": 1872,
-   "malignos": 1316,
-   "auc": 0.7549323762874198,
-   "sens": 0.7879939209726444,
-   "espec": 0.5269784172661871,
-   "p_cal_media_malignos": 0.6002168334875021,
-   "p_cal_media_benignos": 0.38383797897764965
+   "n": 932,
+   "malignos": 671,
+   "auc": 0.8138193695005453,
+   "sens": 0.8137108792846498,
+   "espec": 0.6245210727969348,
+   "auc_maria": 0.7580382684961544,
+   "sens_maria": 0.7779433681073026,
+   "espec_maria": 0.5517241379310345
   },
   "subgrupos": {
    "Faixa etária": {
     "40–49": {
-     "n": 737,
-     "malignos": 478,
-     "auc": 0.704439346698761,
-     "sens": 0.7447698744769874,
-     "espec": 0.5328185328185329,
-     "p_cal_media_malignos": 0.5449428448906266,
-     "p_cal_media_benignos": 0.38638880698967876
+     "n": 391,
+     "malignos": 262,
+     "auc": 0.7682111367536539,
+     "sens": 0.7595419847328244,
+     "espec": 0.6201550387596899,
+     "auc_maria": 0.7095094384283094,
+     "sens_maria": 0.7213740458015268,
+     "espec_maria": 0.5581395348837209
     },
     "50–59": {
-     "n": 459,
-     "malignos": 382,
-     "auc": 0.7388318487794927,
-     "sens": 0.8586387434554974,
-     "espec": 0.33766233766233766,
-     "p_cal_media_malignos": 0.6493823019421916,
-     "p_cal_media_benignos": 0.453465081675504
+     "n": 216,
+     "malignos": 185,
+     "auc": 0.8026155187445511,
+     "sens": 0.8918918918918919,
+     "espec": 0.4193548387096774,
+     "auc_maria": 0.7349607672188316,
+     "sens_maria": 0.8756756756756757,
+     "espec_maria": 0.32258064516129037
     },
     "60–69": {
-     "n": 204,
-     "malignos": 181,
-     "auc": 0.8635599327408118,
-     "sens": 0.9171270718232044,
-     "espec": 0.34782608695652173,
-     "p_cal_media_malignos": 0.7442383603629288,
-     "p_cal_media_benignos": 0.43338900761205634
+     "n": 98,
+     "malignos": 88,
+     "auc": 0.8852272727272728,
+     "sens": 0.9090909090909091,
+     "espec": 0.4,
+     "auc_maria": 0.8375,
+     "sens_maria": 0.875,
+     "espec_maria": 0.30000000000000004
     },
     "< 40": {
-     "n": 417,
-     "malignos": 223,
-     "auc": 0.6632379455411215,
-     "sens": 0.6188340807174888,
-     "espec": 0.6185567010309279,
-     "p_cal_media_malignos": 0.475633582824627,
-     "p_cal_media_benignos": 0.3467698402071369
-    },
-    "≥ 70": {
-     "n": 55,
-     "malignos": 52,
-     "auc": 0.923076923076923,
-     "sens": 0.9423076923076923,
-     "espec": 0.33333333333333337,
-     "p_cal_media_malignos": 0.7801000283525799,
-     "p_cal_media_benignos": 0.3937026123235896
+     "n": 198,
+     "malignos": 107,
+     "auc": 0.7619389955838554,
+     "sens": 0.6822429906542056,
+     "espec": 0.7252747252747253,
+     "auc_maria": 0.6802916709458765,
+     "sens_maria": 0.616822429906542,
+     "espec_maria": 0.6483516483516483
     }
    },
    "Tipo de achado": {
     "calcificação": {
-     "n": 262,
-     "malignos": 198,
-     "auc": 0.6953125,
-     "sens": 0.7424242424242424,
-     "espec": 0.46875,
-     "p_cal_media_malignos": 0.5160764892952089,
-     "p_cal_media_benignos": 0.3784759340887748
+     "n": 146,
+     "malignos": 114,
+     "auc": 0.859375,
+     "sens": 0.9210526315789473,
+     "espec": 0.53125,
+     "auc_maria": 0.697094298245614,
+     "sens_maria": 0.7192982456140351,
+     "espec_maria": 0.46875
     },
     "massa": {
-     "n": 1149,
-     "malignos": 737,
-     "auc": 0.7493874405553872,
-     "sens": 0.7829036635006784,
-     "espec": 0.5364077669902912,
-     "p_cal_media_malignos": 0.6041097097647367,
-     "p_cal_media_benignos": 0.38543822742552863
+     "n": 578,
+     "malignos": 376,
+     "auc": 0.7586238677059194,
+     "sens": 0.7367021276595744,
+     "espec": 0.6336633663366337,
+     "auc_maria": 0.7556483041921213,
+     "sens_maria": 0.776595744680851,
+     "espec_maria": 0.5594059405940595
     },
     "massa + calcificação": {
-     "n": 461,
-     "malignos": 381,
-     "auc": 0.8021325459317585,
-     "sens": 0.821522309711286,
-     "espec": 0.525,
-     "p_cal_media_malignos": 0.636412997093151,
-     "p_cal_media_benignos": 0.379886335382173
+     "n": 208,
+     "malignos": 181,
+     "auc": 0.8741559238796808,
+     "sens": 0.9060773480662984,
+     "espec": 0.6666666666666667,
+     "auc_maria": 0.8144055657867812,
+     "sens_maria": 0.8176795580110497,
+     "espec_maria": 0.5925925925925926
     }
    }
   },
   "calibracao": [
    {
-    "p_media": 0.15995912220582256,
-    "maligno_observado": 0.41605839416058393,
-    "n": 137
+    "p_media": 0.15764675912037326,
+    "maligno_observado": 0.43661971830985913,
+    "n": 71
    },
    {
-    "p_media": 0.2518602163461089,
-    "maligno_observado": 0.504424778761062,
-    "n": 226
+    "p_media": 0.2505592158292781,
+    "maligno_observado": 0.48695652173913045,
+    "n": 115
    },
    {
-    "p_media": 0.34761781555279236,
-    "maligno_observado": 0.5487364620938628,
-    "n": 277
+    "p_media": 0.3455356176012878,
+    "maligno_observado": 0.6323529411764706,
+    "n": 136
    },
    {
-    "p_media": 0.4479292899085012,
-    "maligno_observado": 0.6504065040650406,
-    "n": 246
+    "p_media": 0.45219845450724416,
+    "maligno_observado": 0.6788990825688074,
+    "n": 109
    },
    {
-    "p_media": 0.5500952387153734,
-    "maligno_observado": 0.6936170212765957,
-    "n": 235
+    "p_media": 0.5515470914381349,
+    "maligno_observado": 0.711864406779661,
+    "n": 118
    },
    {
-    "p_media": 0.6495882791624121,
-    "maligno_observado": 0.7860262008733624,
-    "n": 229
+    "p_media": 0.6476634807535401,
+    "maligno_observado": 0.7739130434782608,
+    "n": 115
    },
    {
-    "p_media": 0.753009857918402,
-    "maligno_observado": 0.8902439024390244,
-    "n": 164
+    "p_media": 0.7539000014905447,
+    "maligno_observado": 0.9036144578313253,
+    "n": 83
    },
    {
-    "p_media": 0.8496848274075368,
-    "maligno_observado": 0.9683544303797469,
-    "n": 158
+    "p_media": 0.8519707048722427,
+    "maligno_observado": 0.9651162790697675,
+    "n": 86
    },
    {
-    "p_media": 0.9500390358646921,
-    "maligno_observado": 0.9895287958115183,
-    "n": 191
+    "p_media": 0.9475209365375168,
+    "maligno_observado": 0.9893617021276596,
+    "n": 94
    }
   ]
  },
@@ -1681,5 +1681,142 @@
    }
   },
   "nota": "P por mama com inferência em fp16 e TTA na GPU (difere até ~0,01 do maria.py); a comparação entre modelos é justa (todos iguais)"
+ },
+ "hibrido_gmic": {
+  "descricao": "Prioridade da mama: GMIC (NYU, mamografia inteira) + MARIA (maior P das lesões da mama)",
+  "cmmd_todas": {
+   "mamas": 1872,
+   "malignas": 1316,
+   "auc": {
+    "MARIA": 0.755,
+    "GMIC": 0.778
+   },
+   "delta_gmic_maria": [
+    0.023,
+    -0.0,
+    0.045
+   ],
+   "delta_combinacao_gmic": [
+    0.025,
+    0.014,
+    0.036
+   ]
+  },
+  "cmmd_metade_B": {
+   "metade_A": {
+    "mamas": 940,
+    "malignas": 645
+   },
+   "metade_B": {
+    "mamas": 932,
+    "malignas": 671
+   },
+   "auc_B": {
+    "MARIA (em uso)": 0.758,
+    "GMIC": 0.789,
+    "híbrido": 0.814
+   },
+   "alta_B": {
+    "MARIA (em uso)": {
+     "sens": 0.778,
+     "esp": 0.552
+    },
+    "híbrido": {
+     "sens": 0.814,
+     "esp": 0.625
+    }
+   },
+   "media_B": {
+    "MARIA (em uso)": {
+     "sens": 0.954,
+     "esp": 0.172
+    },
+    "híbrido": {
+     "sens": 0.958,
+     "esp": 0.184
+    }
+   },
+   "por_achado_B": {
+    "both": {
+     "MARIA": 0.814,
+     "GMIC": 0.869,
+     "híbrido": 0.874
+    },
+    "calcification": {
+     "MARIA": 0.697,
+     "GMIC": 0.879,
+     "híbrido": 0.859
+    },
+    "mass": {
+     "MARIA": 0.756,
+     "GMIC": 0.715,
+     "híbrido": 0.759
+    }
+   }
+  },
+  "cdd": {
+   "n": 248,
+   "malignas": 135,
+   "MARIA (anterior, caixas do radiologista)": [
+    0.8791,
+    0.8371,
+    0.9184
+   ],
+   "GMIC": [
+    0.748,
+    0.6862,
+    0.8064
+   ],
+   "híbrido": [
+    0.868,
+    0.8246,
+    0.9075
+   ],
+   "híbrido − MARIA": [
+    -0.0111,
+    -0.0411,
+    0.017
+   ],
+   "híbrido − GMIC": [
+    0.12,
+    0.0816,
+    0.1598
+   ],
+   "prioridade_alta_hibrido": {
+    "limite": 0.359,
+    "sens": 0.874,
+    "esp": 0.69
+   },
+   "todas_as_mamas_GMIC": {
+    "n": 566,
+    "malignas": 183,
+    "normais": 191,
+    "auc": 0.7782
+   }
+  },
+  "cmmd_todas_as_mamas_metade_B": {
+   "descricao": "Protocolo do meta-repositório da NYU: todas as mamas dos exames (sem achado = não maligna); pacientes da metade B",
+   "mamas": 1298,
+   "malignas": 671,
+   "sem_achado": 366,
+   "auc": {
+    "MARIA": 0.761,
+    "GMIC": 0.842,
+    "híbrido": 0.842
+   },
+   "alta": {
+    "MARIA": {
+     "sens": 0.778,
+     "esp_benignas": 0.552,
+     "esp_sem_achado": 0.516
+    },
+    "híbrido": {
+     "sens": 0.814,
+     "esp_benignas": 0.625,
+     "esp_sem_achado": 0.732
+    }
+   },
+   "gmic_publicado_todas": "0,831 [0,815; 0,846] (5 redes); nosso GMIC no mesmo protocolo, todas as 2.601 mamas: 0,831 [0,817; 0,847]"
+  }
  }
 }

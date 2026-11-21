@@ -38,7 +38,7 @@ echo Nenhuma placa NVIDIA encontrada: o MARIA vai rodar na CPU (mais devagar, ma
 
 REM ---- 3) demais bibliotecas ----
 :bibliotecas
-"%PY%" %PYV% -c "import streamlit, torch, torchvision, efficientnet_pytorch, pydicom, pynetdicom, pandas, altair, plotly, sys; sys.exit(0 if tuple(int(x) for x in streamlit.__version__.split('.')[:2]) >= (1, 67) else 1)" >nul 2>nul && exit /b 0
+"%PY%" %PYV% -c "import streamlit, torch, torchvision, efficientnet_pytorch, pydicom, pynetdicom, pandas, altair, plotly, scipy, cv2, sys; sys.exit(0 if tuple(int(x) for x in streamlit.__version__.split('.')[:2]) >= (1, 67) else 1)" >nul 2>nul && exit /b 0
 echo Instalando ou atualizando as bibliotecas do MARIA (pode demorar alguns minutos^)...
 "%PY%" %PYV% -m pip install -r "%~dp0requirements.txt" || (echo Falha ao instalar as bibliotecas. & exit /b 1)
 exit /b 0

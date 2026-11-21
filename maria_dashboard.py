@@ -130,8 +130,16 @@ COR_ACHADO = alt.Scale(domain=["Massa/Nódulo", "Microcalcificação"], range=["
 # o que cada coluna do resultado significa (tabela e legenda)
 ORDEM_PRIORIDADE = ["alta", "média", "baixa", "baixa (nada detectado)", "não avaliar (qualidade)", "indisponível"]
 LEGENDA = {
-    "prioridade": "Prioridade de leitura sugerida ao radiologista (alta, média, baixa), pela P(maligno) calibrada. "
-                  "O MARIA prioriza casos; quem diagnostica é o radiologista. 'Não avaliar' = imagem fora do padrão.",
+    "prioridade": "Prioridade de leitura sugerida ao radiologista (alta, média, baixa). Nas mamografias completas, "
+                  "com o GMIC instalado, é a prioridade da MAMA (híbrido GMIC + MARIA, igual em todas as lesões da "
+                  "mama); senão, a da lesão pela P(maligno) calibrada. O MARIA prioriza casos; quem diagnostica é o "
+                  "radiologista. 'Não avaliar' = imagem fora do padrão.",
+    "prioridade_origem": "De onde veio a prioridade: 'mama (GMIC + MARIA)' = híbrido por mama; 'lesão (MARIA)' = "
+                         "só a P(maligno) da lesão (recortes fornecidos, ou GMIC não instalado/desligado).",
+    "escore_mama": "Escore da mama (0 a 1) do híbrido GMIC + MARIA. NÃO é a probabilidade de câncer: serve para "
+                   "ordenar e definir a prioridade da mama (limites escolhidos no CMMD).",
+    "p_gmic_mama": "P(maligno) do GMIC (NYU) na mama: média das imagens da mama (mamografia inteira).",
+    "prioridade_lesao": "Prioridade só da lesão, pela P(maligno) calibrada do MARIA (como antes do híbrido).",
     "p_maligno_calibrada": "Probabilidade de malignidade calibrada (0 a 1), ajustada para se comportar como "
                            "probabilidade na população do CBIS-DDSM (lesões já suspeitas). Em outro serviço, "
                            "recalibre com casos locais (página Anotações e retreino).",
@@ -468,6 +476,9 @@ def gerar_planilha_da_pasta(pasta: Path):
                     lat = str(getattr(ds, "ImageLaterality", "") or getattr(ds, "Laterality", "") or "").lower()
                     lado = VALORES["lado"].get(lat)
                     vista = str(getattr(ds, "ViewPosition", "") or "").upper() or None
+                    po = [str(x).upper() for x in (getattr(ds, "PatientOrientation", None) or [])]
+                    if not vista and len(po) == 2 and po[1]:      # sem ViewPosition (ex.: CMMD): P\FL = MLO, P\L = CC
+                        vista = "MLO" if any(c in po[1] for c in "FH") else "CC"
                 m_idade = re.match(r"(\d{2,3})Y", str(getattr(ds, "PatientAge", "") or ""))
                 idade = int(m_idade[1]) if m_idade else None
             except Exception:
@@ -836,8 +847,9 @@ if "planilha_base" not in st.session_state:
 
 def pagina_sobre():
     st.subheader("Como o MARIA funciona")
-    st.markdown("O MARIA combina **quatro modelos** de inteligência artificial. Cada imagem segue um caminho "
-                "conforme o tipo (recorte da lesão ou mamografia completa):")
+    st.markdown("O MARIA combina **quatro modelos** de inteligência artificial e, opcionalmente, o **GMIC** (NYU) "
+                "na prioridade da mama. Cada imagem segue um caminho conforme o tipo (recorte da lesão ou mamografia "
+                "completa):")
     st.mermaid_chart("""
 flowchart LR
     E["Pasta de imagens<br/>(DICOM, PNG, JPG)<br/>+ planilha do médico"] --> R["Recorte da lesão"]
@@ -852,11 +864,16 @@ flowchart LR
     R --> A["Achado<br/>massa × microcalcificação<br/>(ResNet-50 + multivista)"]
     RC --> A
     DE --> AV["Aviso de confiabilidade<br/>por densidade"]
+    C --> G["GMIC (NYU, opcional)<br/>mamografia inteira"]
     P --> S["Resultado por lesão"]
     A --> S
     AV --> S
-""", alt="Fluxo do MARIA: recortes vão direto para patologia e achado; mamografias completas passam pelo detector "
-         "e pela densidade, e cada lesão encontrada ou marcada é recortada e classificada")
+    G --> PM["Prioridade da mama<br/>(híbrido GMIC + MARIA)"]
+    P --> PM
+    PM --> S
+""", alt="Fluxo do MARIA: recortes vão direto para patologia e achado; mamografias completas passam pelo detector, "
+         "pela densidade e, se instalado, pelo GMIC; cada lesão encontrada ou marcada é recortada e classificada, e "
+         "a prioridade da mama junta o GMIC com a maior P de malignidade do MARIA")
 
     st.subheader("Arquitetura")
     st.table(pd.DataFrame([
@@ -885,6 +902,13 @@ flowchart LR
          "Entrada": "Mamografia completa em 768 × 768 px",
          "Detalhes": "Média de 2 variações (original e espelhada) e das vistas da mesma mama; a densidade "
                      "informada pelo médico tem prioridade"},
+        {"Componente": "Prioridade da mama (opcional: GMIC)",
+         "Arquitetura": "GMIC (NYU; Shen et al., 2021): 5 redes publicadas, treinadas em ~200 mil exames de "
+                        "rastreamento; olha a mamografia inteira e indica as regiões suspeitas (mapa de saliência). "
+                        "Baixado à parte (licença GNU AGPLv3), sem retreino pelo MARIA",
+         "Entrada": "Mamografia completa recortada na mama, janela de 2.944 × 1.920 px",
+         "Detalhes": "Escore da mama = média padronizada do GMIC (média das imagens da mama) e da maior P do MARIA "
+                     "entre as lesões da mama; limites escolhidos no CMMD (mesma sensibilidade da prioridade anterior)"},
     ]).set_index("Componente"))
 
     st.subheader("Bases de dados")
@@ -904,8 +928,19 @@ flowchart LR
         {"Base": "Mammo-CLIP (pesos pré-treinados)",
          "Tipo": "Modelo de linguagem-imagem para mamografia",
          "Conteúdo": "Codificador de imagem pré-treinado pelos autores com mamografias de rastreamento e laudos",
-         "Uso no MARIA": "Ponto de partida das 5 redes de patologia",
-         "Licença": "Ver o repositório dos autores"},
+         "Uso no MARIA": "Ponto de partida das redes de patologia e de densidade",
+         "Licença": "CC BY-NC-SA 4.0 (uso não comercial)"},
+        {"Base": "CMMD (TCIA)",
+         "Tipo": "Mamografia digital (China)",
+         "Conteúdo": "1.775 pacientes, 1.872 mamas com biópsia (70% malignas), sem marcação das lesões",
+         "Uso no MARIA": "Só teste externo; o limite da prioridade alta e a calibração do híbrido GMIC + MARIA "
+                         "foram escolhidos numa metade dos pacientes e conferidos na outra",
+         "Licença": "CC BY 4.0"},
+        {"Base": "GMIC (pesos pré-treinados, NYU)",
+         "Tipo": "Classificador de mamografia inteira",
+         "Conteúdo": "5 redes treinadas pelos autores em ~200 mil exames de rastreamento da NYU (dados não públicos)",
+         "Uso no MARIA": "Opcional: prioridade da mama (híbrido com o MARIA); baixado à parte",
+         "Licença": "GNU AGPLv3"},
     ]).set_index("Base"))
     st.caption("Treino e teste sempre separados por paciente. Bases públicas: os resultados podem ser diferentes em "
                "outros equipamentos e populações.")
@@ -981,6 +1016,63 @@ flowchart LR
                    "Desde 20/11/2026 a densidade usa o codificador do Mammo-CLIP, pré-treinado em mamografias: "
                    "na validação cruzada, kappa 0,712 × 0,684 da ResNet-50 anterior (IC 95% da diferença +0,009 a "
                    "+0,048) e, no digital, 0,615 × 0,540.")
+    H = None
+    if (pasta_modelo / "desempenho.json").is_file():
+        H = json.loads((pasta_modelo / "desempenho.json").read_text(encoding="utf-8")).get("hibrido_gmic")
+    if H:
+        with st.container(border=True):
+            B = H["cmmd_metade_B"]
+            st.markdown(f"**Prioridade da mama: híbrido GMIC + MARIA** — CMMD (mamografia digital, China), metade dos "
+                        f"pacientes que não entrou em nenhuma escolha: {B['metade_B']['mamas']} mamas "
+                        f"({B['metade_B']['malignas']} malignas)")
+            virg = lambda x, f=".3f": format(x, f).replace(".", ",")
+            with st.container(horizontal=True):
+                st.metric("AUC por mama", virg(B["auc_B"]["híbrido"]), border=True,
+                          delta=f"MARIA sozinho {virg(B['auc_B']['MARIA (em uso)'])}", delta_color="off", delta_arrow="off")
+                st.metric("Prioridade alta: sensibilidade", f"{B['alta_B']['híbrido']['sens']:.0%}", border=True,
+                          delta=f"MARIA sozinho {B['alta_B']['MARIA (em uso)']['sens']:.0%}", delta_color="off",
+                          delta_arrow="off")
+                st.metric("Prioridade alta: especificidade", f"{B['alta_B']['híbrido']['esp']:.1%}".replace(".", ","),
+                          border=True, delta=f"MARIA sozinho {B['alta_B']['MARIA (em uso)']['esp']:.1%}".replace(".", ","),
+                          delta_color="off", delta_arrow="off")
+            nomes = {"mass": "massa", "calcification": "calcificação", "both": "massa + calcificação"}
+            tab_h = pd.DataFrame([{"achado": nomes.get(k, k), **v} for k, v in B["por_achado_B"].items()])
+            c1, c2 = st.columns([2, 3])
+            with c1:
+                mostrar(st.dataframe, tab_h, hide_index=True, alt="AUC por tipo de achado: MARIA, GMIC e híbrido",
+                        column_config={c: st.column_config.NumberColumn(format="%.3f") for c in ("MARIA", "GMIC", "híbrido")})
+            with c2:
+                T = H.get("cmmd_todas", {})
+                st.caption(
+                    f"Nas {T.get('mamas', '?')} mamas do CMMD: GMIC sozinho {virg(T['auc']['GMIC'])} × MARIA sozinho "
+                    f"{virg(T['auc']['MARIA'])} (diferença {virg(T['delta_gmic_maria'][0], '+.3f')}, IC 95% "
+                    f"{virg(T['delta_gmic_maria'][1], '+.3f')} a {virg(T['delta_gmic_maria'][2], '+.3f')}: incerta); a "
+                    f"combinação ganha do GMIC {virg(T['delta_combinacao_gmic'][0], '+.3f')} (IC 95% "
+                    f"{virg(T['delta_combinacao_gmic'][1], '+.3f')} a {virg(T['delta_combinacao_gmic'][2], '+.3f')}). "
+                    "Cada um acerta um tipo: o GMIC é bem melhor nas calcificações, o MARIA nas massas. O escore da mama "
+                    "NÃO é a probabilidade de câncer (o CMMD tem 70% de câncer); os limites mantêm a sensibilidade da "
+                    "prioridade anterior, e o ganho aparece em menos alarmes falsos." if T else "")
+            M = H.get("cmmd_todas_as_mamas_metade_B")
+            if M:
+                st.caption(
+                    f"Incluindo as mamas SEM achado dos mesmos exames (protocolo do meta-repositório da NYU; metade B: "
+                    f"{M['mamas']} mamas, {M['sem_achado']} sem achado): AUC MARIA {virg(M['auc']['MARIA'])}, GMIC "
+                    f"{virg(M['auc']['GMIC'])}, híbrido {virg(M['auc']['híbrido'])}. Prioridade alta indevida em mama sem "
+                    f"achado: {1 - M['alta']['MARIA']['esp_sem_achado']:.0%} com o MARIA sozinho × "
+                    f"{1 - M['alta']['híbrido']['esp_sem_achado']:.0%} com o híbrido. Nesse protocolo o nosso GMIC "
+                    "reproduz o número publicado (0,831).")
+            C = H.get("cdd")
+            if C:
+                st.caption(
+                    f"Conferência no CDD-CESM (digital, Egito; tudo congelado, nada ajustado): {C['n']} mamas com lesão "
+                    f"({C['malignas']} malignas), MARIA nas caixas do radiologista (versão sem CDD no treino). AUC: "
+                    f"MARIA {virg(C['MARIA (anterior, caixas do radiologista)'][0])}, GMIC {virg(C['GMIC'][0])}, "
+                    f"híbrido {virg(C['híbrido'][0])} (híbrido − MARIA {virg(C['híbrido − MARIA'][0], '+.3f')}, IC 95% "
+                    f"{virg(C['híbrido − MARIA'][1], '+.3f')} a {virg(C['híbrido − MARIA'][2], '+.3f')}); prioridade "
+                    f"alta: sensibilidade {C['prioridade_alta_hibrido']['sens']:.0%}, especificidade "
+                    f"{C['prioridade_alta_hibrido']['esp']:.0%}.")
+            else:
+                st.caption("Conferência no CDD-CESM: pendente.")
 
     # ---- gráficos detalhados (lidos de modelo/desempenho.json) ----
     st.subheader("Gráficos detalhados")
@@ -1233,13 +1325,19 @@ flowchart LR
         g = D_sub["geral"]
         st.caption(f"{D_sub.get('base', nome_ext)}. {g['n']} {unidade} ({g['malignos']} malignas). "
                    f"{D_sub.get('descricao', '')}")
-        rot_lim = ("prioridade alta, P cal. ≥ " + f"{D_sub['limiar_alta']:.2f}".replace(".", ",") if "limiar_alta" in D_sub
-                   else "limiar 0,5")
+        rot_lim = D_sub.get("rotulo_limiar") or (
+            "prioridade alta, P cal. ≥ " + f"{D_sub['limiar_alta']:.2f}".replace(".", ",") if "limiar_alta" in D_sub
+            else "limiar 0,5")
+        so_maria = lambda k, fmt: ({"delta": "MARIA sozinho " + format(g[k], fmt).replace(".", ","), "delta_color": "off",
+                                    "delta_arrow": "off"} if k in g else {})
         with st.container(horizontal=True):
-            st.metric("AUC geral", f"{g['auc']:.3f}".replace(".", ","), border=True)
-            st.metric(f"Sensibilidade ({rot_lim})", f"{g['sens']:.0%}", border=True)
-            st.metric(f"Especificidade ({rot_lim})", f"{g['espec']:.0%}", border=True)
+            st.metric("AUC por mama" if unidade == "mamas" else "AUC geral", f"{g['auc']:.3f}".replace(".", ","),
+                      border=True, **so_maria("auc_maria", ".3f"))
+            st.metric(f"Sensibilidade ({rot_lim})", f"{g['sens']:.0%}", border=True, **so_maria("sens_maria", ".0%"))
+            st.metric(f"Especificidade ({rot_lim})", f"{g['espec']:.1%}".replace(".", ","), border=True,
+                      **so_maria("espec_maria", ".1%"))
         linhas_sub = [{"subgrupo": k, "grupo": kk, unidade: v["n"], "malignas": v["malignos"], "AUC": v["auc"],
+                       **({"AUC MARIA sozinho": v["auc_maria"]} if "auc_maria" in v else {}),
                        "sensibilidade": v["sens"], "especificidade": v["espec"]}
                       for k, grupos in D_sub["subgrupos"].items() for kk, v in grupos.items()]
         dsub = pd.DataFrame(linhas_sub)
@@ -1258,6 +1356,7 @@ flowchart LR
         with c2:
             mostrar(st.dataframe, ds.drop(columns="subgrupo"), hide_index=True, alt="Desempenho externo por subgrupo",
                     column_config={"AUC": st.column_config.NumberColumn(format="%.3f"),
+                                   "AUC MARIA sozinho": st.column_config.NumberColumn(format="%.3f"),
                                    "sensibilidade": st.column_config.NumberColumn(format="percent"),
                                    "especificidade": st.column_config.NumberColumn(format="percent")})
         if D_sub.get("calibracao"):
@@ -1276,16 +1375,18 @@ flowchart LR
                 st.markdown("**O que isso mostra (dados do mundo real)**")
                 st.markdown(
                     "- No CMMD o teste é **mais duro** que nos recortes: inclui o detector (≈ 5 caixas por mama, a "
-                    "maioria falsas) e a mama recebe a maior P entre elas. AUC 0,755 por mama; pior em calcificações "
-                    "(0,70) e em mulheres com menos de 50 anos (0,66–0,70), melhor a partir dos 60 (0,86–0,92).\n"
+                    "maioria falsas) e a mama recebe a maior P entre elas. O MARIA sozinho fica em 0,758 por mama, "
+                    "fraco em calcificações (0,70), que o detector perde. Com o **GMIC** (mamografia inteira) no escore "
+                    "da mama: **0,814**, calcificações 0,86, e mais especificidade na prioridade alta (62,5% × 55%) com "
+                    "a mesma sensibilidade. Mulheres com menos de 50 anos seguem mais difíceis (0,76–0,77).\n"
                     "- **Escolha do modelo** (mesmas caixas, IC 95% por paciente): o recorte treinado também com o "
                     "CDD-CESM ganhou +0,015 do anterior; a média com o modelo de **contexto** ganhou mais +0,014. O "
                     "contexto **sozinho** não serve: fora do CBIS quase nunca chama de maligno. No CDD-CESM a média "
                     "também foi melhor ou igual ao recorte.\n"
                     "- **Calibração:** a curva fica abaixo da proporção real porque o CMMD tem 70% de câncer (só casos "
                     "biopsiados); por isso a probabilidade continua calibrada no CBIS e só o **limite da prioridade "
-                    "alta** (0,37) foi escolhido no CMMD, para ≈ 80% de sensibilidade em digital (conferido em metade "
-                    "dos pacientes que não entrou na escolha: 77% sens., 53% espec.).\n"
+                    "alta** foi escolhido no CMMD (0,37 na lesão; no híbrido, o limite do escore da mama), para ≈ 80% "
+                    "de sensibilidade em digital, numa metade dos pacientes, e conferido na outra.\n"
                     "- Por isso o MARIA traz a **calibração local** e o **desempenho local por subgrupo e por "
                     "fabricante**, com casos do serviço confirmados por biópsia ou seguimento. Antes de uso real, é "
                     "preciso validar com **dados brasileiros, de vários equipamentos, com rótulo confiável** "
@@ -1305,8 +1406,9 @@ flowchart LR
                "cerca de metade dos exames normais e não acha todas as lesões).\n"
                "- A probabilidade é calibrada no CBIS-DDSM (lesões já suspeitas). Em outro serviço, com outra "
                "proporção de câncer, recalibre com casos locais (página Anotações e retreino).\n"
-               "- No caminho sem marcação do médico (CMMD), a AUC por mama é 0,755: o detector marca várias caixas "
-               "falsas por mama, e calcificações e mulheres jovens são os casos mais difíceis.\n"
+               "- No caminho sem marcação do médico (CMMD), a AUC por mama é 0,814 com o GMIC (0,758 sem ele): o "
+               "detector marca várias caixas falsas por mama; mulheres jovens são os casos mais difíceis. O híbrido "
+               "com o GMIC foi medido só em casos biopsiados (falta rastreamento com exames normais).\n"
                "- A confiabilidade cai em mama densa e em densidade 4 na mamografia digital.\n"
                "- Os exames normais usados para medir alarmes falsos são poucos (131) e de um único hospital.",
                icon=":material/info:")
@@ -1400,6 +1502,13 @@ def pagina_executar():
         help="Só vale para mamografias completas. Menor = encontra mais lesões, mas marca mais caixas falsas. "
              "No teste (lesões achadas em filme / digital; caixas falsas por exame normal): "
              "0,30 → 64% / 62%, 1,7 caixa; 0,50 → 59% / 55%, 0,9 caixa; 0,70 → 50% / 49%, 0,4 caixa.")
+    gmic_ok = (pasta_modelo / "modulo_gmic" / "models" / "sample_model_5.p").is_file()
+    usar_gmic = st.sidebar.toggle(
+        "Prioridade da mama com o GMIC", value=gmic_ok, disabled=not gmic_ok, key="usar_gmic",
+        help="Híbrido GMIC + MARIA na prioridade da mama (mamografias completas). No CMMD, com a mesma sensibilidade, "
+             "a prioridade alta teve menos alarmes falsos (especificidade 55% → 62%), sobretudo nas calcificações. "
+             + ("" if gmic_ok else "GMIC não instalado: veja a página Administração ou rode "
+                                    "python config/baixar_gmic.py."))
     # ---- pasta de imagens ----
     st.subheader("Pasta de imagens")
     with st.container(horizontal=True, vertical_alignment="bottom"):
@@ -1598,7 +1707,8 @@ def pagina_executar():
         area_prog = st.empty()
         area = st.empty()
         csv_saida = SAIDAS / f"results_{carimbo}.csv"
-        extra = (["--limiar", f"{limiar}"] if limiar is not None else []) + ["--limiar_deteccao", f"{limiar_det}"]
+        extra = ((["--limiar", f"{limiar}"] if limiar is not None else []) + ["--limiar_deteccao", f"{limiar_det}"]
+                 + ([] if usar_gmic else ["--sem_gmic"]))
         if not planilha_valida.empty:
             csv_planilha = SAIDAS / f"planilha_{carimbo}.csv"
             planilha_valida.to_csv(csv_planilha, index=False, encoding="utf-8")
@@ -1986,18 +2096,22 @@ def pagina_resultados():
         for c in ("mama", "vista", "origem_lesao", "imagens_usadas", "imagem", "x0", "y0", "x1", "y1", "score_deteccao",
                   "densidade", "densidade_origem", "aviso_densidade", "concordancia", "prioridade",
                   "p_maligno_calibrada", "incerteza", "qualidade", "avisos_qualidade", "idade", "fabricante",
-                  "mapa_calor", "versao_modelo", "patologia_entrada", "limiar_maligno"):
+                  "mapa_calor", "versao_modelo", "patologia_entrada", "limiar_maligno", "prioridade_origem",
+                  "escore_mama", "p_gmic_mama", "prioridade_lesao", "prioridade_mama", "mapa_gmic"):
             if c not in tab:
                 tab[c] = np.nan
         # colunas de texto sempre como texto (uma coluna toda vazia seria lida como número)
         for c in ("amostra", "mama", "vista", "origem_lesao", "imagens_usadas", "patologia", "achado",
                   "densidade_origem", "aviso_densidade", "concordancia", "imagem", "prioridade", "qualidade",
-                  "avisos_qualidade", "fabricante", "mapa_calor", "versao_modelo", "patologia_entrada"):
+                  "avisos_qualidade", "fabricante", "mapa_calor", "versao_modelo", "patologia_entrada",
+                  "prioridade_origem", "prioridade_lesao", "prioridade_mama", "mapa_gmic"):
             tab[c] = tab[c].astype("object").where(tab[c].notna(), None)
         tab["densidade"] = pd.to_numeric(tab["densidade"], errors="coerce").astype("Int64")
         tab["densidade_txt"] = tab["densidade"].map(densidade_txt)
         tab["p_maligno_calibrada"] = pd.to_numeric(tab["p_maligno_calibrada"], errors="coerce")
         tab["incerteza"] = pd.to_numeric(tab["incerteza"], errors="coerce")
+        tab["escore_mama"] = pd.to_numeric(tab["escore_mama"], errors="coerce")
+        tab["p_gmic_mama"] = pd.to_numeric(tab["p_gmic_mama"], errors="coerce")
         tab["idade"] = pd.to_numeric(tab["idade"], errors="coerce").astype("Int64")
         tab["prioridade"] = tab["prioridade"].fillna("indisponível")
         tab["qualidade"] = tab["qualidade"].fillna("")
@@ -2021,6 +2135,9 @@ def pagina_resultados():
             st.metric("Não avaliar (qualidade)", int((tab["prioridade"] == "não avaliar (qualidade)").sum()),
                       border=True)
             st.metric("Mamas", int(tab["mama"].nunique()), border=True)
+            if tab["escore_mama"].notna().any():
+                st.metric("Mamas em prioridade alta", int(tab.loc[tab["prioridade"] == "alta", "mama"].nunique()),
+                          border=True, help="Pelo híbrido GMIC + MARIA (prioridade da mama).")
         nao_usar = tab[tab["qualidade"] == "não usar"]
         if len(nao_usar):
             st.error(f"{len(nao_usar)} lesão(ões)/imagem(ns) com qualidade **NÃO USAR**: o resultado não deve ser "
@@ -2043,9 +2160,11 @@ def pagina_resultados():
                       | vis["mama"].astype(str).str.contains(busca, case=False, na=False)]
         ordem = {o: i for i, o in enumerate(ORDEM_PRIORIDADE)}
         vis = vis.assign(_ordem=vis["prioridade"].map(ordem).fillna(99)).sort_values(
-            ["_ordem", "p_maligno_calibrada"], ascending=[True, False]).drop(columns="_ordem")
+            ["_ordem", "escore_mama", "mama", "p_maligno_calibrada"], ascending=[True, False, True, False],
+            na_position="last").drop(columns="_ordem")
 
-        colunas_tela = ["amostra", "mama", "vista", "prioridade", "p_maligno_calibrada", "incerteza", "qualidade",
+        colunas_tela = ["amostra", "mama", "vista", "prioridade", "prioridade_origem", "escore_mama", "prioridade_lesao",
+                        "p_maligno_calibrada", "incerteza", "qualidade",
                         "avisos_qualidade", "origem_lesao", "patologia", "conf_patologia", "achado", "conf_achado",
                         "densidade", "densidade_origem", "idade", "fabricante", "concordancia", "score_deteccao"]
         estilo = vis[colunas_tela].style
@@ -2053,10 +2172,12 @@ def pagina_resultados():
                    "origem_lesao": "origem da lesão", "imagens_usadas": "imagens usadas",
                    "conf_patologia": "confiança patologia", "p_maligno": "P(maligno)", "conf_achado": "confiança achado",
                    "densidade_origem": "origem da densidade", "concordancia": "usuário × modelo",
-                   "score_deteccao": "score do detector"}
+                   "score_deteccao": "score do detector", "prioridade_origem": "prioridade por",
+                   "escore_mama": "escore da mama", "prioridade_lesao": "prioridade da lesão"}
         estilo_tab = (estilo.map(estilo_patologia, subset=["patologia"])
                       .map(estilo_prioridade, subset=["prioridade"]).map(estilo_qualidade, subset=["qualidade"]))
-        mostrar(st.dataframe, estilo_tab.format({"p_maligno_calibrada": "{:.3f}", "incerteza": "{:.3f}"},
+        mostrar(st.dataframe, estilo_tab.format({"p_maligno_calibrada": "{:.3f}", "incerteza": "{:.3f}",
+                                                 "escore_mama": "{:.3f}"},
                                                 na_rep="—"), hide_index=True,
                 column_config={c: st.column_config.Column(titulos.get(c, c), help=LEGENDA[c]) for c in colunas_tela},
                 alt="Resultados por lesão: patologia, achado, densidade e origem de cada informação")
@@ -2320,6 +2441,14 @@ def pagina_resultados():
                                                    "que mais pesaram para a suspeita de malignidade")
                     st.caption("O mapa mostra onde o modelo se baseou, não onde está o câncer. Confira se ele olhou "
                                "para a lesão e não para bordas, marcações ou artefatos.")
+                mapa_g = Path(str(linha["mapa_gmic"])) if isinstance(linha.get("mapa_gmic"), str) and linha["mapa_gmic"] else None
+                if mapa_g is not None and mapa_g.is_file():
+                    st.markdown("**Onde o GMIC olhou** (mamografia inteira)")
+                    with Image.open(mapa_g) as im_g:
+                        mostrar_imagem(im_g.convert("RGB"), chave=f"img_gmic_{sel}", altura=360,
+                                       legenda="Mapa de saliência do GMIC (classe maligno): as regiões da mama que mais "
+                                               "pesaram na prioridade da mama")
+                    st.caption("Útil sobretudo para calcificações, que o detector do MARIA às vezes não marca.")
 
             # ---- informações ----
             with cd:
@@ -2350,11 +2479,26 @@ def pagina_resultados():
                     st.markdown("\n".join(itens))
 
                 if np.isnan(p):
-                    st.info(f"Resultado: {linha['patologia']} · prioridade {prio}", icon=":material/info:")
+                    if pd.notna(linha["escore_mama"]):
+                        st.info(f"Resultado: {linha['patologia']} nesta imagem · **prioridade da mama {prio}** (híbrido "
+                                f"GMIC + MARIA, escore {linha['escore_mama']:.2f})".replace(".", ",") + ". O detector não "
+                                "marcou lesão aqui; se a prioridade for alta ou média, confira o mapa do GMIC e as outras "
+                                "imagens da mama.", icon=":material/info:")
+                    else:
+                        st.info(f"Resultado: {linha['patologia']} · prioridade {prio}", icon=":material/info:")
                 else:
                     p_cal = linha["p_maligno_calibrada"]
                     with st.container(horizontal=True):
-                        st.metric("Prioridade de leitura", prio.capitalize(), border=True,
+                        if pd.notna(linha["escore_mama"]):
+                            st.metric("Prioridade da mama", prio.capitalize(), border=True,
+                                      delta=f"escore da mama {linha['escore_mama']:.2f}".replace(".", ","),
+                                      delta_color="off", delta_arrow="off",
+                                      help="Híbrido GMIC + MARIA: média do GMIC (mamografia inteira) com a maior P do "
+                                           "MARIA entre as lesões da mama. Vale para todas as lesões desta mama. "
+                                           f"Só pela lesão, a prioridade seria: {linha['prioridade_lesao'] or '—'}.")
+                        st.metric("Prioridade da lesão" if pd.notna(linha["escore_mama"]) else "Prioridade de leitura",
+                                  (linha["prioridade_lesao"] or prio).capitalize() if pd.notna(linha["escore_mama"])
+                                  else prio.capitalize(), border=True,
                                   delta=f"P(maligno) calibrada {p_cal:.2f}" if pd.notna(p_cal) else None,
                                   delta_color="off", delta_arrow="off",
                                   help="Pela P(maligno) calibrada: alta ≥ 0,50 (recorte) ou ≥ 0,37 (recorte + contexto, "
@@ -2467,6 +2611,21 @@ def pagina_admin():
         st.download_button("Baixar auditoria completa (.jsonl)", auditoria.ARQ_AUDITORIA.read_bytes(),
                            file_name="maria_auditoria.jsonl", icon=":material/download:",
                            on_click=registrar, args=("auditoria exportada", {}))
+
+    st.subheader("Módulo GMIC (prioridade da mama)")
+    st.caption("O GMIC (NYU; Shen et al., Medical Image Analysis 2021) é de terceiros, licenciado sob a GNU AGPLv3, e "
+               "por isso não vem junto com o MARIA. Ele melhora a prioridade da mama (híbrido GMIC + MARIA). "
+               "Ao baixar, você aceita a licença dele. Versão fixa, pesos conferidos por SHA-256 (~410 MB).")
+    gmic_pasta = pasta_modelo / "modulo_gmic"
+    if (gmic_pasta / "models" / "sample_model_5.p").is_file():
+        st.success(f"GMIC instalado em {gmic_pasta}.", icon=":material/check_circle:")
+    elif st.button("Baixar e instalar o GMIC", icon=":material/download:", key="baixar_gmic"):
+        with st.spinner("Baixando o GMIC (~410 MB)…"):
+            r = subprocess.run([sys.executable, str(AQUI / "config" / "baixar_gmic.py")], capture_output=True,
+                               text=True, encoding="utf-8", errors="replace",
+                               env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
+        registrar("GMIC instalado" if r.returncode == 0 else "falha ao instalar o GMIC", {"codigo": r.returncode})
+        (st.success if r.returncode == 0 else st.error)((r.stdout + r.stderr).strip()[-800:])
 
     st.subheader("Retenção de dados")
     st.caption("Os resultados das rodadas (pasta resultados/) contêm identificação de pacientes. Defina por quanto "

@@ -13,6 +13,7 @@
 Configuração: copie `integracao/config_dicom.exemplo.json` para `config_dicom.json`, ajuste AE title, porta,
 PACS de destino e AE autorizados; cadastre o nó "MARIA" no PACS (AE, IP, porta). Teste a conexão com
 `python integracao/no_dicom.py --teste-eco`. Rodar: `python integracao/no_dicom.py`.
+Opções: `limiar` (null = automático), `sem_mapas`, `sem_gmic` (sem o GMIC, a prioridade é só a da lesão; com o GMIC instalado, a série devolvida e a fila usam a prioridade da mama, híbrido GMIC + MARIA).
 
 **Pendências:** teste com o PACS real; **DICOM SR** (relatório estruturado — ex.: modelo de CAD de mamografia)
 para que o PACS/RIS leia os achados como dados, e não só como imagem; DICOM com **TLS**; envio automático por

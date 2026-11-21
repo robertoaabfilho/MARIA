@@ -300,3 +300,71 @@ def test_REQ_PAT_03_pesos_de_contexto_carregam():
         m = maria.ClassificadorMammoCLIP()
         m.load_state_dict(torch.load(RAIZ / f"modelo/modelo_patologia/contexto_dobra_{k}.pth", map_location="cpu"),
                           strict=True)
+
+
+# ---------------- prioridade da mama: híbrido GMIC + MARIA ----------------
+def _cfg_hibrido():
+    return json.loads((RAIZ / "modelo/calibracao.json").read_text(encoding="utf-8"))["hibrido_gmic"]
+
+
+def test_REQ_PRI_01_escore_da_mama_monotono_e_limites():
+    """O escore da mama sobe com a P do GMIC e com a P do MARIA; a prioridade segue os limites do calibracao.json."""
+    import maria
+    cfg = _cfg_hibrido()
+    grade = np.linspace(0.01, 0.99, 25)
+    for fixo in (0.05, 0.5, 0.95):
+        e_g = [maria.escore_mama(p, fixo, cfg) for p in grade]
+        e_m = [maria.escore_mama(fixo, p, cfg) for p in grade]
+        assert all(b > a for a, b in zip(e_g, e_g[1:])) and all(b > a for a, b in zip(e_m, e_m[1:]))
+        assert all(0 < e < 1 for e in e_g + e_m)
+    assert maria.prioridade_hibrida(cfg["alta"], cfg) == "alta"
+    assert maria.prioridade_hibrida((cfg["alta"] + cfg["media"]) / 2, cfg) == "média"
+    assert maria.prioridade_hibrida(cfg["media"] - 1e-6, cfg) == "baixa"
+
+
+def test_REQ_PRI_02_hibrido_aplicado_por_mama():
+    """A prioridade da mama vale para todas as linhas da mama; a da lesão fica em prioridade_lesao; 'não avaliar'
+    continua; mama sem GMIC (só recorte) fica com a prioridade da lesão; mama sem lesão usa maria_sem_lesao."""
+    import maria
+    cfg = _cfg_hibrido()
+    L = lambda a, mama, pri, p, origem=maria.ORIGEM_MODELO, img=None: {
+        "amostra": a, "_mama": mama, "_imagem": img or a.rsplit("_", 1)[0], "prioridade": pri, "p_maligno": p,
+        "origem_lesao": origem}
+    res = [L("m1_cc_modelo1", "m1", "baixa", "0.9000"), L("m1_mlo_modelo1", "m1", "não avaliar (qualidade)", "0.2000"),
+           {**L("m2_cc", "m2", "baixa (nada detectado)", "N/D", maria.ORIGEM_NENHUMA), "_imagem": "m2_cc"},
+           L("r3", "m3", "média", "0.3000", maria.ORIGEM_RECORTE, img="")]
+    gmic_img = {"m1_cc": (0.95, "mapa_m1.png"), "m1_mlo": (0.85, ""), "m2_cc": (0.10, "")}
+    mama_de = {"m1_cc": "m1", "m1_mlo": "m1", "m2_cc": "m2"}
+    assert maria.aplicar_hibrido(res, gmic_img, mama_de, cfg) == 2
+    a, b, c, d = res
+    e1 = maria.escore_mama(0.90, 0.9, cfg)
+    assert a["escore_mama"] == f"{e1:.4f}" and a["prioridade"] == maria.prioridade_hibrida(e1, cfg) == "alta"
+    assert a["prioridade_lesao"] == "baixa" and a["prioridade_origem"] == "mama (GMIC + MARIA)"
+    assert a["mapa_gmic"] == "mapa_m1.png"
+    assert b["prioridade"] == "não avaliar (qualidade)" and b["prioridade_mama"] == "alta"
+    assert c["escore_mama"] == f"{maria.escore_mama(0.10, cfg['maria_sem_lesao'], cfg):.4f}"
+    assert d["prioridade"] == "média" and d["prioridade_origem"] == "lesão (MARIA)" and "escore_mama" not in d
+
+
+def test_REQ_PRI_03_lado_da_parede_e_modulo_gmic_conferido(tmp_path, monkeypatch):
+    """A ponte acha a parede torácica (para pôr a mama na orientação do GMIC) e recusa um GMIC ausente ou alterado."""
+    import gmic_maria
+    img = np.zeros((300, 200), np.float32)
+    img[50:250, :120] = 200                       # mama encostada à esquerda
+    assert not gmic_maria.parede_a_direita(img) and gmic_maria.parede_a_direita(np.fliplr(img))
+    monkeypatch.setattr(gmic_maria, "PASTA", tmp_path / "modulo_gmic")
+    assert not gmic_maria.disponivel() and len(gmic_maria.conferir()) == 6
+    (tmp_path / "modulo_gmic/models").mkdir(parents=True)
+    (tmp_path / "modulo_gmic/models/sample_model_1.p").write_bytes(b"adulterado")
+    assert "sample_model_1.p: SHA-256 diferente" in gmic_maria.conferir()
+
+
+def test_REQ_ENT_07_vista_pelo_patient_orientation():
+    """Sem ViewPosition, a vista vem do PatientOrientation (P\\FL / A\\FR = MLO; P\\L / A\\R = CC)."""
+    import maria
+    from types import SimpleNamespace as N
+    assert maria.vista_dicom(N(ViewPosition="MLO", PatientOrientation=["P", "L"])) == "MLO"
+    assert maria.vista_dicom(N(ViewPosition="", PatientOrientation=["P", "FL"])) == "MLO"
+    assert maria.vista_dicom(N(ViewPosition="", PatientOrientation=["A", "FR"])) == "MLO"
+    assert maria.vista_dicom(N(ViewPosition="", PatientOrientation=["A", "R"])) == "CC"
+    assert maria.vista_dicom(N()) == "SEM_VISTA"

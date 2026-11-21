@@ -18,6 +18,7 @@
 | R10 | Vazamento de dados de pacientes | Violação de privacidade (LGPD) | 3×4=12 | Login, perfis, auditoria, pseudonimização/anonimização fora do atendimento, retenção, nó DICOM apaga recebidos | 2×4=8 | Criptografia de disco e backup (infraestrutura); RIPD |
 | R11 | Acesso não autorizado ao nó DICOM | Envio/recebimento indevido de exames | 3×3=9 | Lista de AE autorizados (recusa com 0x0124); auditoria | 2×3=6 | Restringir também por rede/firewall; TLS no DICOM |
 | R12 | Falha de software (exceção, arquivo corrompido) | Resultado ausente ou incompleto | 3×2=6 | Erros por imagem não derrubam a rodada ("indisponível"); log; testes automatizados | 2×2=4 | — |
+| R13 | Prioridade da mama pelo híbrido GMIC + MARIA diferente da prioridade da lesão (ex.: lesão de baixa P numa mama de prioridade alta, ou o contrário) | Leitura confusa; lesão subestimada ou superestimada | 3×3=9 | As duas prioridades aparecem na tabela e no detalhe (prioridade_lesao, prioridade_origem); mapa do GMIC para conferência; GMIC só roda se os pesos conferirem por SHA-256; pode ser desligado (--sem_gmic / chave no dashboard) | 2×3=6 | Híbrido medido só em casos biopsiados (CMMD): validar em rastreamento com exames normais e dados brasileiros |
 
 **Conclusão provisória:** o risco residual dominante é **R1/R3 (desempenho em dados brasileiros)**, que só se
 reduz com validação clínica multicêntrica. Até lá, o MARIA deve ser usado apenas em pesquisa.

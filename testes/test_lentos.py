@@ -29,7 +29,33 @@ def test_REQ_REG_01_regressao_dos_exemplos(tmp_path):
     assert set(novo) == set(ref)
     for a, l in ref.items():
         for c in ("prioridade", "patologia", "achado", "p_maligno", "p_maligno_calibrada", "qualidade"):
-            assert novo[a][c] == l[c], f"{a}: {c} mudou ({l[c]} -> {novo[a][c]})"
+            c_novo = "prioridade_lesao" if c == "prioridade" else c     # a prioridade da LESÃO (sem o GMIC)
+            assert novo[a][c_novo] == l[c], f"{a}: {c} mudou ({l[c]} -> {novo[a][c_novo]})"
+    import gmic_maria
+    if gmic_maria.disponivel():                  # com o GMIC: prioridade da mama igual em todas as linhas da mama
+        completas = [l for l in novo.values() if l["origem_lesao"] != "recorte fornecido"]
+        assert completas and all(l["prioridade_origem"] == "mama (GMIC + MARIA)" for l in completas
+                                 if l["prioridade"] != "não avaliar (qualidade)")
+        for m in {l["mama"] for l in completas}:
+            assert len({l["prioridade_mama"] for l in completas if l["mama"] == m}) == 1
+
+
+@lento
+def test_REQ_PRI_04_gmic_numa_mamografia_de_exemplo():
+    """A ponte roda o GMIC numa mamografia completa (PNG digital) e o mapa volta no tamanho da imagem."""
+    import gmic_maria
+    import numpy as np
+    import torch
+    from PIL import Image
+    if not gmic_maria.disponivel():
+        pytest.skip("GMIC não instalado (python config/baixar_gmic.py)")
+    arr = np.asarray(Image.open(RAIZ / "exemplos/2_png_digital_cdd/pacienteA_esq_completa_cc.png").convert("L"),
+                     np.float32)
+    g = gmic_maria.GMIC(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    p, desvio, mapa = g.prever(arr, "CC")
+    assert 0 <= p <= 1 and 0 <= desvio < 0.5 and mapa.shape == arr.shape and mapa.max() > 0
+    p_espelhada = g.prever(np.fliplr(arr).copy(), "CC", com_mapa=False)[0]
+    assert abs(p - p_espelhada) < 1e-3              # o lado da imagem não muda o resultado
 
 
 @lento

@@ -15,6 +15,7 @@ não deve ser usada. **Não emite diagnóstico** — a decisão é sempre do rad
 | **Localização** | detector Faster R-CNN; o médico também pode marcar a lesão na tela |
 | **Achado** (massa × microcalcificação) | ResNet-50 + multivista (CC + MLO) |
 | **Densidade** (BI-RADS A–D) | Mammo-CLIP, 768 px |
+| **Prioridade da mama** (opcional) | híbrido: [GMIC](https://github.com/nyukat/GMIC) (NYU, mamografia inteira) + maior P do MARIA na mama |
 | **Explicabilidade e segurança** | mapa de calor (Grad-CAM), incerteza entre as redes, controle de qualidade ("não usar") |
 
 Também inclui: dashboard (Streamlit) com login, auditoria e anonimização (LGPD); revisão, banco de anotações,
@@ -24,8 +25,10 @@ qualidade e regulatória em [`docs/`](docs/README.md).
 ## Desempenho medido (pacientes fora do treino)
 
 - **Patologia, recortes** (validação cruzada no CBIS-DDSM, 2.781 lesões): AUC 0,841.
-- **Validação externa no CMMD** (mamografia digital, China, 1.872 mamas confirmadas por biópsia; caminho completo
-  sem marcação do médico): AUC 0,755 por mama; prioridade alta com 79% de sensibilidade e 53% de especificidade.
+- **Validação externa no CMMD** (mamografia digital, China, confirmada por biópsia; caminho completo sem marcação
+  do médico; metade dos pacientes que não entrou em nenhuma escolha, 932 mamas): **AUC 0,814 por mama** com a
+  prioridade da mama pelo GMIC; prioridade alta com 81% de sensibilidade e 62,5% de especificidade. Sem o GMIC:
+  0,758, 78% / 55%. Contando também as mamas sem achado (protocolo do meta-repositório da NYU): 0,842.
 - **Densidade**: kappa 0,70 (densa × não densa 88%).
 
 Limitações, subgrupos e detalhes: página "Sobre o modelo" do dashboard e [`docs/qualidade/model_card.md`](docs/qualidade/model_card.md).
@@ -42,6 +45,9 @@ Limitações, subgrupos e detalhes: página "Sobre o modelo" do dashboard e [`do
    - **Windows:** duplo clique em `config\iniciar_dashboard.bat` (instala o Python e as bibliotecas se faltar);
    - **Linux/macOS:** `./config/iniciar_dashboard.sh`.
 
+5. **Opcional, recomendado:** baixe o GMIC, que melhora a prioridade da mama: `config\baixar_gmic.bat` (Windows) ou
+   `./config/baixar_gmic.sh` (Linux/macOS), ou pela página Administração do dashboard.
+
 Guia completo (em português): [`COMO_USAR.txt`](COMO_USAR.txt). Testes: `python -m pytest testes -q`.
 
 ## Licenças
@@ -51,6 +57,8 @@ Guia completo (em português): [`COMO_USAR.txt`](COMO_USAR.txt). Testes: `python
   (Ghosh et al., MICCAI 2024), licenciado sob **CC BY-NC-SA 4.0**; por isso esses pesos são distribuídos sob a
   mesma licença — **uso não comercial**, com citação, e obras derivadas sob a mesma licença. Os pesos de achado e
   detector partem de modelos pré-treinados do torchvision (ImageNet/COCO).
+- **GMIC** (opcional): código e pesos da NYU sob **GNU AGPLv3**. Não fazem parte deste repositório; são baixados
+  à parte para `modelo/modulo_gmic/` (versão fixa, pesos conferidos por SHA-256). Ao baixar, você aceita a licença deles.
 - **Imagens de exemplo**: de bases públicas, com citação obrigatória (abaixo).
 
 ## Bases de dados e citações
@@ -64,4 +72,6 @@ Guia completo (em português): [`COMO_USAR.txt`](COMO_USAR.txt). Testes: `python
   DOI: 10.7937/tcia.eqde-4b16 (CC BY 4.0). Usado só como teste externo.
 - **Mammo-CLIP** — Ghosh S. et al. *Mammo-CLIP: A Vision Language Foundation Model to Enhance Data Efficiency and
   Robustness in Mammography*. MICCAI 2024 (código e pesos: CC BY-NC-SA 4.0).
+- **GMIC** — Shen Y. et al. *An interpretable classifier for high-resolution breast cancer screening images utilizing
+  weakly supervised localization*. Medical Image Analysis 68:101908, 2021 (código e pesos: GNU AGPLv3).
 - The Cancer Imaging Archive — Clark K. et al. *J Digit Imaging* 26(6):1045–1057, 2013.

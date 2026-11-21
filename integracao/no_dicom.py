@@ -160,19 +160,28 @@ def gerar_saidas(resultados, pasta_estudo):
         f = fonte(max(14, img.width // 45))
         for r in linhas:
             x0, y0, x1, y1 = (float(r[c]) * fator for c in ("x0", "y0", "x1", "y1"))
-            cor = CORES.get(r.get("prioridade", ""), (180, 180, 180))
+            pri_les = r.get("prioridade_lesao") or r.get("prioridade", "")      # caixa = prioridade da LESÃO
+            cor = CORES.get(pri_les, (180, 180, 180))
             d.rectangle([x0 - 6, y0 - 6, x1 + 6, y1 + 6], outline=cor, width=max(3, img.width // 300))
-            d.text((x0, max(0, y0 - f.size - 10)), f"{r.get('prioridade', '?')} P={r.get('p_maligno_calibrada', '?')}",
+            d.text((x0, max(0, y0 - f.size - 10)), f"{pri_les or '?'} P={r.get('p_maligno_calibrada', '?')}",
                    fill=cor, font=f)
         d.text((10, 10), "MARIA - apoio a priorizacao. NAO e diagnostico.", fill=(255, 255, 0), font=f)
+        if linhas[0].get("escore_mama"):                                          # híbrido GMIC + MARIA
+            pm = linhas[0].get("prioridade_mama") or linhas[0].get("prioridade", "?")
+            d.text((10, 20 + f.size), f"Prioridade da mama (GMIC + MARIA): {pm}", fill=CORES.get(pm, (255, 255, 0)),
+                   font=f)
         saidas.append(secondary_capture(img, ref, f"MARIA: {len(linhas)} lesao(oes) marcadas", numero, serie))
         numero += 1
     # imagem-resumo (tabela)
     linhas_txt = ["MARIA - resumo do estudo (apoio a priorizacao; o diagnostico e do radiologista)", ""]
-    linhas_txt.append(f"{'lesao':<34}{'prioridade':<12}{'P calib.':<10}{'achado':<20}{'qualidade'}")
+    linhas_txt.append(f"{'lesao':<34}{'prioridade':<12}{'da lesao':<12}{'P calib.':<10}{'achado':<20}{'qualidade'}")
     for r in resultados:
         linhas_txt.append(f"{r.get('amostra', '')[:33]:<34}{r.get('prioridade', '')[:11]:<12}"
+                          f"{(r.get('prioridade_lesao') or r.get('prioridade', ''))[:11]:<12}"
                           f"{r.get('p_maligno_calibrada', '')[:9]:<10}{r.get('achado', '')[:19]:<20}{r.get('qualidade', '')}")
+    if any(r.get("escore_mama") for r in resultados):
+        linhas_txt += ["", "prioridade = da MAMA (hibrido GMIC + MARIA, igual para todas as lesoes da mama); "
+                           "'da lesao' = so a P da lesao"]
     linhas_txt += ["", f"versao do modelo: {resultados[0].get('versao_modelo', '?') if resultados else '?'}",
                    "Prototipo de pesquisa. Nao e dispositivo medico registrado."]
     f = fonte(18)
@@ -209,12 +218,16 @@ def processar_estudo(cfg, estudo):
     saida = cfg["pasta_saida"] / estudo
     saida.mkdir(parents=True, exist_ok=True)
     csv_saida = saida / "results.csv"
-    cmd = [sys.executable, str(RAIZ / "modelo" / "maria.py"), "--pasta", str(pasta), "--saida_csv", str(csv_saida),
-           "--limiar", str(cfg.get("limiar", 0.5))]
+    cmd = [sys.executable, str(RAIZ / "modelo" / "maria.py"), "--pasta", str(pasta), "--saida_csv", str(csv_saida)]
+    if cfg.get("limiar") is not None:              # null/ausente = automático (o limite da prioridade alta)
+        cmd += ["--limiar", str(cfg["limiar"])]
     if cfg.get("sem_mapas", False):
         cmd.append("--sem_mapas")
+    if cfg.get("sem_gmic", False):                 # prioridade da mama só pelo MARIA (sem o GMIC)
+        cmd.append("--sem_gmic")
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       env={**__import__("os").environ, "MARIA_DASHBOARD": "1", "PYTHONIOENCODING": "utf-8"})
+                       env={**__import__("os").environ, "MARIA_DASHBOARD": "1", "PYTHONIOENCODING": "utf-8",
+                            "PYTHONUTF8": "1"})
     (saida / "log.txt").write_text(r.stdout + "\n" + r.stderr, encoding="utf-8")
     if r.returncode != 0 or not csv_saida.is_file():
         auditoria.registrar("nó DICOM", "estudo com erro no processamento", {"estudo": estudo[-12:]})

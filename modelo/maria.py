@@ -15,6 +15,9 @@ Gera um results.csv com, para cada amostra (lesão):
     lesão com um aviso do desempenho medido para aquela densidade (a acurácia cai em mama densa).
   - ACHADO (Massa/Nódulo vs Microcalcificação): média de ResNet-50 do recorte (TTA) +
     ResNet-50 multivista (só quando há recorte CC e MLO da mesma amostra).
+  - PRIORIDADE DA MAMA (opcional, se o GMIC estiver em modulo_gmic/): híbrido GMIC (NYU, mamografia inteira) +
+    maior P do MARIA entre as lesões da mama (gmic_maria.py; calibracao.json -> "hibrido_gmic"). Vale para todas
+    as linhas da mama; a prioridade só da lesão fica em prioridade_lesao. --sem_gmic desliga.
 
 Identificação do tipo de imagem (máscaras de ROI são ignoradas):
   - DICOM: pela SeriesDescription ("crop"/"full"/"mask", como no CBIS-DDSM). Sem descrição,
@@ -31,10 +34,11 @@ Estrutura esperada (ao lado deste arquivo):
                        as mamografias completas usam só o recorte)
     modelo_deteccao/   detector_lesao.pth, detector_lesao.json   (sem eles, a detecção é pulada)
     modelo_densidade/  densidade.pth, densidade.json             (sem eles, a densidade só vem do --densidade_csv)
+    modulo_gmic/       GMIC da NYU (AGPLv3; opcional, baixado à parte: python config/baixar_gmic.py)
 
 Uso (Linux/macOS: python3 | Windows: python ou py):
     python3 maria.py --pasta /caminho/com/dicoms_ou_pngs [--planilha planilha.csv] [--limiar 0.5]
-                     [--saida_csv results.csv] [--limiar_deteccao 0.x] [--sem_deteccao]
+                     [--saida_csv results.csv] [--limiar_deteccao 0.x] [--sem_deteccao] [--sem_gmic]
 
 PLANILHA DO USUÁRIO (opcional; CSV com "," ou ";"; uma linha por imagem/lesão; só "mama" é obrigatória):
     mama              id da mama (paciente + lado). Tudo com a mesma "mama" é a mesma mama.
@@ -46,7 +50,8 @@ PLANILHA DO USUÁRIO (opcional; CSV com "," ou ";"; uma linha por imagem/lesão;
     x0, y0, x1, y1    caixa da lesão marcada pelo médico na mamografia completa (pixels da imagem original)
     Arquivos citados na planilha não precisam seguir regra de nome. O formato antigo "amostra,densidade" também vale.
 
-SAÍDA (results.csv): amostra, mama, vista (CC/MLO), origem_lesao (recorte fornecido | marcada pelo usuário | detectada pelo
+SAÍDA (results.csv): amostra, mama, vista (CC/MLO), prioridade (+ prioridade_origem, escore_mama, p_gmic_mama,
+    prioridade_lesao), origem_lesao (recorte fornecido | marcada pelo usuário | detectada pelo
     modelo | nenhuma lesão encontrada), imagens_usadas, patologia, conf_patologia, p_maligno, achado, conf_achado,
     densidade, densidade_origem (informada pelo usuário | inferida pelo modelo), aviso_densidade, concordancia
     (marcação do usuário x detecção do modelo), score_deteccao, imagem, x0, y0, x1, y1.
@@ -419,6 +424,18 @@ def entrada_patologia(arr):
 # 3. MONTAGEM DAS AMOSTRAS
 # =============================================================================
 
+def vista_dicom(ds):
+    """CC/MLO do DICOM: ViewPosition; se vazio, pelo PatientOrientation (2º valor com F/H, ex. "P\\FL", = oblíqua;
+    sem F/H, ex. "P\\L", = CC). Alguns acervos (ex.: CMMD) só preenchem o PatientOrientation."""
+    vp = str(getattr(ds, "ViewPosition", "") or "").upper().strip()
+    if vp:
+        return vp
+    po = [str(x).upper() for x in (getattr(ds, "PatientOrientation", None) or [])]
+    if len(po) == 2 and po[1]:
+        return "MLO" if any(c in po[1] for c in "FH") else "CC"
+    return "SEM_VISTA"
+
+
 def ler_metadados(caminho):
     try:
         ds = pydicom.dcmread(str(caminho), stop_before_pixels=True)
@@ -428,7 +445,7 @@ def ler_metadados(caminho):
         "caminho": str(caminho),
         "patient_id": str(getattr(ds, "PatientID", "")) or "SEM_ID",
         "lado": str(getattr(ds, "ImageLaterality", getattr(ds, "Laterality", ""))).upper() or "SEM_LADO",
-        "vista": str(getattr(ds, "ViewPosition", "") or "SEM_VISTA").upper(),
+        "vista": vista_dicom(ds),
         "descricao": str(getattr(ds, "SeriesDescription", "")).lower(),
         "area": int(getattr(ds, "Rows", 0)) * int(getattr(ds, "Columns", 0)),
     }
@@ -752,15 +769,77 @@ def mapa_calor(modelos_mc, arr, device, nome):
     cinza = entrada_patologia(arr)[y0:y0 + nh, x0:x0 + nw].astype(np.float32) / 255
     c = cam[y0:y0 + nh, x0:x0 + nw]
     c = (c - c.min()) / (c.max() - c.min() + 1e-8)
+    return _salvar_painel(cinza, c, nome)
+
+
+def _salvar_painel(cinza, c, nome):
+    """cinza e c (mapa) em 0-1, mesmo tamanho -> PNG lado a lado (imagem | imagem + mapa); devolve o caminho."""
     cor = np.stack([np.clip(1.5 - np.abs(4 * c - 3), 0, 1), np.clip(1.5 - np.abs(4 * c - 2), 0, 1),
                     np.clip(1.5 - np.abs(4 * c - 1), 0, 1)], -1)
     base = np.repeat(cinza[..., None], 3, -1)
     sobre = base * (1 - 0.45 * c[..., None]) + cor * 0.45 * c[..., None]
-    painel = np.concatenate([base, np.ones((nh, 6, 3)), sobre], 1)
+    painel = np.concatenate([base, np.ones((cinza.shape[0], 6, 3)), sobre], 1)
     destino = CONTEXTO["pasta_mapas"] / f"{re.sub(r'[^A-Za-z0-9_.-]', '_', nome)}.png"
     destino.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray((np.clip(painel, 0, 1) * 255).astype(np.uint8)).save(destino)
     return str(destino)
+
+
+def mapa_gmic(arr, mapa, nome, lado_max=1024):
+    """Mapa de saliência do GMIC (classe maligno, média das 5 redes) sobre a mamografia INTEIRA, reduzida."""
+    if not CONTEXTO["mapas"] or CONTEXTO["pasta_mapas"] is None or mapa is None:
+        return ""
+    cinza = normalizar_mamografia(arr)
+    fator = min(1.0, lado_max / float(max(cinza.shape)))
+    if fator < 1:
+        tam = (max(1, round(cinza.shape[1] * fator)), max(1, round(cinza.shape[0] * fator)))
+        cinza = np.asarray(Image.fromarray(cinza).resize(tam, Image.LANCZOS))
+        mapa = np.asarray(Image.fromarray(np.ascontiguousarray(mapa, dtype=np.float32)).resize(tam, Image.BILINEAR))
+    c = np.clip(mapa, 0, None) / max(float(mapa.max()), 1e-8)
+    return _salvar_painel(cinza.astype(np.float32) / 255, c, f"{nome}_gmic")
+
+
+# --- prioridade da MAMA pelo híbrido GMIC + MARIA (calibracao.json -> "hibrido_gmic"; escolhido no CMMD) ---
+def escore_mama(p_gmic, p_maria, cfg):
+    """Escore 0-1 da mama: média dos logits padronizados do GMIC (média das imagens da mama) e do MARIA (máxima
+    P bruta das lesões da mama, recorte + contexto). NÃO é a probabilidade de câncer: serve para a prioridade."""
+    lg = lambda p: float(np.log(min(max(p, cfg["eps"]), 1 - cfg["eps"]) / (1 - min(max(p, cfg["eps"]), 1 - cfg["eps"]))))
+    z = ((lg(p_gmic) - cfg["gmic_media"]) / cfg["gmic_desvio"] + (lg(p_maria) - cfg["maria_media"]) / cfg["maria_desvio"]) / 2
+    return float(1 / (1 + np.exp(-(cfg["a"] * z + cfg["b"]))))
+
+
+def prioridade_hibrida(escore, cfg):
+    return "alta" if escore >= cfg["alta"] else "média" if escore >= cfg["media"] else "baixa"
+
+
+def aplicar_hibrido(resultados, gmic_img, mama_de, cfg):
+    """Prioridade da MAMA = híbrido GMIC + MARIA; a prioridade só da lesão fica em prioridade_lesao.
+    Linhas com qualidade 'não usar' continuam 'não avaliar'."""
+    p_gmic = {}
+    for a, (p, _) in gmic_img.items():
+        p_gmic.setdefault(mama_de[a], []).append(p)
+    p_maria = {}
+    for r in resultados:
+        if r.get("origem_lesao") in (ORIGEM_MODELO, ORIGEM_USUARIO) and r.get("p_maligno") not in (None, "", "N/D"):
+            p_maria[r["_mama"]] = max(p_maria.get(r["_mama"], 0.0), float(r["p_maligno"]))
+    hib = {}
+    for m, ps in p_gmic.items():
+        pm = p_maria.get(m, cfg["maria_sem_lesao"])
+        e = escore_mama(float(np.mean(ps)), pm, cfg)
+        hib[m] = (float(np.mean(ps)), e, prioridade_hibrida(e, cfg))
+    for r in resultados:
+        r["prioridade_lesao"] = r.get("prioridade", "")
+        r["mapa_gmic"] = gmic_img.get(r.get("_imagem"), (None, ""))[1]
+        h = hib.get(r["_mama"])
+        if h is None:
+            r["prioridade_origem"] = "lesão (MARIA)"
+            continue
+        r.update(p_gmic_mama=f"{h[0]:.4f}", escore_mama=f"{h[1]:.4f}", prioridade_mama=h[2])
+        if r.get("prioridade") != "não avaliar (qualidade)":
+            r.update(prioridade=h[2], prioridade_origem="mama (GMIC + MARIA)")
+        else:
+            r["prioridade_origem"] = "lesão (MARIA)"
+    return len(hib)
 
 
 def metadados_imagem(caminho):
@@ -1012,10 +1091,11 @@ def diagnosticar_completa(imagem_id, caminho, detector, limiar_det, caixas_usr, 
 # 5. PRINCIPAL
 # =============================================================================
 
-CAMPOS_SAIDA = ["amostra", "mama", "vista", "prioridade", "p_maligno_calibrada", "incerteza", "qualidade",
+CAMPOS_SAIDA = ["amostra", "mama", "vista", "prioridade", "prioridade_origem", "escore_mama", "p_gmic_mama", "prioridade_mama",
+                "prioridade_lesao", "p_maligno_calibrada", "incerteza", "qualidade",
                 "avisos_qualidade", "origem_lesao", "imagens_usadas", "patologia", "conf_patologia", "p_maligno",
                 "achado", "conf_achado", "densidade", "densidade_origem", "aviso_densidade", "concordancia",
-                "score_deteccao", "patologia_entrada", "limiar_maligno", "idade", "fabricante", "mapa_calor", "versao_modelo", "calibracao", "imagem", "x0", "y0", "x1", "y1"]
+                "score_deteccao", "patologia_entrada", "limiar_maligno", "idade", "fabricante", "mapa_calor", "mapa_gmic", "versao_modelo", "calibracao", "imagem", "x0", "y0", "x1", "y1"]
 
 
 def main():
@@ -1037,6 +1117,8 @@ def main():
     ap.add_argument("--pasta_densidade", default=str(PASTA_DENSIDADE), help="pasta com densidade.pth/.json")
     ap.add_argument("--modelo_recorte", default=str(PASTA_ACHADO / "resnet50_multitask_mama_do_zero.pth"))
     ap.add_argument("--modelo_multivista", default=str(PASTA_ACHADO / "resnet50_multivista.pth"))
+    ap.add_argument("--sem_gmic", action="store_true",
+                    help="não usa o GMIC (prioridade da mama só pelo MARIA, como antes do híbrido)")
     ap.add_argument("--sem_mapas", action="store_true", help="não gera os mapas de calor (mais rápido, sobretudo na CPU)")
     args = ap.parse_args()
 
@@ -1110,6 +1192,22 @@ def main():
     limiar_det = args.limiar_deteccao if args.limiar_deteccao is not None else (detector.limiar if detector else None)
     if detector:
         print(f"   detector de lesões: score mínimo {limiar_det:.3f}")
+    gmic, cfg_hib = None, (CONTEXTO["cal"] or {}).get("hibrido_gmic")
+    if completas and not args.sem_gmic and cfg_hib and CONTEXTO.get("modelos_ctx"):
+        import gmic_maria  # noqa: E402  (ponte; o GMIC em si fica em modelo/modulo_gmic, AGPLv3, baixado à parte)
+        problemas = gmic_maria.conferir()
+        if not problemas:
+            try:
+                gmic = gmic_maria.GMIC(device)
+                versao_modelo = f"{versao_modelo}+{gmic_maria.VERSAO}"
+                print("   prioridade da mama: híbrido GMIC + MARIA (GMIC: NYU, AGPLv3)")
+            except Exception as e:
+                print(f"⚠️  não consegui carregar o GMIC ({e}): prioridade só pelo MARIA.")
+        elif any("falta" in x for x in problemas) and len(problemas) >= 5:
+            print("ℹ️  GMIC não instalado (opcional; melhora a prioridade da mama): python config/baixar_gmic.py")
+        else:
+            print("⚠️  GMIC com problema (" + "; ".join(problemas[:3]) + "): prioridade só pelo MARIA. "
+                  "Baixe de novo: python config/baixar_gmic.py")
     m_dens = ClassificadorDensidade(args.pasta_densidade, device) if completas and tem_densidade else None
     if completas and not tem_densidade:
         print(f"⚠️  classificador de densidade não encontrado em {args.pasta_densidade}: densidade não estimada.")
@@ -1123,7 +1221,7 @@ def main():
               f"{len(recortes)} lesão(ões)")
 
     print("\n🔎 Diagnosticando...")
-    resultados, probs_mama = [], {}
+    resultados, probs_mama, gmic_img = [], {}, {}
     with torch.no_grad():
         for a, v in progresso(sorted(recortes.items()), "Recortes"):
             r = dict(diagnosticar(a, v, m_recorte, m_multivista, modelos_mc, device, args.limiar), _mama=mama_de[a])
@@ -1133,15 +1231,36 @@ def main():
                     r["qualidade"] = "atenção"
             resultados.append(r)
         for a, info in progresso(sorted(completas.items()), "Mamografias completas"):
-            if m_dens and mama_de[a] not in dens_informada:      # densidade informada dispensa a estimativa
+            arr_c = None
+            if (m_dens and mama_de[a] not in dens_informada) or gmic is not None:
                 try:
-                    probs_mama.setdefault(mama_de[a], []).append(m_dens.estimar(ler_imagem(info["caminho"])[0]))
+                    arr_c = ler_imagem(info["caminho"])[0]
+                except Exception as e:
+                    print(f"   ⚠️  {a}: falha ao ler a imagem ({e})")
+            if arr_c is not None and m_dens and mama_de[a] not in dens_informada:   # densidade informada dispensa
+                try:
+                    probs_mama.setdefault(mama_de[a], []).append(m_dens.estimar(arr_c))
                 except Exception as e:
                     print(f"   ⚠️  {a}: falha ao estimar a densidade ({e})")
+            if arr_c is not None and gmic is not None and (detectar or caixas_usuario.get(a)):
+                qual = checar_qualidade(arr_c, metadados_imagem(info["caminho"]), "completa")
+                if not any(n == "não usar" for n, _ in qual):
+                    try:
+                        p_g, _, mapa = gmic.prever(arr_c, vista_da_imagem(a, info["caminho"]), com_mapa=CONTEXTO["mapas"])
+                        gmic_img[a] = (p_g, mapa_gmic(arr_c, mapa, a))
+                    except Exception as e:
+                        print(f"   ⚠️  {a}: falha no GMIC ({e})")
             if detectar or caixas_usuario.get(a):
                 for r in diagnosticar_completa(a, info["caminho"], detector, limiar_det, caixas_usuario.get(a),
                                                m_recorte, modelos_mc, device, args.limiar):
                     resultados.append(dict(r, _mama=mama_de[a]))
+
+    if gmic_img:
+        n_hib = aplicar_hibrido(resultados, gmic_img, mama_de, cfg_hib)
+        print(f"   prioridade da mama pelo híbrido GMIC + MARIA: {n_hib} mama(s)")
+    else:
+        for r in resultados:
+            r.update(prioridade_lesao=r.get("prioridade", ""), prioridade_origem="lesão (MARIA)")
 
     # densidade por mama: a informada pelo usuário (prioridade) ou a inferida (média das vistas)
     dens_modelo = {m: int(np.mean(ps, axis=0).argmax()) + 1 for m, ps in probs_mama.items()}
